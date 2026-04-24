@@ -1,0 +1,227 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum CmtLevel {
+  LEVEL_1
+  LEVEL_2
+  LEVEL_3
+}
+
+enum QuizMode {
+  SUBTOPIC
+  CHAPTER
+  CUSTOM
+  FULL_TEST
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+enum MediaKind {
+  IMAGE
+  PDF
+}
+
+enum QuestionType {
+  SINGLE_CHOICE
+  MULTI_CHOICE
+}
+
+enum QuestionDifficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+model User {
+  id             String    @id @default(cuid())
+  supabaseUserId String    @unique
+  email          String    @unique
+  fullName       String?
+  avatarUrl      String?
+  role           UserRole  @default(USER)
+  isPremium      Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  createdNotes   Note[]    @relation("NoteCreatedBy")
+  updatedNotes   Note[]    @relation("NoteUpdatedBy")
+  createdQuestions Question[] @relation("QuestionCreatedBy")
+  updatedQuestions Question[] @relation("QuestionUpdatedBy")
+  quizAttempts   QuizAttempt[]
+  mediaUploads   MediaAsset[]
+}
+
+model Chapter {
+  id          String     @id @default(cuid())
+  level       CmtLevel
+  title       String
+  slug        String
+  description String?
+  orderIndex  Int        @default(0)
+  isPublished Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  subtopics   Subtopic[]
+  questions   Question[]
+
+  @@unique([level, slug])
+  @@index([level, isPublished, orderIndex])
+}
+
+model Subtopic {
+  id          String     @id @default(cuid())
+  chapterId   String
+  title       String
+  slug        String
+  description String?
+  orderIndex  Int        @default(0)
+  isPublished Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  chapter     Chapter    @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  notes       Note[]
+  questions   Question[]
+
+  @@unique([chapterId, slug])
+  @@index([chapterId, isPublished, orderIndex])
+}
+
+model Note {
+  id           String     @id @default(cuid())
+  subtopicId   String
+  title        String
+  contentJson  Json
+  contentHtml  String?
+  orderIndex   Int        @default(0)
+  isPublished  Boolean    @default(false)
+  createdById  String?
+  updatedById  String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  subtopic     Subtopic   @relation(fields: [subtopicId], references: [id], onDelete: Cascade)
+  createdBy    User?      @relation("NoteCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy    User?      @relation("NoteUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([subtopicId, isPublished, orderIndex])
+}
+
+model MediaAsset {
+  id            String     @id @default(cuid())
+  url           String
+  publicId      String     @unique
+  kind          MediaKind
+  mimeType      String
+  originalName  String
+  sizeBytes     Int
+  uploadedById  String?
+  createdAt     DateTime   @default(now())
+
+  uploadedBy    User?      @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([kind, createdAt])
+}
+
+model Question {
+  id                String            @id @default(cuid())
+  level             CmtLevel?
+  chapterId         String?
+  subtopicId        String?
+  promptJson        Json
+  explanationJson   Json?
+  questionType      QuestionType      @default(SINGLE_CHOICE)
+  difficulty       QuestionDifficulty?
+  isPublished      Boolean           @default(false)
+  createdById      String?
+  updatedById      String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  chapter          Chapter?          @relation(fields: [chapterId], references: [id], onDelete: SetNull)
+  subtopic         Subtopic?         @relation(fields: [subtopicId], references: [id], onDelete: SetNull)
+  options          QuestionOption[]
+  attemptItems     QuizAttemptItem[]
+  createdBy        User?             @relation("QuestionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy        User?             @relation("QuestionUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([level, isPublished])
+  @@index([chapterId, isPublished])
+  @@index([subtopicId, isPublished])
+  @@index([isPublished, difficulty])
+}
+
+model QuestionOption {
+  id          String   @id @default(cuid())
+  questionId  String
+  contentJson Json
+  isCorrect   Boolean  @default(false)
+  orderIndex  Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  question    Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  selectedIn  QuizAttemptItem[]
+
+  @@unique([questionId, orderIndex])
+  @@index([questionId, isCorrect])
+}
+
+model QuizAttempt {
+  id                 String           @id @default(cuid())
+  userId             String
+  mode               QuizMode
+  selectionJson      Json
+  level              CmtLevel?
+  totalQuestions     Int
+  correctCount       Int              @default(0)
+  scorePercentage    Float?
+  status             AttemptStatus    @default(IN_PROGRESS)
+  startedAt          DateTime         @default(now())
+  completedAt        DateTime?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items              QuizAttemptItem[]
+
+  @@index([userId, startedAt])
+  @@index([status, startedAt])
+}
+
+model QuizAttemptItem {
+  id                     String          @id @default(cuid())
+  attemptId              String
+  questionId             String
+  questionOrder          Int
+  questionSnapshotJson   Json
+  selectedOptionId       String?
+  selectedOptionSnapshotJson Json?
+  isCorrect              Boolean         @default(false)
+  answeredAt             DateTime        @default(now())
+  timeSpentSeconds       Int?
+
+  attempt                QuizAttempt     @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question               Question        @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  selectedOption         QuestionOption? @relation(fields: [selectedOptionId], references: [id], onDelete: SetNull)
+
+  @@unique([attemptId, questionId])
+  @@index([attemptId, questionOrder])
+  @@index([questionId])
+}
