@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { AuthError, requireAdminUser } from '@/server/policies/auth';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
 import { deleteNote, updateNote } from '@/server/services/note.service';
-import { noteSchema } from '@/server/validators/admin-content';
+import { noteUpdateSchema } from '@/server/validators/admin-content';
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -29,7 +29,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
     const { id } = await context.params;
     const payload = await request.json();
-    const input = noteSchema.parse(payload);
+    const input = noteUpdateSchema.parse(payload);
     const note = await updateNote(id, input, user.id);
 
     return NextResponse.json({ success: true, data: note });

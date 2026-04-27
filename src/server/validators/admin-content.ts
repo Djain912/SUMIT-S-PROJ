@@ -25,8 +25,25 @@ export const noteSchema = z.object({
   title: z.string().min(1),
   contentJson: z.any().optional(),
   contentHtml: z.string().optional().nullable(),
+  watermarkConfig: z
+    .object({
+      enabled: z.coerce.boolean().default(false),
+      text: z.string().max(120).default('Confidential'),
+      opacity: z.coerce.number().min(0.05).max(0.4).default(0.14),
+      position: z.enum(['TILE', 'CENTER', 'TOP_LEFT', 'TOP_RIGHT', 'BOTTOM_LEFT', 'BOTTOM_RIGHT']).default('TILE'),
+      fontSize: z.coerce.number().int().min(12).max(40).default(18),
+      color: z
+        .string()
+        .regex(/^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/)
+        .default('#1f293780'),
+    })
+    .optional(),
   orderIndex: z.coerce.number().int().nonnegative().default(0),
   isPublished: z.coerce.boolean().default(false),
+});
+
+export const noteUpdateSchema = noteSchema.partial().omit({ subtopicId: true }).extend({
+  title: z.string().min(1).optional(),
 });
 
 export const questionOptionSchema = z.object({

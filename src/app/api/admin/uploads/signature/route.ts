@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { AuthError, requireAdminUser } from '@/server/policies/auth';
 import { createUploadSignature } from '@/lib/cloudinary/server';
 
 const bodySchema = z.object({
@@ -8,6 +9,16 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: Request) {
+  try {
+    await requireAdminUser();
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ success: false, error: { message: error.message } }, { status: error.statusCode });
+    }
+
+    return NextResponse.json({ success: false, error: { message: 'Unable to verify admin user' } }, { status: 500 });
+  }
+
   let payload: Record<string, unknown> = {};
   
   const contentLength = request.headers.get('content-length');

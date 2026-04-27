@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { AdminLevelTabs, type AdminLevel } from '@/components/admin/admin-level-tabs';
 import { TinyMceEditor } from '@/components/admin/tinymce-editor';
+import { DEFAULT_WATERMARK_CONFIG, sanitizeWatermarkConfig, type WatermarkConfig, type WatermarkPosition } from '@/lib/utils/watermark';
 
 type Level = AdminLevel;
 
@@ -25,23 +26,62 @@ type Note = {
   subtopicId: string;
   title: string;
   contentHtml: string | null;
+  watermarkConfig: unknown;
   orderIndex: number;
   isPublished: boolean;
 };
 
+const chaptersInFlight = new Map<Level, Promise<Chapter[]>>();
+const notesInFlight = new Map<string, Promise<Note[]>>();
+
 async function fetchChapters(level: Level): Promise<Chapter[]> {
-  const res = await fetch(`/api/admin/chapters?level=${level}`);
-  const data = await res.json();
-  return data.data || [];
+  const existing = chaptersInFlight.get(level);
+  if (existing) {
+    return existing;
+  }
+
+  const request = (async () => {
+    const res = await fetch(`/api/admin/chapters?level=${level}`);
+    const data = await res.json();
+    return data.data || [];
+  })();
+
+  chaptersInFlight.set(level, request);
+  request.finally(() => {
+    chaptersInFlight.delete(level);
+  });
+
+  return request;
 }
 
 async function fetchNotes(subtopicId: string): Promise<Note[]> {
-  const res = await fetch(`/api/admin/notes?subtopicId=${subtopicId}`);
-  const data = await res.json();
-  return data.data || [];
+  const existing = notesInFlight.get(subtopicId);
+  if (existing) {
+    return existing;
+  }
+
+  const request = (async () => {
+    const res = await fetch(`/api/admin/notes?subtopicId=${subtopicId}`);
+    const data = await res.json();
+    return data.data || [];
+  })();
+
+  notesInFlight.set(subtopicId, request);
+  request.finally(() => {
+    notesInFlight.delete(subtopicId);
+  });
+
+  return request;
 }
 
-async function saveNote(data: { subtopicId: string; title: string; contentHtml: string; orderIndex: number; isPublished: boolean }) {
+async function saveNote(data: {
+  subtopicId: string;
+  title: string;
+  contentHtml: string;
+  orderIndex: number;
+  isPublished: boolean;
+  watermarkConfig: WatermarkConfig;
+}) {
   const res = await fetch('/api/admin/notes', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -50,7 +90,7 @@ async function saveNote(data: { subtopicId: string; title: string; contentHtml: 
   return res.json();
 }
 
-async function updateNote(id: string, data: { title: string; contentHtml: string; isPublished: boolean }) {
+async function updateNote(id: string, data: { title: string; contentHtml: string; isPublished: boolean; watermarkConfig: WatermarkConfig }) {
   const res = await fetch(`/api/admin/notes/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -78,6 +118,7 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
   const [editPublished, setEditPublished] = useState(false);
+  const [editWatermark, setEditWatermark] = useState<WatermarkConfig>(DEFAULT_WATERMARK_CONFIG);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -110,6 +151,7 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
           title: editTitle,
           contentHtml: editContent,
           isPublished: editPublished,
+          watermarkConfig: editWatermark,
         });
       } else {
         // Create new note
@@ -119,14 +161,17 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
           contentHtml: editContent,
           orderIndex: notes.length,
           isPublished: editPublished,
+          watermarkConfig: editWatermark,
         });
       }
+      notesInFlight.delete(selectedSubtopic);
       fetchNotes(selectedSubtopic).then(setNotes);
       setIsEditing(false);
       setEditingNoteId(null);
       setEditTitle('');
       setEditContent('');
       setEditPublished(false);
+      setEditWatermark(DEFAULT_WATERMARK_CONFIG);
     } finally {
       setSaving(false);
     }
@@ -205,6 +250,7 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
                       setEditTitle(note.title);
                       setEditContent(note.contentHtml || '');
                       setEditPublished(note.isPublished);
+                      setEditWatermark(sanitizeWatermarkConfig(note.watermarkConfig));
                       setIsEditing(false);
                       setEditingNoteId(null);
                     }}
@@ -262,6 +308,79 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
                   Published
                 </label>
               </div>
+              <div className="space-y-3 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+                <p className="text-sm font-medium text-zinc-800">Watermark Protection</p>
+                <label className="flex items-center gap-2 text-sm text-zinc-700">
+                  <input
+                    type="checkbox"
+                    checked={editWatermark.enabled}
+                    onChange={(e) => setEditWatermark((prev) => ({ ...prev, enabled: e.target.checked }))}
+                    className="rounded border-zinc-300"
+                  />
+                  Enable watermark for this note
+                </label>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-xs font-medium uppercase tracking-wide text-zinc-500">Text</label>
+                    <input
+                      value={editWatermark.text}
+                      onChange={(e) => setEditWatermark((prev) => ({ ...prev, text: e.target.value.slice(0, 120) }))}
+                      className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+                      placeholder="Confidential"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium uppercase tracking-wide text-zinc-500">Position</label>
+                    <select
+                      value={editWatermark.position}
+                      onChange={(e) =>
+                        setEditWatermark((prev) => ({ ...prev, position: e.target.value as WatermarkPosition }))
+                      }
+                      className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+                    >
+                      <option value="TILE">Tile (background)</option>
+                      <option value="CENTER">Center</option>
+                      <option value="TOP_LEFT">Top left</option>
+                      <option value="TOP_RIGHT">Top right</option>
+                      <option value="BOTTOM_LEFT">Bottom left</option>
+                      <option value="BOTTOM_RIGHT">Bottom right</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium uppercase tracking-wide text-zinc-500">Opacity</label>
+                    <input
+                      type="range"
+                      min={0.05}
+                      max={0.4}
+                      step={0.01}
+                      value={editWatermark.opacity}
+                      onChange={(e) => setEditWatermark((prev) => ({ ...prev, opacity: Number(e.target.value) }))}
+                      className="mt-2 w-full"
+                    />
+                    <p className="mt-1 text-xs text-zinc-500">{Math.round(editWatermark.opacity * 100)}%</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium uppercase tracking-wide text-zinc-500">Font Size</label>
+                    <input
+                      type="number"
+                      min={12}
+                      max={40}
+                      value={editWatermark.fontSize}
+                      onChange={(e) => setEditWatermark((prev) => ({ ...prev, fontSize: Number(e.target.value) || 18 }))}
+                      className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium uppercase tracking-wide text-zinc-500">Color</label>
+                    <input
+                      type="color"
+                      value={editWatermark.color.slice(0, 7)}
+                      onChange={(e) => setEditWatermark((prev) => ({ ...prev, color: `${e.target.value}80` }))}
+                      className="mt-1 h-10 w-full rounded-lg border border-zinc-200 bg-white px-2"
+                    />
+                  </div>
+                </div>
+              </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => {
@@ -270,6 +389,7 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
                     setEditTitle('');
                     setEditContent('');
                     setEditPublished(false);
+                    setEditWatermark(DEFAULT_WATERMARK_CONFIG);
                   }}
                   className="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700"
                 >
@@ -292,6 +412,7 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
                   setEditTitle('');
                   setEditContent('');
                   setEditPublished(false);
+                  setEditWatermark(DEFAULT_WATERMARK_CONFIG);
                   setIsEditing(true);
                   setEditingNoteId(null);
                 }}
@@ -310,6 +431,7 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
                       setEditTitle(selectedNote.title);
                       setEditContent(selectedNote.contentHtml || '');
                       setEditPublished(selectedNote.isPublished);
+                      setEditWatermark(sanitizeWatermarkConfig(selectedNote.watermarkConfig));
                       setIsEditing(true);
                       setEditingNoteId(selectedNote.id);
                     }}
@@ -321,6 +443,7 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
                     onClick={async () => {
                       if (!confirm('Delete this note?')) return;
                       await deleteNote(selectedNote.id);
+                      notesInFlight.delete(selectedSubtopic);
                       fetchNotes(selectedSubtopic).then(setNotes);
                       setSelectedNote(null);
                     }}

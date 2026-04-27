@@ -16,6 +16,7 @@ function shuffle<T>(items: T[]) {
 export async function resolveQuizQuestions(selection: QuizSelectionInput) {
   const where: Prisma.QuestionWhereInput = {
     isPublished: true,
+    isDeleted: false,
   };
 
   const orConditions: Prisma.QuestionWhereInput[] = [];

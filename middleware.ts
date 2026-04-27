@@ -4,16 +4,26 @@ import { NextResponse, type NextRequest } from 'next/server';
 const protectedRoutes = ['/user', '/admin'];
 const publicAdminRoutes = ['/admin/login'];
 
+function applySecurityHeaders(response: NextResponse) {
+  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
+  response.headers.set('Cross-Origin-Resource-Policy', 'same-site');
+  return response;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (publicAdminRoutes.some((route) => pathname.startsWith(route))) {
-    return NextResponse.next();
+    return applySecurityHeaders(NextResponse.next());
   }
 
   const isProtected = protectedRoutes.some((route) => pathname.startsWith(route));
   if (!isProtected) {
-    return NextResponse.next();
+    return applySecurityHeaders(NextResponse.next());
   }
 
   const response = NextResponse.next({
@@ -48,10 +58,10 @@ export async function middleware(request: NextRequest) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = pathname.startsWith('/admin') ? '/admin/login' : '/sign-in';
     redirectUrl.searchParams.set('next', pathname);
-    return NextResponse.redirect(redirectUrl);
+    return applySecurityHeaders(NextResponse.redirect(redirectUrl));
   }
 
-  return response;
+  return applySecurityHeaders(response);
 }
 
 export const config = {

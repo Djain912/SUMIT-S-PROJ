@@ -26,6 +26,21 @@ async function loadSessionRole(): Promise<ExpectedRole | null> {
   return payload.data?.role ?? null;
 }
 
+async function waitForSessionRole(maxAttempts = 4): Promise<ExpectedRole | null> {
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const role = await loadSessionRole();
+    if (role) {
+      return role;
+    }
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, 150 * (attempt + 1));
+    });
+  }
+
+  return null;
+}
+
 export function SignInForm({
   allowGoogle = true,
   expectedRole = 'USER',
@@ -41,7 +56,7 @@ export function SignInForm({
 
   async function finishSignIn() {
     const supabase = createSupabaseBrowserClient();
-    const role = await loadSessionRole();
+    const role = await waitForSessionRole();
 
     if (expectedRole === 'ADMIN' && role !== 'ADMIN') {
       await supabase.auth.signOut();
@@ -80,10 +95,11 @@ export function SignInForm({
     setErrorMessage(null);
 
     const supabase = createSupabaseBrowserClient();
+    const nextParam = encodeURIComponent(redirectTo);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}${redirectTo}`,
+        redirectTo: `${window.location.origin}/auth/callback?next=${nextParam}`,
       },
     });
 

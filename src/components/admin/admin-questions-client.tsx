@@ -42,16 +42,47 @@ type Question = {
   options: QuestionOption[];
 };
 
+const chaptersInFlight = new Map<Level, Promise<Chapter[]>>();
+const questionsInFlight = new Map<string, Promise<Question[]>>();
+
 async function fetchChapters(level: Level): Promise<Chapter[]> {
-  const res = await fetch(`/api/admin/chapters?level=${level}`);
-  const data = await res.json();
-  return data.data || [];
+  const existing = chaptersInFlight.get(level);
+  if (existing) {
+    return existing;
+  }
+
+  const request = (async () => {
+    const res = await fetch(`/api/admin/chapters?level=${level}`);
+    const data = await res.json();
+    return data.data || [];
+  })();
+
+  chaptersInFlight.set(level, request);
+  request.finally(() => {
+    chaptersInFlight.delete(level);
+  });
+
+  return request;
 }
 
 async function fetchQuestions(subtopicId: string): Promise<Question[]> {
-  const res = await fetch(`/api/admin/questions?subtopicId=${subtopicId}`);
-  const data = await res.json();
-  return data.data || [];
+  const existing = questionsInFlight.get(subtopicId);
+  if (existing) {
+    return existing;
+  }
+
+  const request = (async () => {
+    const res = await fetch(`/api/admin/questions?subtopicId=${subtopicId}`);
+    const data = await res.json();
+    return data.data || [];
+  })();
+
+  questionsInFlight.set(subtopicId, request);
+  request.finally(() => {
+    questionsInFlight.delete(subtopicId);
+  });
+
+  return request;
 }
 
 async function saveQuestion(data: {
@@ -129,6 +160,7 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
         isPublished: editPublished,
         options: editOptions,
       });
+      questionsInFlight.delete(selectedSubtopic);
       fetchQuestions(selectedSubtopic).then(setQuestions);
       setIsEditing(false);
     } finally {

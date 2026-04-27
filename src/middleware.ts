@@ -19,8 +19,8 @@ export async function middleware(request: NextRequest) {
           response.cookies.set(name, value, options);
         },
         remove(name, options) {
-          request.cookies.set(name, '', options);
-          response.cookies.set(name, '', options);
+          request.cookies.delete(name);
+          response.cookies.delete(name);
         },
       },
     }

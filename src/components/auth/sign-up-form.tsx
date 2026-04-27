@@ -23,7 +23,7 @@ export function SignUpForm() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/user`,
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/user')}`,
       },
     });
 
@@ -57,9 +57,16 @@ export function SignUpForm() {
     }
 
     if (!data.session) {
-      setSuccessMessage('Account created. Check your inbox to verify your email, then sign in.');
-      setIsLoading(false);
-      return;
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInError) {
+        setSuccessMessage('Account created. Check your inbox to verify your email, then sign in.');
+        setIsLoading(false);
+        return;
+      }
     }
 
     router.replace('/user');

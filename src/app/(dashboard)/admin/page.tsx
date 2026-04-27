@@ -23,15 +23,16 @@ export default async function AdminDashboardPage({
 
   try {
     const [chapters, subtopics, notes, questions] = await Promise.all([
-      prisma.chapter.count({ where: { level: selectedLevel } }),
-      prisma.subtopic.count({ where: { chapter: { level: selectedLevel } } }),
-      prisma.note.count({ where: { subtopic: { chapter: { level: selectedLevel } } } }),
+      prisma.chapter.count({ where: { level: selectedLevel, isDeleted: false } }),
+      prisma.subtopic.count({ where: { chapter: { level: selectedLevel, isDeleted: false } } }),
+      prisma.note.count({ where: { subtopic: { chapter: { level: selectedLevel } }, isDeleted: false } }),
       prisma.question.count({
         where: {
+          isDeleted: false,
           OR: [
             { level: selectedLevel },
-            { chapter: { level: selectedLevel } },
-            { subtopic: { chapter: { level: selectedLevel } } },
+            { chapter: { level: selectedLevel, isDeleted: false } },
+            { subtopic: { chapter: { level: selectedLevel }, isDeleted: false } },
           ],
         },
       }),
@@ -49,49 +50,26 @@ export default async function AdminDashboardPage({
   ];
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-sm font-medium text-zinc-500">{formatLevel(selectedLevel)}</p>
-          <h2 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-950">Curriculum Overview</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500">
-            Review the structure and readiness of study content before students see it.
-          </p>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">{formatLevel(selectedLevel)}</p>
+          <h2 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-950 sm:text-[1.7rem]">Overview</h2>
         </div>
         <AdminLevelTabs selectedLevel={selectedLevel} />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {cards.map((item) => (
           <Link
             key={item.label}
             href={item.href}
-            className="group rounded-lg border border-zinc-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md"
+            className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:p-5"
           >
             <p className="text-sm font-medium text-zinc-500">{item.label}</p>
-            <p className="mt-3 text-3xl font-semibold tracking-tight text-zinc-950">{item.value}</p>
-            <p className="mt-3 text-sm font-medium text-zinc-500 transition group-hover:text-zinc-950">
-              Open section
-            </p>
+            <p className="mt-2 text-2xl font-semibold tracking-tight text-zinc-950 sm:text-[2rem]">{item.value}</p>
           </Link>
         ))}
-      </div>
-
-      <div className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
-        <div>
-          <h2 className="text-base font-semibold text-zinc-950">Level Structure</h2>
-          <p className="mt-1 text-sm text-zinc-500">
-            Keep each exam level organized into chapters, subtopics, notes, and question banks.
-          </p>
-        </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          {levels.map((level) => (
-            <div key={level} className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
-              <p className="text-sm font-semibold text-zinc-900">{formatLevel(level)}</p>
-              <p className="mt-2 text-sm leading-6 text-zinc-500">Dedicated curriculum path for this level.</p>
-            </div>
-          ))}
-        </div>
       </div>
     </div>
   );

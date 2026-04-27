@@ -56,11 +56,6 @@ type Question = {
   options: QuestionOption[];
 };
 
-type RichTextValue = {
-  json: Record<string, unknown>;
-  html: string;
-};
-
 type UploadSignature = {
   cloudName: string;
   apiKey: string;
@@ -182,7 +177,14 @@ export function AdminCmsClient() {
     return imageUrl;
   };
 
-  const [chapterForm, setChapterForm] = useState({
+  const [chapterForm, setChapterForm] = useState<{
+    level: Level;
+    title: string;
+    slug: string;
+    description: string;
+    orderIndex: number;
+    isPublished: boolean;
+  }>({
     level: 'LEVEL_1' as Level,
     title: '',
     slug: '',
@@ -191,7 +193,14 @@ export function AdminCmsClient() {
     isPublished: false,
   });
 
-  const [subtopicForm, setSubtopicForm] = useState({
+  const [subtopicForm, setSubtopicForm] = useState<{
+    chapterId: string;
+    title: string;
+    slug: string;
+    description: string;
+    orderIndex: number;
+    isPublished: boolean;
+  }>({
     chapterId: '',
     title: '',
     slug: '',
@@ -200,7 +209,14 @@ export function AdminCmsClient() {
     isPublished: false,
   });
 
-  const [noteForm, setNoteForm] = useState({
+  const [noteForm, setNoteForm] = useState<{
+    subtopicId: string;
+    title: string;
+    contentJson: Record<string, unknown>;
+    contentHtml: string;
+    orderIndex: number;
+    isPublished: boolean;
+  }>({
     subtopicId: '',
     title: '',
     contentJson: emptyDocument,
@@ -209,7 +225,19 @@ export function AdminCmsClient() {
     isPublished: false,
   });
 
-  const [questionForm, setQuestionForm] = useState({
+  const [questionForm, setQuestionForm] = useState<{
+    level: Level;
+    chapterId: string;
+    subtopicId: string;
+    promptJson: Record<string, unknown>;
+    promptHtml: string;
+    explanationJson: Record<string, unknown>;
+    explanationHtml: string;
+    questionType: 'SINGLE_CHOICE' | 'MULTI_CHOICE';
+    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+    isPublished: boolean;
+    options: QuestionOption[];
+  }>({
     level: 'LEVEL_1' as Level,
     chapterId: '',
     subtopicId: '',
@@ -217,7 +245,7 @@ export function AdminCmsClient() {
     promptHtml: '<p></p>',
     explanationJson: emptyDocument,
     explanationHtml: '<p></p>',
-    questionType: 'SINGLE_CHOICE' as const,
+    questionType: 'SINGLE_CHOICE' as 'SINGLE_CHOICE' | 'MULTI_CHOICE',
     difficulty: 'MEDIUM' as 'EASY' | 'MEDIUM' | 'HARD',
     isPublished: false,
     options: createEmptyQuestionOptions(),

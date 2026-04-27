@@ -8,10 +8,10 @@ type Level = 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3';
 
 async function getChaptersByLevel(level: Level) {
   return prisma.chapter.findMany({
-    where: { level },
+    where: { level, isDeleted: false },
     orderBy: { orderIndex: 'asc' },
     include: {
-      _count: { select: { subtopics: true, questions: true } },
+      _count: { select: { subtopics: { where: { isDeleted: false } }, questions: { where: { isDeleted: false } } } },
     },
   });
 }
@@ -70,7 +70,10 @@ export default async function AdminChaptersPage({
   async function handleDelete(id: string) {
     'use server';
     await requireAdminUser();
-    await prisma.chapter.delete({ where: { id } });
+    await prisma.chapter.update({
+      where: { id },
+      data: { isDeleted: true, deletedAt: new Date() },
+    });
     revalidatePath('/admin/chapters');
   }
 

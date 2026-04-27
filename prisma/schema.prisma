@@ -48,6 +48,17 @@ enum QuestionDifficulty {
   HARD
 }
 
+enum QuestionReportStatus {
+  PENDING
+  REVIEWED
+  DISMISSED
+}
+
+enum QuizFlagColor {
+  YELLOW
+  RED
+}
+
 model User {
   id             String    @id @default(cuid())
   supabaseUserId String    @unique
@@ -65,63 +76,79 @@ model User {
   updatedQuestions Question[] @relation("QuestionUpdatedBy")
   quizAttempts   QuizAttempt[]
   mediaUploads   MediaAsset[]
+  questionReports QuestionReport[]
+  noteReports NoteReport[]
 }
 
 model Chapter {
-  id          String     @id @default(cuid())
+  id          String      @id @default(cuid())
   level       CmtLevel
   title       String
   slug        String
   description String?
-  orderIndex  Int        @default(0)
-  isPublished Boolean    @default(false)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  orderIndex  Int         @default(0)
+  isPublished Boolean     @default(false)
+  isDeleted   Boolean     @default(false)
+  deletedAt   DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
   subtopics   Subtopic[]
   questions   Question[]
 
   @@unique([level, slug])
   @@index([level, isPublished, orderIndex])
+  @@index([level, isDeleted])
+  @@index([level, isDeleted, orderIndex])
 }
 
 model Subtopic {
-  id          String     @id @default(cuid())
+  id          String      @id @default(cuid())
   chapterId   String
   title       String
   slug        String
   description String?
-  orderIndex  Int        @default(0)
-  isPublished Boolean    @default(false)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  orderIndex  Int         @default(0)
+  isPublished Boolean     @default(false)
+  isDeleted   Boolean     @default(false)
+  deletedAt   DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
-  chapter     Chapter    @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  chapter     Chapter     @relation(fields: [chapterId], references: [id], onDelete: Cascade)
   notes       Note[]
   questions   Question[]
 
   @@unique([chapterId, slug])
   @@index([chapterId, isPublished, orderIndex])
+  @@index([chapterId, isDeleted])
+  @@index([chapterId, isDeleted, orderIndex])
 }
 
 model Note {
-  id           String     @id @default(cuid())
+  id           String      @id @default(cuid())
   subtopicId   String
   title        String
   contentJson  Json
   contentHtml  String?
-  orderIndex   Int        @default(0)
-  isPublished  Boolean    @default(false)
+  watermarkConfig Json?
+  orderIndex   Int         @default(0)
+  isPublished  Boolean     @default(false)
+  isDeleted    Boolean     @default(false)
+  deletedAt    DateTime?
   createdById  String?
   updatedById  String?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
-  subtopic     Subtopic   @relation(fields: [subtopicId], references: [id], onDelete: Cascade)
-  createdBy    User?      @relation("NoteCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  updatedBy    User?      @relation("NoteUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  subtopic     Subtopic    @relation(fields: [subtopicId], references: [id], onDelete: Cascade)
+  createdBy    User?       @relation("NoteCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy    User?       @relation("NoteUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  noteReports NoteReport[]
 
   @@index([subtopicId, isPublished, orderIndex])
+  @@index([subtopicId, isDeleted])
+  @@index([subtopicId, isDeleted, orderIndex])
 }
 
 model MediaAsset {
@@ -150,6 +177,8 @@ model Question {
   questionType      QuestionType      @default(SINGLE_CHOICE)
   difficulty       QuestionDifficulty?
   isPublished      Boolean           @default(false)
+  isDeleted         Boolean           @default(false)
+  deletedAt         DateTime?
   createdById      String?
   updatedById      String?
   createdAt        DateTime          @default(now())
@@ -161,26 +190,36 @@ model Question {
   attemptItems     QuizAttemptItem[]
   createdBy        User?             @relation("QuestionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   updatedBy        User?             @relation("QuestionUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  reports          QuestionReport[]
 
   @@index([level, isPublished])
+  @@index([level, isDeleted])
   @@index([chapterId, isPublished])
+  @@index([chapterId, isDeleted])
   @@index([subtopicId, isPublished])
+  @@index([subtopicId, isDeleted])
+  @@index([subtopicId, isDeleted, createdAt])
   @@index([isPublished, difficulty])
+  @@index([level, chapterId, isPublished])
+  @@index([level, subtopicId, isPublished])
 }
 
 model QuestionOption {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   questionId  String
   contentJson Json
-  isCorrect   Boolean  @default(false)
-  orderIndex  Int      @default(0)
-  createdAt   DateTime @default(now())
+  isCorrect   Boolean   @default(false)
+  orderIndex  Int       @default(0)
+  isDeleted   Boolean   @default(false)
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
 
-  question    Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  question    Question  @relation(fields: [questionId], references: [id], onDelete: Cascade)
   selectedIn  QuizAttemptItem[]
 
   @@unique([questionId, orderIndex])
   @@index([questionId, isCorrect])
+  @@index([questionId, isDeleted])
 }
 
 model QuizAttempt {
@@ -216,6 +255,8 @@ model QuizAttemptItem {
   isCorrect              Boolean         @default(false)
   answeredAt             DateTime        @default(now())
   timeSpentSeconds       Int?
+  flagColor              QuizFlagColor?
+  flaggedAt              DateTime?
 
   attempt                QuizAttempt     @relation(fields: [attemptId], references: [id], onDelete: Cascade)
   question               Question        @relation(fields: [questionId], references: [id], onDelete: Restrict)
@@ -223,5 +264,38 @@ model QuizAttemptItem {
 
   @@unique([attemptId, questionId])
   @@index([attemptId, questionOrder])
+  @@index([attemptId, flagColor])
   @@index([questionId])
+}
+
+model QuestionReport {
+  id          String                  @id @default(cuid())
+  questionId  String
+  userId      String
+  reason      String
+  status      QuestionReportStatus    @default(PENDING)
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+
+  question    Question                @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user        User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@unique([questionId, userId])
+}
+
+model NoteReport {
+  id          String                  @id @default(cuid())
+  noteId      String
+  userId      String
+  reason      String
+  status      QuestionReportStatus    @default(PENDING)
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+
+  note        Note                    @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  user        User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@unique([noteId, userId])
 }

@@ -9,12 +9,28 @@ export async function GET(request: Request) {
     const level = searchParams.get('level') as 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3' | null;
 
     const chapters = await prisma.chapter.findMany({
-      where: level ? { level } : undefined,
+      where: {
+        ...(level ? { level } : {}),
+        isDeleted: false,
+      },
       orderBy: { orderIndex: 'asc' },
-      include: {
+      select: {
+        id: true,
+        level: true,
+        title: true,
+        slug: true,
+        description: true,
+        orderIndex: true,
+        isPublished: true,
         subtopics: {
+          where: { isDeleted: false },
           orderBy: { orderIndex: 'asc' },
-          where: { isPublished: true },
+          select: {
+            id: true,
+            chapterId: true,
+            title: true,
+            slug: true,
+          },
         },
       },
     });

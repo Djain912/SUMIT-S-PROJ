@@ -4,9 +4,7 @@ import { getUserDashboardData } from '@/server/services/dashboard.service';
 
 export async function GET(request: Request) {
   try {
-    console.log('Dashboard API called');
     const user = await requireAuthenticatedUser();
-    console.log('User authenticated:', user.id);
     const { searchParams } = new URL(request.url);
     const levelParam = searchParams.get('level') ?? 'LEVEL_1';
     
@@ -15,10 +13,8 @@ export async function GET(request: Request) {
     }
     
     const level = levelParam as 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3';
-    console.log('Loading dashboard for level:', level);
 
     const data = await getUserDashboardData(user.id, level);
-    console.log('Dashboard data loaded successfully');
 
     return NextResponse.json({ success: true, data });
   } catch (error) {

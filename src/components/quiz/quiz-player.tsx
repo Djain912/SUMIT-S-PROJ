@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
+import { Flag, AlertTriangle, CircleX } from 'lucide-react';
 
 type Level = 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3';
 type QuizMode = 'SUBTOPIC' | 'CHAPTER' | 'CUSTOM' | 'FULL_TEST';
@@ -44,6 +45,8 @@ type AttemptItem = {
   selectedOptionId: string | null;
   selectedOptionSnapshotJson: { id: string; isCorrect: boolean } | null;
   isCorrect: boolean;
+  flagColor?: 'YELLOW' | 'RED' | null;
+  flaggedAt?: string | null;
 };
 
 type QuizAttempt = {
@@ -104,13 +107,14 @@ export function QuizPlayer() {
   const [selectedCustomSubtopicIds, setSelectedCustomSubtopicIds] = useState<string[]>([]);
   const [attempt, setAttempt] = useState<QuizAttempt | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [selectedOptionId, setSelectedOptionId] = useState('');
-  const [answerFeedback, setAnswerFeedback] = useState<{ isCorrect: boolean } | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmittingAnswer, setIsSubmittingAnswer] = useState(false);
   const [questionStartedAt, setQuestionStartedAt] = useState<number>(Date.now());
   const [isCompleted, setIsCompleted] = useState(false);
+  const [isFlagging, setIsFlagging] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [isReporting, setIsReporting] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -133,7 +137,22 @@ export function QuizPlayer() {
     if (urlSubtopic) {
       setSelectedSubtopicId(urlSubtopic);
     }
-  }, []);
+
+    if ((urlChapter || urlSubtopic) && mode !== 'FULL_TEST') {
+      const timer = setTimeout(() => {
+        if (urlSubtopic && subtopics.length > 0) {
+          const found = subtopics.find(st => st.id === urlSubtopic);
+          if (found) {
+            setSelectedSubtopicId(urlSubtopic);
+            if (found.chapterId && !selectedChapterId) {
+              setSelectedChapterId(found.chapterId);
+            }
+          }
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [mode, subtopics, selectedChapterId]);
 
   const currentItem = useMemo(() => {
     if (!attempt) {
@@ -144,6 +163,10 @@ export function QuizPlayer() {
   }, [attempt, currentIndex]);
 
   const currentQuestion = currentItem?.questionSnapshotJson ?? null;
+
+  useEffect(() => {
+    setReportReason('');
+  }, [currentItem?.questionId]);
 
   async function loadChapters(nextLevel: Level) {
     const data = await apiJson<Chapter[]>(`/api/chapters?level=${nextLevel}`);
@@ -215,8 +238,6 @@ async function handleStartQuiz() {
 
       setAttempt(startedAttempt);
       setCurrentIndex(0);
-      setSelectedOptionId('');
-      setAnswerFeedback(null);
       setIsCompleted(false);
       setQuestionStartedAt(Date.now());
     } catch (error) {
@@ -226,8 +247,69 @@ async function handleStartQuiz() {
     }
   }
 
-  async function handleSubmitAnswer() {
-    if (!attempt || !currentItem || !selectedOptionId) {
+  function updateCurrentSelection(nextOptionId: string) {
+    setAttempt((currentAttempt) => {
+      if (!currentAttempt) {
+        return currentAttempt;
+      }
+
+      const nextItems = [...currentAttempt.items];
+      nextItems[currentIndex] = {
+        ...nextItems[currentIndex],
+        selectedOptionId: nextOptionId,
+      };
+
+      return {
+        ...currentAttempt,
+        items: nextItems,
+      };
+    });
+  }
+
+  async function persistAnswerForItem(item: AttemptItem) {
+    if (!attempt || !item.selectedOptionId) {
+      return;
+    }
+
+    const timeSpentSeconds = Math.max(1, Math.round((Date.now() - questionStartedAt) / 1000));
+    const updatedItem = await apiJson<AttemptItem>(`/api/quizzes/${attempt.id}/answer`, {
+      method: 'POST',
+      body: JSON.stringify({
+        questionId: item.questionId,
+        selectedOptionId: item.selectedOptionId,
+        timeSpentSeconds,
+      }),
+    });
+
+    setAttempt((currentAttempt) => {
+      if (!currentAttempt) {
+        return currentAttempt;
+      }
+
+      const targetIndex = currentAttempt.items.findIndex((entry) => entry.id === item.id);
+      if (targetIndex < 0) {
+        return currentAttempt;
+      }
+
+      const nextItems = [...currentAttempt.items];
+      nextItems[targetIndex] = {
+        ...nextItems[targetIndex],
+        ...updatedItem,
+      };
+
+      return {
+        ...currentAttempt,
+        items: nextItems,
+      };
+    });
+  }
+
+  async function handleNextQuestion() {
+    if (!attempt) {
+      return;
+    }
+
+    if (!currentItem) {
       return;
     }
 
@@ -235,43 +317,10 @@ async function handleStartQuiz() {
     setErrorMessage('');
 
     try {
-      const timeSpentSeconds = Math.max(1, Math.round((Date.now() - questionStartedAt) / 1000));
-      const updatedItem = await apiJson<AttemptItem>(`/api/quizzes/${attempt.id}/answer`, {
-        method: 'POST',
-        body: JSON.stringify({
-          questionId: currentItem.questionId,
-          selectedOptionId,
-          timeSpentSeconds,
-        }),
-      });
-
-      setAttempt((currentAttempt) => {
-        if (!currentAttempt) {
-          return currentAttempt;
-        }
-
-        const nextItems = [...currentAttempt.items];
-        nextItems[currentIndex] = {
-          ...nextItems[currentIndex],
-          ...updatedItem,
-        };
-
-        return {
-          ...currentAttempt,
-          items: nextItems,
-        };
-      });
-
-      setAnswerFeedback({ isCorrect: updatedItem.isCorrect });
+      await persistAnswerForItem(currentItem);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Unable to submit answer');
-    } finally {
+      setErrorMessage(error instanceof Error ? error.message : 'Unable to save answer');
       setIsSubmittingAnswer(false);
-    }
-  }
-
-  async function handleNextQuestion() {
-    if (!attempt) {
       return;
     }
 
@@ -287,19 +336,118 @@ async function handleStartQuiz() {
         setIsCompleted(true);
       } catch (error) {
         setErrorMessage(error instanceof Error ? error.message : 'Unable to complete quiz');
+      } finally {
+        setIsSubmittingAnswer(false);
       }
 
       return;
     }
 
     setCurrentIndex((value) => value + 1);
-    setSelectedOptionId('');
-    setAnswerFeedback(null);
     setQuestionStartedAt(Date.now());
+    setIsSubmittingAnswer(false);
+  }
+
+  async function handleFlagQuestion(flagColor: 'YELLOW' | 'RED' | null) {
+    if (!attempt || !currentItem) {
+      return;
+    }
+
+    setIsFlagging(true);
+    setErrorMessage('');
+
+    try {
+      const updatedItem = await apiJson<AttemptItem>(
+        `/api/quizzes/${attempt.id}/items/${currentItem.id}/flag`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ flagColor }),
+        }
+      );
+
+      setAttempt((currentAttempt) => {
+        if (!currentAttempt) {
+          return currentAttempt;
+        }
+
+        const nextItems = [...currentAttempt.items];
+        nextItems[currentIndex] = {
+          ...nextItems[currentIndex],
+          flagColor: updatedItem.flagColor,
+          flaggedAt: updatedItem.flaggedAt,
+        };
+
+        return {
+          ...currentAttempt,
+          items: nextItems,
+        };
+      });
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Unable to flag question');
+    } finally {
+      setIsFlagging(false);
+    }
+  }
+
+  async function handleReportQuestion() {
+    if (!currentQuestion || !reportReason.trim()) {
+      return;
+    }
+
+    setIsReporting(true);
+    setErrorMessage('');
+
+    try {
+      await apiJson(`/api/user/questions/${currentQuestion.id}/report`, {
+        method: 'POST',
+        body: JSON.stringify({ reason: reportReason.trim() }),
+      });
+
+      alert('Question reported successfully');
+      setReportReason('');
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Unable to report question');
+    } finally {
+      setIsReporting(false);
+    }
+  }
+
+  async function handleJumpToQuestion(index: number) {
+    if (!attempt || !currentItem || index === currentIndex) {
+      return;
+    }
+
+    setIsSubmittingAnswer(true);
+    setErrorMessage('');
+
+    try {
+      await persistAnswerForItem(currentItem);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Unable to save answer');
+      setIsSubmittingAnswer(false);
+      return;
+    }
+
+    setCurrentIndex(index);
+    setQuestionStartedAt(Date.now());
+    setIsSubmittingAnswer(false);
+  }
+
+  function getOptionText(item: AttemptItem, optionId: string | null): string {
+    if (!optionId) {
+      return 'Not answered';
+    }
+
+    const option = item.questionSnapshotJson.options.find((entry) => entry.id === optionId);
+    if (!option) {
+      return 'Answer unavailable';
+    }
+
+    return extractTextFromRichJson(option.contentJson) || 'Answer unavailable';
   }
 
   return (
-    <section className="space-y-6 rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
+    <section className="space-y-6 rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm pb-24">
       <header className="space-y-2">
         <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">Quiz Practice</p>
         <h2 className="text-2xl font-semibold text-zinc-950">Take a level-based quiz</h2>
@@ -423,26 +571,53 @@ async function handleStartQuiz() {
           </button>
         </div>
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-5 pb-28">
           {isCompleted ? (
-            <div className="space-y-4 rounded-2xl border border-zinc-200 bg-zinc-50 p-5">
-              <h3 className="text-xl font-semibold text-zinc-950">Quiz completed</h3>
-              <p className="text-sm text-zinc-700">
-                Score: {attempt.correctCount} / {attempt.totalQuestions} ({Math.round(attempt.scorePercentage ?? 0)}%)
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setAttempt(null);
-                  setCurrentIndex(0);
-                  setAnswerFeedback(null);
-                  setSelectedOptionId('');
-                  setIsCompleted(false);
-                }}
-                className="rounded-full border border-zinc-300 bg-white px-5 py-2 text-sm"
-              >
-                Start another quiz
-              </button>
+            <div className="space-y-4">
+              <div className="space-y-4 rounded-2xl border border-zinc-200 bg-zinc-50 p-5">
+                <h3 className="text-xl font-semibold text-zinc-950">Quiz completed</h3>
+                <p className="text-sm text-zinc-700">
+                  Score: {attempt.correctCount} / {attempt.totalQuestions} ({Math.round(attempt.scorePercentage ?? 0)}%)
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAttempt(null);
+                    setCurrentIndex(0);
+                    setIsCompleted(false);
+                  }}
+                  className="rounded-full border border-zinc-300 bg-white px-5 py-2 text-sm"
+                >
+                  Start another quiz
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {attempt.items.map((item, index) => (
+                  <div key={item.id} className="rounded-2xl border border-zinc-200 bg-white p-5">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-medium text-zinc-700">Question {index + 1}</p>
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                          item.isCorrect ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                        }`}
+                      >
+                        {item.isCorrect ? 'Correct' : 'Wrong'}
+                      </span>
+                    </div>
+                    <p className="mt-3 text-sm leading-6 text-zinc-900">
+                      {extractTextFromRichJson(item.questionSnapshotJson.promptJson) || 'Question text unavailable'}
+                    </p>
+                    <p className="mt-3 text-sm text-zinc-700">
+                      <span className="font-medium">Your answer:</span> {getOptionText(item, item.selectedOptionId)}
+                    </p>
+                    <p className="mt-3 text-sm text-zinc-700">
+                      <span className="font-medium">Explanation:</span>{' '}
+                      {extractTextFromRichJson(item.questionSnapshotJson.explanationJson) || 'No explanation available.'}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : (
             <>
@@ -465,8 +640,8 @@ async function handleStartQuiz() {
                       <input
                         type="radio"
                         name={`question-${currentQuestion.id}`}
-                        checked={selectedOptionId === option.id}
-                        onChange={() => setSelectedOptionId(option.id)}
+                        checked={currentItem?.selectedOptionId === option.id}
+                        onChange={() => updateCurrentSelection(option.id)}
                       />
                       <span className="text-sm text-zinc-800">{optionText}</span>
                     </label>
@@ -474,36 +649,127 @@ async function handleStartQuiz() {
                 })}
               </div>
 
-              {answerFeedback ? (
-                <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
-                  <p className={`text-sm font-medium ${answerFeedback.isCorrect ? 'text-emerald-700' : 'text-red-700'}`}>
-                    {answerFeedback.isCorrect ? 'Correct answer.' : 'Incorrect answer.'}
-                  </p>
-                  <p className="mt-2 text-sm text-zinc-700">
-                    {extractTextFromRichJson(currentQuestion?.explanationJson) || 'No explanation available.'}
-                  </p>
-                </div>
-              ) : null}
+              <div className="flex gap-3 items-center">
+                <button
+                  type="button"
+                  onClick={() => void handleNextQuestion()}
+                  disabled={isSubmittingAnswer}
+                  className="rounded-full bg-zinc-950 px-6 py-2.5 text-sm font-medium text-white disabled:opacity-60"
+                >
+                  {isSubmittingAnswer
+                    ? 'Saving...'
+                    : currentIndex >= attempt.items.length - 1
+                    ? 'Submit quiz'
+                    : 'Save & next'}
+                </button>
 
-              <div className="flex gap-3">
-                {!answerFeedback ? (
+                <button
+                  type="button"
+                  disabled={currentIndex === 0 || isSubmittingAnswer}
+                  onClick={() => setCurrentIndex((value) => Math.max(0, value - 1))}
+                  className="rounded-full border border-zinc-300 bg-white px-5 py-2.5 text-sm font-medium text-zinc-700 disabled:opacity-60"
+                >
+                  Previous
+                </button>
+
+                <div className="ml-auto flex items-center gap-2">
                   <button
                     type="button"
-                    disabled={!selectedOptionId || isSubmittingAnswer}
-                    onClick={handleSubmitAnswer}
-                    className="rounded-full bg-zinc-950 px-6 py-2.5 text-sm font-medium text-white disabled:opacity-60"
+                    onClick={() => void handleFlagQuestion('YELLOW')}
+                    disabled={isFlagging}
+                    title="Flag for review"
+                    className={`rounded-full border px-3 py-2 text-sm transition ${
+                      currentItem?.flagColor === 'YELLOW'
+                        ? 'border-yellow-400 bg-yellow-100 text-yellow-900'
+                        : 'border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50'
+                    }`}
                   >
-                    {isSubmittingAnswer ? 'Submitting...' : 'Submit answer'}
+                    <AlertTriangle className="h-4 w-4" />
                   </button>
-                ) : (
                   <button
                     type="button"
-                    onClick={handleNextQuestion}
-                    className="rounded-full bg-zinc-950 px-6 py-2.5 text-sm font-medium text-white"
+                    onClick={() => void handleFlagQuestion('RED')}
+                    disabled={isFlagging}
+                    title="Flag as wrong"
+                    className={`rounded-full border px-3 py-2 text-sm transition ${
+                      currentItem?.flagColor === 'RED'
+                        ? 'border-red-400 bg-red-100 text-red-900'
+                        : 'border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50'
+                    }`}
                   >
-                    {currentIndex >= attempt.items.length - 1 ? 'Finish quiz' : 'Next question'}
+                    <CircleX className="h-4 w-4" />
                   </button>
-                )}
+                  <button
+                    type="button"
+                    onClick={() => void handleFlagQuestion(null)}
+                    disabled={isFlagging || !currentItem?.flagColor}
+                    title="Clear flag"
+                    className="rounded-full border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-700 disabled:opacity-60 hover:bg-zinc-50"
+                  >
+                    <Flag className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-orange-200 bg-orange-50 p-4">
+                <p className="mb-3 text-sm font-medium text-orange-900">Report this question</p>
+                <textarea
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                  placeholder="Describe what is wrong in this question (max 500 characters)"
+                  maxLength={500}
+                  className="w-full rounded-lg border border-orange-300 p-2 text-sm resize-none"
+                  rows={3}
+                />
+                <div className="mt-3 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void handleReportQuestion()}
+                    disabled={!reportReason.trim() || isReporting}
+                    className="rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60 hover:bg-orange-700"
+                  >
+                    {isReporting ? 'Reporting...' : 'Submit report'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setReportReason('')}
+                    className="rounded-full border border-orange-300 bg-white px-4 py-2 text-sm font-medium text-orange-700 hover:bg-orange-50"
+                  >
+                    Clear text
+                  </button>
+                </div>
+              </div>
+
+              <div className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl border border-zinc-200 border-b-0 bg-white px-4 py-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+                <div className="grid grid-cols-10 gap-1.5 md:grid-cols-12 md:gap-2">
+                  {attempt.items.map((item, index) => {
+                    const isCurrent = currentIndex === index;
+                    const isAnswered = Boolean(item.selectedOptionId);
+
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => void handleJumpToQuestion(index)}
+                        disabled={isSubmittingAnswer}
+                        title={`Q${index + 1}${isAnswered ? ' - Answered' : ''}${item.flagColor ? ` - Flagged ${item.flagColor}` : ''}`}
+                        className={`flex h-8 w-8 items-center justify-center rounded text-xs font-semibold transition ${
+                          isCurrent ? 'ring-2 ring-zinc-950' : ''
+                        } ${
+                          item.flagColor === 'YELLOW'
+                            ? 'bg-yellow-400 text-zinc-900'
+                            : item.flagColor === 'RED'
+                            ? 'bg-red-500 text-white'
+                            : isAnswered
+                            ? 'bg-emerald-200 text-emerald-900'
+                            : 'bg-zinc-100 text-zinc-600'
+                        }`}
+                      >
+                        {index + 1}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </>
           )}
