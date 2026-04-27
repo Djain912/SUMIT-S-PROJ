@@ -267,7 +267,21 @@ export function UserNotesClient() {
       )}
 
       {isLoading ? (
-        <div className="py-12 text-center text-zinc-500">Loading notes...</div>
+        <div className="grid gap-6 lg:grid-cols-[280px_1fr] animate-pulse">
+          <div className="space-y-3">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div key={index} className="h-10 rounded-lg bg-zinc-200" />
+            ))}
+          </div>
+          <div className="rounded-xl border border-zinc-200 bg-white p-6">
+            <div className="h-6 w-1/2 rounded bg-zinc-200" />
+            <div className="mt-5 space-y-3">
+              {Array.from({ length: 8 }).map((_, index) => (
+                <div key={index} className="h-4 rounded bg-zinc-100" />
+              ))}
+            </div>
+          </div>
+        </div>
       ) : error ? (
         <div className="py-12 text-center text-red-600">{error}</div>
       ) : notes.length === 0 ? (

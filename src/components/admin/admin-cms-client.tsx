@@ -318,8 +318,7 @@ export function AdminCmsClient() {
   }
 
   useEffect(() => {
-    void loadChapters(selectedLevel);
-    void loadQuestions();
+    void Promise.all([loadChapters(selectedLevel), loadQuestions()]);
   }, [selectedLevel]);
 
   useEffect(() => {

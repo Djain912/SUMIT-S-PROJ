@@ -122,8 +122,23 @@ export function UserAnalyticsClient() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <p className="text-zinc-500">Loading analytics...</p>
+      <div className="space-y-6 animate-pulse">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="rounded-xl border border-zinc-200 bg-white p-5">
+              <div className="h-4 w-28 rounded bg-zinc-200" />
+              <div className="mt-4 h-8 w-20 rounded bg-zinc-200" />
+            </div>
+          ))}
+        </div>
+        <div className="rounded-xl border border-zinc-200 bg-white p-5">
+          <div className="h-4 w-36 rounded bg-zinc-200" />
+          <div className="mt-5 space-y-3">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div key={index} className="h-4 rounded bg-zinc-100" />
+            ))}
+          </div>
+        </div>
       </div>
     );
   }

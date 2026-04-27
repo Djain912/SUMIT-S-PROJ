@@ -1,68 +1,41 @@
-import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
-  const response = NextResponse.next({
-    request,
-  });
+  const pathname = request.nextUrl.pathname;
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name) {
-          return request.cookies.get(name)?.value;
-        },
-        set(name, value, options) {
-          request.cookies.set(name, value);
-          response.cookies.set(name, value, options);
-        },
-        remove(name, options) {
-          request.cookies.delete(name);
-          response.cookies.delete(name);
-        },
-      },
-    }
-  );
-
-  const { data: { user }, error } = await supabase.auth.getUser();
-
-  const isAuthPage = request.nextUrl.pathname.startsWith('/sign-in') || 
-                   request.nextUrl.pathname.startsWith('/sign-up') ||
-                   request.nextUrl.pathname.startsWith('/reset-password');
-
-  const isPublicPage = request.nextUrl.pathname === '/' || 
-                     request.nextUrl.pathname.startsWith('/auth/') ||
-                     request.nextUrl.pathname.startsWith('/api/auth/');
-
-  if (error || !user) {
-    if (!isAuthPage && !isPublicPage) {
-      const redirectUrl = new URL('/sign-in', request.url);
-      return NextResponse.redirect(redirectUrl);
-    }
-    return response;
+  const isAdminLoginPage = pathname.startsWith('/admin/login');
+  if (isAdminLoginPage) {
+    return NextResponse.next({ request });
   }
 
-  const isAdmin = user.email?.toLowerCase() === 'admin@financeprep.com';
-  const isAdminPage = request.nextUrl.pathname.startsWith('/admin') || 
-                    request.nextUrl.pathname.startsWith('/api/admin');
+  const isAuthPage = pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up') || pathname.startsWith('/reset-password');
+  const isProtectedPage = pathname.startsWith('/admin') || pathname.startsWith('/user');
 
-  if (isAdminPage && !isAdmin) {
-    const redirectUrl = new URL('/', request.url);
+  // Fast-path check: avoid Supabase round-trips in middleware for every navigation.
+  const hasSessionCookie = request.cookies
+    .getAll()
+    .some((cookie) => cookie.name === 'sb-access-token' || cookie.name.includes('-auth-token'));
+
+  if (!hasSessionCookie && isProtectedPage) {
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = pathname.startsWith('/admin') ? '/admin/login' : '/sign-in';
+    redirectUrl.searchParams.set('next', pathname);
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (isAuthPage) {
-    const redirectUrl = new URL(isAdmin ? '/admin' : '/user', request.url);
-    return NextResponse.redirect(redirectUrl);
+  if (!hasSessionCookie && isAuthPage) {
+    return NextResponse.next({ request });
   }
 
-  return response;
+  return NextResponse.next({ request });
 }
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    '/admin/:path*',
+    '/user/:path*',
+    '/sign-in',
+    '/sign-up',
+    '/reset-password',
   ],
 };

@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { LayoutDashboard, BookOpen, FileText, ListChecks, Flag, ShieldCheck, Menu, X, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createSupabaseBrowserClient } from '@/lib/auth/supabase-browser';
@@ -38,6 +38,22 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const selectedLevel = getSelectedLevel(searchParams.get('level'));
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [supabase] = useState(() => createSupabaseBrowserClient());
+
+  useEffect(() => {
+    const buildHref = (href: string, level = selectedLevel) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('level', level);
+      return `${href}?${params.toString()}`;
+    };
+
+    navItems.forEach((item) => {
+      router.prefetch(buildHref(item.href));
+    });
+
+    levels.forEach((level) => {
+      router.prefetch(buildHref(pathname, level));
+    });
+  }, [pathname, router, searchParams, selectedLevel]);
 
   function getHref(href: string, level = selectedLevel) {
     const params = new URLSearchParams(searchParams);

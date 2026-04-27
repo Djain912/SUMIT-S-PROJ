@@ -359,7 +359,13 @@ export function UserDashboardClient() {
         </div>
 
         {isLoading ? (
-          <div className="py-3 text-center text-sm text-zinc-500">Loading...</div>
+          <div className="space-y-3 animate-pulse py-1">
+            <div className="h-2 w-full rounded-full bg-zinc-200" />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="h-12 rounded-xl bg-zinc-100" />
+              <div className="h-12 rounded-xl bg-zinc-100" />
+            </div>
+          </div>
         ) : error ? (
           <div className="py-3 text-center text-sm text-red-600">{error}</div>
         ) : data ? (
@@ -372,7 +378,19 @@ export function UserDashboardClient() {
       </div>
 
       <div className="flex flex-col gap-4">
-        {isLoading || error || !data?.sections ? (
+        {isLoading ? (
+          <div className="space-y-4 animate-pulse">
+            {Array.from({ length: 2 }).map((_, index) => (
+              <div key={index} className="rounded-xl border border-zinc-200 bg-white p-4">
+                <div className="h-4 w-44 rounded bg-zinc-200" />
+                <div className="mt-4 space-y-3">
+                  <div className="h-14 rounded-lg bg-zinc-100" />
+                  <div className="h-14 rounded-lg bg-zinc-100" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : error || !data?.sections ? (
           <div className="rounded-xl border border-dashed border-zinc-300 bg-white py-8 text-center text-sm text-zinc-500">
             Select a level to view chapters.
           </div>

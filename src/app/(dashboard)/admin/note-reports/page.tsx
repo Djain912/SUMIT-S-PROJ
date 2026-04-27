@@ -89,9 +89,14 @@ export default function NoteReportsPage() {
   }, [pageSize, searchNoteId]);
 
   useEffect(() => {
-    setPage(1);
-    fetchReports(1, statusFilter);
-  }, [statusFilter, searchNoteId]);
+    if (page !== 1) {
+      setPage(1);
+    }
+  }, [statusFilter, searchNoteId, page]);
+
+  useEffect(() => {
+    void fetchReports(page, statusFilter);
+  }, [fetchReports, page, statusFilter]);
 
   const updateReportStatus = async (reportId: string, newStatus: ReportStatus) => {
     try {
@@ -184,8 +189,18 @@ export default function NoteReportsPage() {
 
       <div className="space-y-6">
         {loading ? (
-          <Card className="p-12 text-center shadow-sm">
-            <p className="text-zinc-600">Loading reports...</p>
+          <Card className="border-white/70 bg-white/90 p-6 shadow-sm">
+            <div className="space-y-4 animate-pulse">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <div key={index} className="grid grid-cols-6 gap-3 rounded-xl border border-zinc-100 p-4">
+                  <div className="col-span-2 h-4 rounded bg-zinc-200" />
+                  <div className="col-span-1 h-4 rounded bg-zinc-200" />
+                  <div className="col-span-1 h-4 rounded bg-zinc-200" />
+                  <div className="col-span-1 h-4 rounded bg-zinc-200" />
+                  <div className="col-span-1 h-4 rounded bg-zinc-200" />
+                </div>
+              ))}
+            </div>
           </Card>
         ) : error ? (
           <Card className="border-red-200 bg-red-50 p-6">
