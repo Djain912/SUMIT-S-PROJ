@@ -28,108 +28,67 @@ interface SectionData {
 
 export async function getUserDashboardData(userId: string, level: string) {
   try {
-    const chapters = await prisma.chapter.findMany({
-      where: {
-        level: level as 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3',
-        isPublished: true,
-        isDeleted: false,
-      },
-      orderBy: { orderIndex: 'asc' },
-      include: {
-        subtopics: {
-          where: {
-            isPublished: true,
-            isDeleted: false,
-          },
-          orderBy: { orderIndex: 'asc' },
-          include: {
-            notes: {
-              where: { isPublished: true, isDeleted: false },
-              select: { id: true },
-            },
-            questions: {
-              where: { isPublished: true, isDeleted: false },
-              select: { id: true },
+    const targetLevel = level as 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3';
+    
+    const [chapters, quizAttempts, attemptItems] = await Promise.all([
+      prisma.chapter.findMany({
+        where: {
+          level: targetLevel,
+          isPublished: true,
+          isDeleted: false,
+        },
+        orderBy: { orderIndex: 'asc' },
+        include: {
+          subtopics: {
+            where: { isPublished: true, isDeleted: false },
+            orderBy: { orderIndex: 'asc' },
+            include: {
+              notes: { where: { isPublished: true, isDeleted: false }, select: { id: true } },
+              questions: { where: { isPublished: true, isDeleted: false }, select: { id: true } },
             },
           },
         },
-      },
-    });
-
-    const chapterIds = chapters.map(ch => ch.id);
-    const subtopicIds = chapters.flatMap(ch => ch.subtopics.map(st => st.id));
-
-    const subtopicAttemptData = await prisma.quizAttemptItem.findMany({
-      where: {
-        attempt: {
+      }),
+      prisma.quizAttempt.findMany({
+        where: {
           userId,
-          level: level as 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3',
+          level: targetLevel,
           status: 'COMPLETED',
         },
-        question: {
-          subtopicId: { in: subtopicIds },
+        select: { totalQuestions: true, correctCount: true, scorePercentage: true },
+      }),
+      prisma.quizAttemptItem.findMany({
+        where: {
+          attempt: { userId, level: targetLevel, status: 'COMPLETED' },
         },
-      },
-      include: {
-        question: {
-          select: { subtopicId: true },
+        include: {
+          question: { select: { subtopicId: true, chapterId: true } },
         },
-      },
-    });
+      }),
+    ]);
 
     const subtopicStats = new Map<string, { correct: number; total: number }>();
-
-    for (const item of subtopicAttemptData) {
-      const stId = item.question.subtopicId;
-      if (!stId) continue;
-      const current = subtopicStats.get(stId) || { correct: 0, total: 0 };
-      current.total += 1;
-      if (item.isCorrect) current.correct += 1;
-      subtopicStats.set(stId, current);
-    }
-
     const chapterStats = new Map<string, { correct: number; total: number }>();
-    const chapterAttemptData = await prisma.quizAttemptItem.findMany({
-      where: {
-        attempt: {
-          userId,
-          level: level as 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3',
-          status: 'COMPLETED',
-        },
-        question: {
-          chapterId: { in: chapterIds },
-        },
-      },
-      include: {
-        question: {
-          select: { chapterId: true },
-        },
-      },
-    });
 
-    for (const item of chapterAttemptData) {
-      const chId = item.question.chapterId;
-      if (!chId) continue;
-      const current = chapterStats.get(chId) || { correct: 0, total: 0 };
-      current.total += 1;
-      if (item.isCorrect) current.correct += 1;
-      chapterStats.set(chId, current);
+    for (const item of attemptItems) {
+      const stId = item.question?.subtopicId;
+      const chId = item.question?.chapterId;
+      
+      if (stId) {
+        const current = subtopicStats.get(stId) || { correct: 0, total: 0 };
+        current.total += 1;
+        if (item.isCorrect) current.correct += 1;
+        subtopicStats.set(stId, current);
+      }
+      if (chId) {
+        const current = chapterStats.get(chId) || { correct: 0, total: 0 };
+        current.total += 1;
+        if (item.isCorrect) current.correct += 1;
+        chapterStats.set(chId, current);
+      }
     }
 
-    const totalQuestionsAnswered = chapterAttemptData.length;
-    
-    const quizAttempts = await prisma.quizAttempt.findMany({
-      where: {
-        userId,
-        level: level as 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3',
-        status: 'COMPLETED',
-      },
-      select: {
-        totalQuestions: true,
-        correctCount: true,
-        scorePercentage: true,
-      },
-    });
+    const totalQuestionsAnswered = attemptItems.length;
     
     let totalScore = 0;
     for (const attempt of quizAttempts) {
@@ -143,58 +102,45 @@ export async function getUserDashboardData(userId: string, level: string) {
     const totalProgress = totalChapters > 0 ? Math.round((completedChapters / totalChapters) * 100) : 0;
 
     const recentAttempts = await prisma.quizAttempt.findMany({
-      where: {
-        userId,
-        level: level as 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3',
-        status: 'COMPLETED',
-      },
+      where: { userId, level: targetLevel, status: 'COMPLETED' },
       orderBy: { completedAt: 'desc' },
       take: 5,
-      select: {
-        id: true,
-        totalQuestions: true,
-        correctCount: true,
-        scorePercentage: true,
-        completedAt: true,
-        mode: true,
-      },
+      select: { id: true, totalQuestions: true, correctCount: true, scorePercentage: true, completedAt: true, mode: true },
     });
 
-    const sections: SectionData[] = [
-      {
-        id: 'section-chapters',
-        title: 'Chapters',
-        chapters: chapters.map((ch, index) => {
-          const stats = chapterStats.get(ch.id) || { correct: 0, total: 0 };
-          const totalQs = ch.subtopics.reduce((sum, st) => sum + st.questions.length, 0);
-          const progress = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
-          
-          return {
-            id: ch.id,
-            title: ch.title,
-            slug: ch.slug,
-            isLocked: index > 0 && (chapterStats.get(chapters[index - 1].id)?.total ?? 0) === 0,
-            progress,
-            totalNotes: ch.subtopics.reduce((sum, st) => sum + st.notes.length, 0),
-            totalQuestions: totalQs,
-            subtopics: ch.subtopics.map(st => {
-              const stStats = subtopicStats.get(st.id) || { correct: 0, total: 0 };
-              const stTotalQs = st.questions.length;
-              const progress = stStats.total > 0 ? Math.round((stStats.correct / stStats.total) * 100) : 0;
-              
-              return {
-                id: st.id,
-                title: st.title,
-                progress,
-                totalQuestions: stTotalQs,
-                questionsAnswered: stStats.total,
-                isLocked: false,
-              };
-            }),
-          };
-        }),
-      },
-    ];
+    const sections: SectionData[] = [{
+      id: 'section-chapters',
+      title: 'Chapters',
+      chapters: chapters.map((ch, index) => {
+        const stats = chapterStats.get(ch.id) || { correct: 0, total: 0 };
+        const totalQs = ch.subtopics.reduce((sum, st) => sum + st.questions.length, 0);
+        const progress = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
+        
+        return {
+          id: ch.id,
+          title: ch.title,
+          slug: ch.slug,
+          isLocked: index > 0 && (chapterStats.get(chapters[index - 1].id)?.total ?? 0) === 0,
+          progress,
+          totalNotes: ch.subtopics.reduce((sum, st) => sum + st.notes.length, 0),
+          totalQuestions: totalQs,
+          subtopics: ch.subtopics.map(st => {
+            const stStats = subtopicStats.get(st.id) || { correct: 0, total: 0 };
+            const stTotalQs = st.questions.length;
+            const progress = stStats.total > 0 ? Math.round((stStats.correct / stStats.total) * 100) : 0;
+            
+            return {
+              id: st.id,
+              title: st.title,
+              progress,
+              totalQuestions: stTotalQs,
+              questionsAnswered: stStats.total,
+              isLocked: false,
+            };
+          }),
+        };
+      }),
+    }];
 
     return {
       level,
@@ -215,11 +161,7 @@ export async function getUserDashboardData(userId: string, level: string) {
     console.error('Dashboard service error:', error);
     return {
       level,
-      sections: [{
-        id: 'section-chapters',
-        title: 'Chapters',
-        chapters: [],
-      }],
+      sections: [{ id: 'section-chapters', title: 'Chapters', chapters: [] }],
       totalProgress: 0,
       assessmentScore: 0,
       totalQuestionsAnswered: 0,

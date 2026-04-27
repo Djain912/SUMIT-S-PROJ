@@ -34,7 +34,6 @@ export async function GET(request: Request) {
         id: true,
         subtopicId: true,
         title: true,
-        contentJson: true,
         contentHtml: true,
         watermarkConfig: true,
         orderIndex: true,
