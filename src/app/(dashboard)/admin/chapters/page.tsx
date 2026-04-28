@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/db/prisma';
 import { revalidatePath } from 'next/cache';
+import { Prisma } from '@prisma/client';
+import { redirect } from 'next/navigation';
 import { AdminLevelTabs } from '@/components/admin/admin-level-tabs';
 import { ConfirmSubmitButton } from '@/components/shared/confirm-submit-button';
 import { requireAdminUser } from '@/server/policies/auth';
@@ -24,21 +26,13 @@ function formatLevel(level: Level) {
   return level.replace('_', ' ').replace('LEVEL', 'Level');
 }
 
-export default async function AdminChaptersPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ level?: string }>;
-}) {
+async function createChapterAction(formData: FormData) {
+  'use server';
   await requireAdminUser();
 
-  const params = await searchParams;
-  const selectedLevel = getSelectedLevel(params?.level);
-  const chapters = await getChaptersByLevel(selectedLevel);
+  const level = formData.get('level') as string;
 
-  async function handleCreate(formData: FormData) {
-    'use server';
-    await requireAdminUser();
-
+  try {
     await prisma.chapter.create({
       data: {
         level: formData.get('level') as Level,
@@ -49,12 +43,22 @@ export default async function AdminChaptersPage({
       },
     });
     revalidatePath('/admin/chapters');
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      redirect(`/admin/chapters?level=${encodeURIComponent(level)}&error=${encodeURIComponent('A chapter with that slug already exists in this level.')}`);
+    }
+
+    throw error;
   }
+}
 
-  async function handleUpdate(formData: FormData) {
-    'use server';
-    await requireAdminUser();
+async function updateChapterAction(formData: FormData) {
+  'use server';
+  await requireAdminUser();
 
+  const level = formData.get('level') as string;
+
+  try {
     await prisma.chapter.update({
       where: { id: formData.get('id') as string },
       data: {
@@ -65,17 +69,37 @@ export default async function AdminChaptersPage({
       },
     });
     revalidatePath('/admin/chapters');
-  }
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      redirect(`/admin/chapters?level=${encodeURIComponent(level)}&error=${encodeURIComponent('A chapter with that slug already exists in this level.')}`);
+    }
 
-  async function handleDelete(id: string) {
-    'use server';
-    await requireAdminUser();
-    await prisma.chapter.update({
-      where: { id },
-      data: { isDeleted: true, deletedAt: new Date() },
-    });
-    revalidatePath('/admin/chapters');
+    throw error;
   }
+}
+
+async function deleteChapterAction(formData: FormData) {
+  'use server';
+  await requireAdminUser();
+
+  await prisma.chapter.update({
+    where: { id: formData.get('id') as string },
+    data: { isDeleted: true, deletedAt: new Date() },
+  });
+  revalidatePath('/admin/chapters');
+}
+
+export default async function AdminChaptersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ level?: string; error?: string }>;
+}) {
+  await requireAdminUser();
+
+  const params = await searchParams;
+  const selectedLevel = getSelectedLevel(params?.level);
+  const errorMessage = typeof params?.error === 'string' ? params.error : null;
+  const chapters = await getChaptersByLevel(selectedLevel);
 
   return (
     <div className="space-y-8">
@@ -86,6 +110,11 @@ export default async function AdminChaptersPage({
           <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500">
             Build the main learning path students follow before they move into subtopics, notes, and quizzes.
           </p>
+          {errorMessage ? (
+            <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {errorMessage}
+            </p>
+          ) : null}
         </div>
         <AdminLevelTabs selectedLevel={selectedLevel} />
       </div>
@@ -126,12 +155,8 @@ export default async function AdminChaptersPage({
                           Draft
                         </span>
                       )}
-                      <form
-                        action={async () => {
-                          'use server';
-                          await handleDelete(chapter.id);
-                        }}
-                      >
+                      <form action={deleteChapterAction}>
+                        <input type="hidden" name="id" value={chapter.id} />
                         <ConfirmSubmitButton
                           className="text-sm font-medium text-red-500 hover:text-red-700"
                           message="Delete this chapter?"
@@ -148,8 +173,9 @@ export default async function AdminChaptersPage({
                       <span className="hidden group-open:inline">Close editor</span>
                     </summary>
 
-                    <form action={handleUpdate} className="mt-3 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+                    <form action={updateChapterAction} className="mt-3 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
                       <input type="hidden" name="id" value={chapter.id} />
+                      <input type="hidden" name="level" value={selectedLevel} />
                       <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_8rem]">
                         <div>
                           <label className="block text-sm font-medium text-zinc-700">Title</label>
@@ -210,7 +236,7 @@ export default async function AdminChaptersPage({
             <summary className="cursor-pointer text-sm font-semibold text-zinc-800 hover:text-zinc-950">
               + Add new chapter to {formatLevel(selectedLevel)}
             </summary>
-            <form action={handleCreate} className="mt-3 space-y-4 rounded-lg border border-zinc-200 bg-white p-4">
+            <form action={createChapterAction} className="mt-3 space-y-4 rounded-lg border border-zinc-200 bg-white p-4">
               <input type="hidden" name="level" value={selectedLevel} />
               <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_8rem]">
                 <div>
