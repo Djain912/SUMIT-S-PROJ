@@ -1,22 +1,29 @@
 import { prisma } from '@/lib/db/prisma';
 import { revalidatePath } from 'next/cache';
-import { Prisma } from '@prisma/client';
 import { redirect } from 'next/navigation';
 import { AdminLevelTabs } from '@/components/admin/admin-level-tabs';
 import { ConfirmSubmitButton } from '@/components/shared/confirm-submit-button';
 import { requireAdminUser } from '@/server/policies/auth';
 
+export const dynamic = 'force-dynamic';
+
 type Level = 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3';
 
 async function getChaptersWithSubtopics(level: Level) {
   return prisma.chapter.findMany({
-    where: { level, isDeleted: false },
-    orderBy: { orderIndex: 'asc' },
+    where: { level },
+    orderBy: { chapterNo: 'asc' },
     include: {
       subtopics: {
-        where: { isDeleted: false },
-        orderBy: { orderIndex: 'asc' },
-        include: { _count: { select: { notes: { where: { isDeleted: false } }, questions: { where: { isDeleted: false } } } } },
+        orderBy: { subtopicNo: 'asc' },
+        include: {
+          _count: {
+            select: {
+              notes: true,
+              questions: true,
+            },
+          },
+        },
       },
     },
   });
@@ -34,24 +41,18 @@ async function createSubtopicAction(formData: FormData) {
   'use server';
   await requireAdminUser();
 
-  const level = formData.get('level') as string;
-
   try {
     await prisma.subtopic.create({
       data: {
         chapterId: formData.get('chapterId') as string,
         title: formData.get('title') as string,
-        slug: formData.get('slug') as string,
-        orderIndex: Number(formData.get('orderIndex') || 0),
+        subtopicNo: Number(formData.get('subtopicNo') || 0),
         isPublished: formData.get('isPublished') === 'on',
       },
     });
     revalidatePath('/admin/subtopics');
+    redirect('/admin/subtopics?nocache=' + Date.now());
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-      redirect(`/admin/subtopics?level=${encodeURIComponent(level)}&error=${encodeURIComponent('A subtopic with that slug already exists in this chapter.')}`);
-    }
-
     throw error;
   }
 }
@@ -60,24 +61,18 @@ async function updateSubtopicAction(formData: FormData) {
   'use server';
   await requireAdminUser();
 
-  const level = formData.get('level') as string;
-
   try {
     await prisma.subtopic.update({
       where: { id: formData.get('id') as string },
       data: {
         title: formData.get('title') as string,
-        slug: formData.get('slug') as string,
-        orderIndex: Number(formData.get('orderIndex') || 0),
+        subtopicNo: Number(formData.get('subtopicNo') || 0),
         isPublished: formData.get('isPublished') === 'on',
       },
     });
     revalidatePath('/admin/subtopics');
+    redirect('/admin/subtopics?nocache=' + Date.now());
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-      redirect(`/admin/subtopics?level=${encodeURIComponent(level)}&error=${encodeURIComponent('A subtopic with that slug already exists in this chapter.')}`);
-    }
-
     throw error;
   }
 }
@@ -86,11 +81,11 @@ async function deleteSubtopicAction(formData: FormData) {
   'use server';
   await requireAdminUser();
 
-  await prisma.subtopic.update({
+  await prisma.subtopic.delete({
     where: { id: formData.get('id') as string },
-    data: { isDeleted: true, deletedAt: new Date() },
   });
   revalidatePath('/admin/subtopics');
+  redirect('/admin/subtopics?nocache=' + Date.now());
 }
 
 export default async function AdminSubtopicsPage({
@@ -158,7 +153,7 @@ export default async function AdminSubtopicsPage({
                             <div className="min-w-0">
                               <p className="text-sm font-semibold text-zinc-950">{subtopic.title}</p>
                               <p className="mt-1 text-xs text-zinc-500">
-                                {subtopic.slug} - {subtopic._count.notes} notes - {subtopic._count.questions} questions
+                                Subtopic {subtopic.subtopicNo} - {subtopic._count.notes} notes - {subtopic._count.questions} questions
                               </p>
                             </div>
 
@@ -195,7 +190,7 @@ export default async function AdminSubtopicsPage({
                             <form action={updateSubtopicAction} className="mt-3 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
                               <input type="hidden" name="id" value={subtopic.id} />
                               <input type="hidden" name="level" value={selectedLevel} />
-                              <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_8rem]">
+                              <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_8rem]">
                                 <div>
                                   <label className="block text-sm font-medium text-zinc-700">Title</label>
                                   <input
@@ -206,20 +201,11 @@ export default async function AdminSubtopicsPage({
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-sm font-medium text-zinc-700">Slug</label>
+                                  <label className="block text-sm font-medium text-zinc-700">Subtopic No.</label>
                                   <input
-                                    name="slug"
-                                    defaultValue={subtopic.slug}
-                                    required
-                                    className="mt-1 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-sm font-medium text-zinc-700">Order</label>
-                                  <input
-                                    name="orderIndex"
+                                    name="subtopicNo"
                                     type="number"
-                                    defaultValue={subtopic.orderIndex}
+                                    defaultValue={subtopic.subtopicNo}
                                     className="mt-1 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
                                   />
                                 </div>
@@ -256,7 +242,7 @@ export default async function AdminSubtopicsPage({
                         <form action={createSubtopicAction} className="mt-3 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
                           <input type="hidden" name="chapterId" value={chapter.id} />
                           <input type="hidden" name="level" value={selectedLevel} />
-                          <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_8rem]">
+                          <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_8rem]">
                             <div>
                               <label className="block text-sm font-medium text-zinc-700">Title</label>
                               <input
@@ -267,18 +253,9 @@ export default async function AdminSubtopicsPage({
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-zinc-700">Slug</label>
+                              <label className="block text-sm font-medium text-zinc-700">Subtopic No.</label>
                               <input
-                                name="slug"
-                                required
-                                placeholder="subtopic-slug"
-                                className="mt-1 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-zinc-700">Order</label>
-                              <input
-                                name="orderIndex"
+                                name="subtopicNo"
                                 type="number"
                                 placeholder="0"
                                 className="mt-1 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"

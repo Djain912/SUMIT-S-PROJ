@@ -448,6 +448,7 @@ export function AdminCmsClient() {
     const method = editingChapterId ? 'PATCH' : 'POST';
 
     await apiJson(url, { method, body: JSON.stringify(payload) });
+    window.location.reload();
     await reloadAll();
     clearChapterForm();
     setStatusMessage('Chapter saved.');
@@ -466,6 +467,7 @@ export function AdminCmsClient() {
     const method = editingSubtopicId ? 'PATCH' : 'POST';
 
     await apiJson(url, { method, body: JSON.stringify(payload) });
+    window.location.reload();
     await reloadAll();
     clearSubtopicForm();
     setStatusMessage('Subtopic saved.');
@@ -488,6 +490,7 @@ export function AdminCmsClient() {
     const method = editingNoteId ? 'PATCH' : 'POST';
 
     await apiJson(url, { method, body: JSON.stringify(payload) });
+    window.location.reload();
     await reloadAll();
     clearNoteForm();
     setStatusMessage('Note saved.');
@@ -513,6 +516,7 @@ export function AdminCmsClient() {
     const method = editingQuestionId ? 'PATCH' : 'POST';
 
     await apiJson(url, { method, body: JSON.stringify(payload) });
+    window.location.reload();
     await reloadAll();
     clearQuestionForm();
     setStatusMessage('Question saved.');
@@ -531,6 +535,7 @@ export function AdminCmsClient() {
     };
 
     await apiJson(endpointMap[resource], { method: 'DELETE' });
+    window.location.reload();
     await reloadAll();
     setStatusMessage('Item deleted.');
   }

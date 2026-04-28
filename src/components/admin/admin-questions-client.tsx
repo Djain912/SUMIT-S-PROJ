@@ -246,6 +246,7 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
         throw new Error(result.error?.message || 'Failed to save question');
       }
 
+      window.location.reload();
       const refreshed = await fetchQuestions(selectedSubtopic);
       setQuestions(refreshed);
       const savedQuestion = result.data as Question | undefined;
@@ -274,19 +275,7 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
       return;
     }
 
-    questionsInFlight.delete(selectedSubtopic);
-    const refreshed = await fetchQuestions(selectedSubtopic);
-    setQuestions(refreshed);
-
-    if (selectedQuestion?.id === questionId) {
-      const nextSelected = refreshed[0] ?? null;
-      setSelectedQuestion(nextSelected);
-      if (nextSelected) {
-        loadQuestionIntoEditor(nextSelected);
-      } else {
-        startNewQuestion();
-      }
-    }
+    window.location.reload();
   }
 
   return (

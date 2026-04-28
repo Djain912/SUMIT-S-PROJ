@@ -5,12 +5,11 @@ export async function listChapters(level?: 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3', in
   return prisma.chapter.findMany({
     where: {
       ...(level ? { level } : undefined),
-      ...(includeDeleted ? {} : { isDeleted: false }),
     },
-    orderBy: [{ level: 'asc' }, { orderIndex: 'asc' }, { title: 'asc' }],
+    orderBy: [{ level: 'asc' }, { chapterNo: 'asc' }, { title: 'asc' }],
     include: {
       _count: {
-        select: { subtopics: { where: { isDeleted: false } } },
+        select: { subtopics: true },
       },
     },
   });
@@ -25,9 +24,8 @@ export async function updateChapter(id: string, input: ChapterInput) {
 }
 
 export async function deleteChapter(id: string) {
-  return prisma.chapter.update({
+  return prisma.chapter.delete({
     where: { id },
-    data: { isDeleted: true, deletedAt: new Date() },
   });
 }
 

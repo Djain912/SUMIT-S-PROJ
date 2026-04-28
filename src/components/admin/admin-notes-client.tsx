@@ -106,6 +106,17 @@ async function deleteNote(id: string) {
   return res.json();
 }
 
+async function saveOrUpdateNote(id: string | null, data: Record<string, unknown>) {
+  const method = id ? 'PATCH' : 'POST';
+  const url = id ? `/api/admin/notes/${id}` : '/api/admin/notes';
+  const res = await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return res.json();
+}
+
 export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: Level }) {
   const [level, setLevel] = useState<Level>(initialLevel);
   const [chapters, setChapters] = useState<Chapter[]>([]);
@@ -157,7 +168,7 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
         savedNote = result.data ?? null;
       } else {
         // Create new note
-        const result = await saveNote({
+        const result = await saveOrUpdateNote(null, {
           subtopicId: selectedSubtopic,
           title: editTitle,
           contentHtml: editContent,
@@ -168,19 +179,7 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
         savedNote = result.data ?? null;
       }
       notesInFlight.delete(selectedSubtopic);
-      const refreshed = await fetchNotes(selectedSubtopic);
-      setNotes(refreshed);
-      if (savedNote) {
-        setSelectedNote(savedNote);
-      }
-      setIsEditing(false);
-      setEditingNoteId(null);
-      if (!savedNote) {
-        setEditTitle('');
-        setEditContent('');
-        setEditPublished(false);
-        setEditWatermark(DEFAULT_WATERMARK_CONFIG);
-      }
+      window.location.reload();
     } finally {
       setSaving(false);
     }
@@ -448,13 +447,11 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
                   >
                     Edit
                   </button>
-                  <button
+<button
                     onClick={async () => {
                       if (!confirm('Delete this note?')) return;
                       await deleteNote(selectedNote.id);
-                      notesInFlight.delete(selectedSubtopic);
-                      fetchNotes(selectedSubtopic).then(setNotes);
-                      setSelectedNote(null);
+                      window.location.reload();
                     }}
                     className="text-sm font-medium text-red-600 hover:text-red-800"
                   >

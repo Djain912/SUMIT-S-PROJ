@@ -5,7 +5,6 @@ export async function listNotes(subtopicId: string, includeDeleted = false) {
   return prisma.note.findMany({
     where: {
       subtopicId,
-      ...(includeDeleted ? {} : { isDeleted: false }),
     },
     orderBy: [{ orderIndex: 'asc' }, { title: 'asc' }],
   });
@@ -60,9 +59,8 @@ export async function updateNote(id: string, input: {
 }
 
 export async function deleteNote(id: string) {
-  return prisma.note.update({
+  return prisma.note.delete({
     where: { id },
-    data: { isDeleted: true, deletedAt: new Date() },
   });
 }
 

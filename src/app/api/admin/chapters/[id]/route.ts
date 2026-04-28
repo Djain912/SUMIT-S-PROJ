@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { AuthError, requireAdminUser } from '@/server/policies/auth';
 import { validateCsrfOrigin } from '@/server/policies/csrf';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
@@ -85,6 +86,7 @@ export async function DELETE(_request: Request, context: { params: Promise<{ id:
     const { id } = await context.params;
     await deleteChapter(id);
     revalidatePath('/admin/chapters');
+    redirect('/admin/chapters?nocache=' + Date.now());
 
     return NextResponse.json({ success: true });
   } catch (error) {

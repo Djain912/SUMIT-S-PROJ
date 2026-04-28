@@ -26,7 +26,7 @@ export async function GET(request: Request) {
           chapterId,
           isDeleted: false,
         },
-        orderBy: { orderIndex: 'asc' },
+        orderBy: { subtopicNo: 'asc' },
         take: limit,
         skip,
       }),

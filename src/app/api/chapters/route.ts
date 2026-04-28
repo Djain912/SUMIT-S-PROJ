@@ -17,14 +17,13 @@ export async function GET(request: Request) {
         isDeleted: false,
         level: level ?? undefined,
       },
-      orderBy: [{ orderIndex: 'asc' }, { title: 'asc' }],
+      orderBy: [{ chapterNo: 'asc' }, { title: 'asc' }],
       select: {
         id: true,
         level: true,
         title: true,
-        slug: true,
         description: true,
-        orderIndex: true,
+        chapterNo: true,
       },
     });
 

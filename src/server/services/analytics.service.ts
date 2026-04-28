@@ -172,7 +172,7 @@ export async function getUserAnalyticsData(userId: string): Promise<AnalyticsDat
         isPublished: true,
         isDeleted: false,
       },
-      orderBy: { orderIndex: 'asc' },
+      orderBy: { chapterNo: 'asc' },
       select: {
         id: true,
         title: true,

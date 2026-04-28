@@ -1,22 +1,13 @@
 import { prisma } from '@/lib/db/prisma';
 import { revalidatePath } from 'next/cache';
-import { Prisma } from '@prisma/client';
 import { redirect } from 'next/navigation';
 import { AdminLevelTabs } from '@/components/admin/admin-level-tabs';
 import { ConfirmSubmitButton } from '@/components/shared/confirm-submit-button';
 import { requireAdminUser } from '@/server/policies/auth';
 
-type Level = 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3';
+export const dynamic = 'force-dynamic';
 
-async function getChaptersByLevel(level: Level) {
-  return prisma.chapter.findMany({
-    where: { level, isDeleted: false },
-    orderBy: { orderIndex: 'asc' },
-    include: {
-      _count: { select: { subtopics: { where: { isDeleted: false } }, questions: { where: { isDeleted: false } } } },
-    },
-  });
-}
+type Level = 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3';
 
 function getSelectedLevel(level?: string): Level {
   return ['LEVEL_1', 'LEVEL_2', 'LEVEL_3'].includes(level ?? '') ? (level as Level) : 'LEVEL_1';
@@ -26,28 +17,37 @@ function formatLevel(level: Level) {
   return level.replace('_', ' ').replace('LEVEL', 'Level');
 }
 
+async function getChaptersByLevel(level: Level) {
+  return prisma.chapter.findMany({
+    where: { level },
+    orderBy: { chapterNo: 'asc' },
+    include: {
+      _count: {
+        select: {
+          subtopics: true,
+          questions: true,
+        },
+      },
+    },
+  });
+}
+
 async function createChapterAction(formData: FormData) {
   'use server';
   await requireAdminUser();
-
-  const level = formData.get('level') as string;
 
   try {
     await prisma.chapter.create({
       data: {
         level: formData.get('level') as Level,
         title: formData.get('title') as string,
-        slug: formData.get('slug') as string,
-        orderIndex: Number(formData.get('orderIndex') || 0),
+        chapterNo: Number(formData.get('chapterNo') || 0),
         isPublished: formData.get('isPublished') === 'on',
       },
     });
     revalidatePath('/admin/chapters');
+    redirect('/admin/chapters?nocache=' + Date.now());
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-      redirect(`/admin/chapters?level=${encodeURIComponent(level)}&error=${encodeURIComponent('A chapter with that slug already exists in this level.')}`);
-    }
-
     throw error;
   }
 }
@@ -56,24 +56,18 @@ async function updateChapterAction(formData: FormData) {
   'use server';
   await requireAdminUser();
 
-  const level = formData.get('level') as string;
-
   try {
     await prisma.chapter.update({
       where: { id: formData.get('id') as string },
       data: {
         title: formData.get('title') as string,
-        slug: formData.get('slug') as string,
-        orderIndex: Number(formData.get('orderIndex') || 0),
+        chapterNo: Number(formData.get('chapterNo') || 0),
         isPublished: formData.get('isPublished') === 'on',
       },
     });
     revalidatePath('/admin/chapters');
+    redirect('/admin/chapters?nocache=' + Date.now());
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-      redirect(`/admin/chapters?level=${encodeURIComponent(level)}&error=${encodeURIComponent('A chapter with that slug already exists in this level.')}`);
-    }
-
     throw error;
   }
 }
@@ -82,11 +76,11 @@ async function deleteChapterAction(formData: FormData) {
   'use server';
   await requireAdminUser();
 
-  await prisma.chapter.update({
+  await prisma.chapter.delete({
     where: { id: formData.get('id') as string },
-    data: { isDeleted: true, deletedAt: new Date() },
   });
   revalidatePath('/admin/chapters');
+  redirect('/admin/chapters?nocache=' + Date.now());
 }
 
 export default async function AdminChaptersPage({
@@ -141,7 +135,7 @@ export default async function AdminChaptersPage({
                     <div className="min-w-0">
                       <p className="text-base font-semibold text-zinc-950">{chapter.title}</p>
                       <p className="mt-1 text-xs text-zinc-500">
-                        {chapter.slug} - {chapter._count.subtopics} subtopics - {chapter._count.questions} questions
+                        Chapter {chapter.chapterNo} - {chapter._count.subtopics} subtopics - {chapter._count.questions} questions
                       </p>
                     </div>
 
@@ -176,7 +170,7 @@ export default async function AdminChaptersPage({
                     <form action={updateChapterAction} className="mt-3 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
                       <input type="hidden" name="id" value={chapter.id} />
                       <input type="hidden" name="level" value={selectedLevel} />
-                      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_8rem]">
+                      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_8rem]">
                         <div>
                           <label className="block text-sm font-medium text-zinc-700">Title</label>
                           <input
@@ -187,20 +181,11 @@ export default async function AdminChaptersPage({
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-zinc-700">Slug</label>
+                          <label className="block text-sm font-medium text-zinc-700">Chapter No.</label>
                           <input
-                            name="slug"
-                            defaultValue={chapter.slug}
-                            required
-                            className="mt-1 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-zinc-700">Order</label>
-                          <input
-                            name="orderIndex"
+                            name="chapterNo"
                             type="number"
-                            defaultValue={chapter.orderIndex}
+                            defaultValue={chapter.chapterNo}
                             className="mt-1 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
                           />
                         </div>
@@ -238,7 +223,7 @@ export default async function AdminChaptersPage({
             </summary>
             <form action={createChapterAction} className="mt-3 space-y-4 rounded-lg border border-zinc-200 bg-white p-4">
               <input type="hidden" name="level" value={selectedLevel} />
-              <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_8rem]">
+              <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_8rem]">
                 <div>
                   <label className="block text-sm font-medium text-zinc-700">Title</label>
                   <input
@@ -249,20 +234,11 @@ export default async function AdminChaptersPage({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700">Slug</label>
+                  <label className="block text-sm font-medium text-zinc-700">Chapter No.</label>
                   <input
-                    name="slug"
-                    required
-                    className="mt-1 w-full rounded-md border border-zinc-200 px-3 py-2 text-sm"
-                    placeholder="chapter-slug"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700">Order</label>
-                  <input
-                    name="orderIndex"
+                    name="chapterNo"
                     type="number"
-                    defaultValue={chapters.length}
+                    defaultValue={chapters.length + 1}
                     className="mt-1 w-full rounded-md border border-zinc-200 px-3 py-2 text-sm"
                   />
                 </div>

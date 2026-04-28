@@ -12,7 +12,7 @@ interface SubtopicProgress {
 interface ChapterProgress {
   id: string;
   title: string;
-  slug: string;
+  chapterNo: number;
   isLocked: boolean;
   progress: number;
   totalNotes: number;
@@ -36,11 +36,11 @@ export async function getUserDashboardData(userId: string, level: string) {
           isPublished: true,
           isDeleted: false,
         },
-        orderBy: { orderIndex: 'asc' },
+        orderBy: { chapterNo: 'asc' },
         include: {
           subtopics: {
             where: { isPublished: true, isDeleted: false },
-            orderBy: { orderIndex: 'asc' },
+            orderBy: { subtopicNo: 'asc' },
             include: {
               notes: { where: { isPublished: true, isDeleted: false }, select: { id: true } },
               questions: { where: { isPublished: true, isDeleted: false }, select: { id: true } },
@@ -120,7 +120,7 @@ export async function getUserDashboardData(userId: string, level: string) {
         return {
           id: ch.id,
           title: ch.title,
-          slug: ch.slug,
+          chapterNo: ch.chapterNo,
           isLocked: index > 0 && (chapterStats.get(chapters[index - 1].id)?.total ?? 0) === 0,
           progress,
           totalNotes: ch.subtopics.reduce((sum, st) => sum + st.notes.length, 0),
@@ -133,6 +133,7 @@ export async function getUserDashboardData(userId: string, level: string) {
             return {
               id: st.id,
               title: st.title,
+              subtopicNo: st.subtopicNo,
               progress,
               totalQuestions: stTotalQs,
               questionsAnswered: stStats.total,

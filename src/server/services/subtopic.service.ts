@@ -5,9 +5,8 @@ export async function listSubtopics(chapterId: string, includeDeleted = false) {
   return prisma.subtopic.findMany({
     where: {
       chapterId,
-      ...(includeDeleted ? {} : { isDeleted: false }),
     },
-    orderBy: [{ orderIndex: 'asc' }, { title: 'asc' }],
+    orderBy: [{ subtopicNo: 'asc' }, { title: 'asc' }],
   });
 }
 
@@ -20,9 +19,8 @@ export async function updateSubtopic(id: string, input: SubtopicInput) {
 }
 
 export async function deleteSubtopic(id: string) {
-  return prisma.subtopic.update({
+  return prisma.subtopic.delete({
     where: { id },
-    data: { isDeleted: true, deletedAt: new Date() },
   });
 }
 

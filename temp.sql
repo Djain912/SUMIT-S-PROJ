@@ -1,0 +1,1 @@
+SELECT column_name FROM information_schema.columns WHERE table_name = 'Chapter' AND table_schema = 'public';
