@@ -6,14 +6,40 @@ import { requireAdminUser } from '@/server/policies/auth';
 
 type Level = 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3';
 
+function toSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+}
+
+async function uniqueChapterSlug(level: Level, base: string, excludeId?: string): Promise<string> {
+  let slug = toSlug(base) || 'chapter';
+  let suffix = 0;
+  while (true) {
+    const candidate = suffix === 0 ? slug : `${slug}-${suffix}`;
+    const existing = await prisma.chapter.findFirst({
+      where: { level, slug: candidate, ...(excludeId ? { id: { not: excludeId } } : {}) },
+      select: { id: true },
+    });
+    if (!existing) return candidate;
+    suffix++;
+  }
+}
+
 export async function createChapter(formData: FormData) {
   await requireAdminUser();
   const level = formData.get('level') as Level;
+  const title = formData.get('title') as string;
+  const slug = await uniqueChapterSlug(level, title);
   await prisma.chapter.create({
     data: {
       level,
-      title: formData.get('title') as string,
-      chapterNo: Number(formData.get('chapterNo') || 0),
+      title,
+      slug,
+      chapterNo: Number(formData.get('orderIndex') || 0),
       isPublished: formData.get('isPublished') === 'on',
     },
   });
@@ -22,11 +48,16 @@ export async function createChapter(formData: FormData) {
 
 export async function updateChapter(formData: FormData) {
   await requireAdminUser();
+  const id = formData.get('id') as string;
+  const title = formData.get('title') as string;
+  const level = formData.get('level') as Level;
+  const slug = await uniqueChapterSlug(level, title, id);
   await prisma.chapter.update({
-    where: { id: formData.get('id') as string },
+    where: { id },
     data: {
-      title: formData.get('title') as string,
-      chapterNo: Number(formData.get('chapterNo') || 0),
+      title,
+      slug,
+      chapterNo: Number(formData.get('orderIndex') || 0),
       isPublished: formData.get('isPublished') === 'on',
     },
   });

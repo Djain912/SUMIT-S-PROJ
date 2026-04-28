@@ -11,6 +11,7 @@ type Chapter = {
   id: string;
   title: string;
   chapterNo: number;
+  orderIndex: number;
   isPublished: boolean;
   level: Level;
   _count: { subtopics: number; questions: number };
@@ -139,9 +140,9 @@ export function AdminChaptersClient({
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-zinc-700">Chapter No.</label>
+                          <label className="block text-sm font-medium text-zinc-700">Order</label>
                           <input
-                            name="chapterNo"
+                            name="orderIndex"
                             type="number"
                             defaultValue={chapter.chapterNo}
                             className="mt-1 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
@@ -192,9 +193,9 @@ export function AdminChaptersClient({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700">Chapter No.</label>
+                  <label className="block text-sm font-medium text-zinc-700">Order</label>
                   <input
-                    name="chapterNo"
+                    name="orderIndex"
                     type="number"
                     defaultValue={chapters.length + 1}
                     className="mt-1 w-full rounded-md border border-zinc-200 px-3 py-2 text-sm"

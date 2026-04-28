@@ -41,7 +41,7 @@ export async function getUserDashboardData(userId: string, level: string) {
         include: {
           subtopics: {
             where: { isPublished: true, isDeleted: false },
-            orderBy: { subtopicNo: 'asc' },
+            orderBy: { orderIndex: 'asc' },
             include: {
               notes: { where: { isPublished: true, isDeleted: false }, select: { id: true } },
               questions: { where: { isPublished: true, isDeleted: false }, select: { id: true } },
@@ -131,7 +131,7 @@ export async function getUserDashboardData(userId: string, level: string) {
             return {
               id: st.id,
               title: st.title,
-              subtopicNo: st.subtopicNo,
+              subtopicNo: st.orderIndex,
               progress,
               totalQuestions: stTotalQs,
               questionsAnswered: stStats.total,

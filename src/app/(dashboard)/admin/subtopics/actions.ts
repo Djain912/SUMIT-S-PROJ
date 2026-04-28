@@ -4,13 +4,40 @@ import { prisma } from '@/lib/db/prisma';
 import { revalidatePath } from 'next/cache';
 import { requireAdminUser } from '@/server/policies/auth';
 
+function toSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+}
+
+async function uniqueSubtopicSlug(chapterId: string, base: string, excludeId?: string): Promise<string> {
+  let slug = toSlug(base) || 'subtopic';
+  let suffix = 0;
+  while (true) {
+    const candidate = suffix === 0 ? slug : `${slug}-${suffix}`;
+    const existing = await prisma.subtopic.findFirst({
+      where: { chapterId, slug: candidate, ...(excludeId ? { id: { not: excludeId } } : {}) },
+      select: { id: true },
+    });
+    if (!existing) return candidate;
+    suffix++;
+  }
+}
+
 export async function createSubtopic(formData: FormData) {
   await requireAdminUser();
+  const chapterId = formData.get('chapterId') as string;
+  const title = formData.get('title') as string;
+  const slug = await uniqueSubtopicSlug(chapterId, title);
   await prisma.subtopic.create({
     data: {
-      chapterId: formData.get('chapterId') as string,
-      title: formData.get('title') as string,
-      subtopicNo: Number(formData.get('subtopicNo') || 0),
+      chapterId,
+      title,
+      slug,
+      orderIndex: Number(formData.get('orderIndex') || 0),
       isPublished: formData.get('isPublished') === 'on',
     },
   });
@@ -19,11 +46,16 @@ export async function createSubtopic(formData: FormData) {
 
 export async function updateSubtopic(formData: FormData) {
   await requireAdminUser();
+  const id = formData.get('id') as string;
+  const chapterId = formData.get('chapterId') as string;
+  const title = formData.get('title') as string;
+  const slug = await uniqueSubtopicSlug(chapterId, title, id);
   await prisma.subtopic.update({
-    where: { id: formData.get('id') as string },
+    where: { id },
     data: {
-      title: formData.get('title') as string,
-      subtopicNo: Number(formData.get('subtopicNo') || 0),
+      title,
+      slug,
+      orderIndex: Number(formData.get('orderIndex') || 0),
       isPublished: formData.get('isPublished') === 'on',
     },
   });

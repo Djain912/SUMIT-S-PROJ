@@ -10,8 +10,9 @@ type Level = AdminLevel;
 type Subtopic = {
   id: string;
   title: string;
-  subtopicNo: number;
+  orderIndex: number;
   isPublished: boolean;
+  chapterId: string;
   _count: { notes: number; questions: number };
 };
 
@@ -113,7 +114,7 @@ export function AdminSubtopicsClient({
                             <div className="min-w-0">
                               <p className="text-sm font-semibold text-zinc-950">{subtopic.title}</p>
                               <p className="mt-1 text-xs text-zinc-500">
-                                Subtopic {subtopic.subtopicNo} - {subtopic._count.notes} notes - {subtopic._count.questions} questions
+                                Order {subtopic.orderIndex} -{subtopic._count.notes} notes - {subtopic._count.questions} questions
                               </p>
                             </div>
 
@@ -145,6 +146,7 @@ export function AdminSubtopicsClient({
 
                             <form action={handleUpdate} className="mt-3 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
                               <input type="hidden" name="id" value={subtopic.id} />
+                              <input type="hidden" name="chapterId" value={chapter.id} />
                               <input type="hidden" name="level" value={selectedLevel} />
                               <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_8rem]">
                                 <div>
@@ -157,11 +159,11 @@ export function AdminSubtopicsClient({
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-sm font-medium text-zinc-700">Subtopic No.</label>
+                                  <label className="block text-sm font-medium text-zinc-700">Order</label>
                                   <input
-                                    name="subtopicNo"
+                                    name="orderIndex"
                                     type="number"
-                                    defaultValue={subtopic.subtopicNo}
+                                    defaultValue={subtopic.orderIndex}
                                     className="mt-1 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
                                   />
                                 </div>
@@ -215,9 +217,9 @@ export function AdminSubtopicsClient({
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-zinc-700">Subtopic No.</label>
+                              <label className="block text-sm font-medium text-zinc-700">Order</label>
                               <input
-                                name="subtopicNo"
+                                name="orderIndex"
                                 type="number"
                                 placeholder="0"
                                 className="mt-1 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"

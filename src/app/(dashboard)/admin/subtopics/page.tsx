@@ -16,7 +16,7 @@ async function getChaptersWithSubtopics(level: Level) {
     orderBy: { chapterNo: 'asc' },
     include: {
       subtopics: {
-        orderBy: { subtopicNo: 'asc' },
+        orderBy: { orderIndex: 'asc' },
         include: {
           _count: { select: { notes: true, questions: true } },
         },
