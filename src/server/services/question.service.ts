@@ -21,24 +21,26 @@ export async function listQuestions(filters?: { chapterId?: string; subtopicId?:
 
 export async function createQuestion(input: QuestionFormValues, createdById?: string) {
   const { options, ...data } = input;
+  const normalizedPromptJson = (data.promptJson ?? { html: '' }) as object;
+  const normalizedExplanationJson = data.explanationJson ? (data.explanationJson as object) : undefined;
 
   return prisma.question.create({
     data: {
       level: data.level,
       chapterId: data.chapterId || null,
       subtopicId: data.subtopicId || null,
-      promptJson: data.promptJson as object,
-      explanationJson: data.explanationJson ? data.explanationJson as object : undefined,
+      promptJson: normalizedPromptJson,
+      explanationJson: normalizedExplanationJson,
       questionType: data.questionType,
       difficulty: data.difficulty,
       isPublished: data.isPublished,
       createdById,
       updatedById: createdById,
       options: {
-        create: options.map((option) => ({
-          contentJson: option.contentJson as object,
+        create: options.map((option, index) => ({
+          contentJson: (option.contentJson ?? { html: '' }) as object,
           isCorrect: option.isCorrect,
-          orderIndex: option.orderIndex,
+          orderIndex: index,
         })),
       },
     },
@@ -48,6 +50,8 @@ export async function createQuestion(input: QuestionFormValues, createdById?: st
 
 export async function updateQuestion(id: string, input: QuestionFormValues, updatedById?: string) {
   const { options, ...data } = input;
+  const normalizedPromptJson = (data.promptJson ?? { html: '' }) as object;
+  const normalizedExplanationJson = data.explanationJson ? (data.explanationJson as object) : undefined;
 
   return prisma.question.update({
     where: { id },
@@ -55,18 +59,18 @@ export async function updateQuestion(id: string, input: QuestionFormValues, upda
       level: data.level,
       chapterId: data.chapterId || null,
       subtopicId: data.subtopicId || null,
-      promptJson: data.promptJson as object,
-      explanationJson: data.explanationJson ? data.explanationJson as object : undefined,
+      promptJson: normalizedPromptJson,
+      explanationJson: normalizedExplanationJson,
       questionType: data.questionType,
       difficulty: data.difficulty,
       isPublished: data.isPublished,
       updatedById,
       options: {
         deleteMany: { isDeleted: false },
-        create: options.map((option) => ({
-          contentJson: option.contentJson as object,
+        create: options.map((option, index) => ({
+          contentJson: (option.contentJson ?? { html: '' }) as object,
           isCorrect: option.isCorrect,
-          orderIndex: option.orderIndex,
+          orderIndex: index,
         })),
       },
     },

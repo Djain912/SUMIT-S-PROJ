@@ -66,12 +66,22 @@ type ApiResponse<T> = {
 const levelOptions: Level[] = ['LEVEL_1', 'LEVEL_2', 'LEVEL_3'];
 
 function extractTextFromRichJson(input: unknown): string {
-  if (!input || typeof input !== 'object') {
+  if (!input) {
     return '';
   }
 
-  const node = input as { text?: string; content?: unknown[] };
-  const text = typeof node.text === 'string' ? node.text : '';
+  if (typeof input === 'string') {
+    return input.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  if (typeof input !== 'object') {
+    return '';
+  }
+
+  const node = input as { text?: string; content?: unknown[]; html?: string };
+  const html = typeof node.html === 'string' ? node.html : '';
+  const htmlText = html ? html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : '';
+  const text = typeof node.text === 'string' ? node.text : htmlText;
   const childText = Array.isArray(node.content)
     ? node.content.map((child) => extractTextFromRichJson(child)).filter(Boolean).join(' ')
     : '';

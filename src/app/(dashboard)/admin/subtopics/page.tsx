@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/db/prisma';
 import { revalidatePath } from 'next/cache';
+import { Prisma } from '@prisma/client';
+import { redirect } from 'next/navigation';
 import { AdminLevelTabs } from '@/components/admin/admin-level-tabs';
 import { ConfirmSubmitButton } from '@/components/shared/confirm-submit-button';
 import { requireAdminUser } from '@/server/policies/auth';
@@ -28,21 +30,13 @@ function formatLevel(level: Level) {
   return level.replace('_', ' ').replace('LEVEL', 'Level');
 }
 
-export default async function AdminSubtopicsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ level?: string }>;
-}) {
+async function createSubtopicAction(formData: FormData) {
+  'use server';
   await requireAdminUser();
 
-  const params = await searchParams;
-  const selectedLevel = getSelectedLevel(params?.level);
-  const chapters = await getChaptersWithSubtopics(selectedLevel);
+  const level = formData.get('level') as string;
 
-  async function handleCreate(formData: FormData) {
-    'use server';
-    await requireAdminUser();
-
+  try {
     await prisma.subtopic.create({
       data: {
         chapterId: formData.get('chapterId') as string,
@@ -53,12 +47,22 @@ export default async function AdminSubtopicsPage({
       },
     });
     revalidatePath('/admin/subtopics');
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      redirect(`/admin/subtopics?level=${encodeURIComponent(level)}&error=${encodeURIComponent('A subtopic with that slug already exists in this chapter.')}`);
+    }
+
+    throw error;
   }
+}
 
-  async function handleUpdate(formData: FormData) {
-    'use server';
-    await requireAdminUser();
+async function updateSubtopicAction(formData: FormData) {
+  'use server';
+  await requireAdminUser();
 
+  const level = formData.get('level') as string;
+
+  try {
     await prisma.subtopic.update({
       where: { id: formData.get('id') as string },
       data: {
@@ -69,17 +73,37 @@ export default async function AdminSubtopicsPage({
       },
     });
     revalidatePath('/admin/subtopics');
-  }
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      redirect(`/admin/subtopics?level=${encodeURIComponent(level)}&error=${encodeURIComponent('A subtopic with that slug already exists in this chapter.')}`);
+    }
 
-  async function handleDelete(id: string) {
-    'use server';
-    await requireAdminUser();
-    await prisma.subtopic.update({
-      where: { id },
-      data: { isDeleted: true, deletedAt: new Date() },
-    });
-    revalidatePath('/admin/subtopics');
+    throw error;
   }
+}
+
+async function deleteSubtopicAction(formData: FormData) {
+  'use server';
+  await requireAdminUser();
+
+  await prisma.subtopic.update({
+    where: { id: formData.get('id') as string },
+    data: { isDeleted: true, deletedAt: new Date() },
+  });
+  revalidatePath('/admin/subtopics');
+}
+
+export default async function AdminSubtopicsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ level?: string; error?: string }>;
+}) {
+  await requireAdminUser();
+
+  const params = await searchParams;
+  const selectedLevel = getSelectedLevel(params?.level);
+  const errorMessage = typeof params?.error === 'string' ? params.error : null;
+  const chapters = await getChaptersWithSubtopics(selectedLevel);
 
   return (
     <div className="space-y-8">
@@ -90,6 +114,11 @@ export default async function AdminSubtopicsPage({
           <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500">
             Break chapters into focused study areas so notes and questions stay easy to find.
           </p>
+          {errorMessage ? (
+            <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {errorMessage}
+            </p>
+          ) : null}
         </div>
         <AdminLevelTabs selectedLevel={selectedLevel} />
       </div>
@@ -144,11 +173,9 @@ export default async function AdminSubtopicsPage({
                                 </span>
                               )}
                               <form
-                                action={async () => {
-                                  'use server';
-                                  await handleDelete(subtopic.id);
-                                }}
+                                action={deleteSubtopicAction}
                               >
+                                <input type="hidden" name="id" value={subtopic.id} />
                                 <ConfirmSubmitButton
                                   className="text-xs text-red-500 hover:text-red-700"
                                   message="Delete this subtopic?"
@@ -165,8 +192,9 @@ export default async function AdminSubtopicsPage({
                               <span className="hidden group-open:inline">Close editor</span>
                             </summary>
 
-                            <form action={handleUpdate} className="mt-3 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+                            <form action={updateSubtopicAction} className="mt-3 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
                               <input type="hidden" name="id" value={subtopic.id} />
+                              <input type="hidden" name="level" value={selectedLevel} />
                               <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_8rem]">
                                 <div>
                                   <label className="block text-sm font-medium text-zinc-700">Title</label>
@@ -225,8 +253,9 @@ export default async function AdminSubtopicsPage({
                         <summary className="cursor-pointer text-xs font-semibold text-zinc-800 hover:text-zinc-950">
                           + Add subtopic
                         </summary>
-                        <form action={handleCreate} className="mt-3 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+                        <form action={createSubtopicAction} className="mt-3 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
                           <input type="hidden" name="chapterId" value={chapter.id} />
+                          <input type="hidden" name="level" value={selectedLevel} />
                           <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_8rem]">
                             <div>
                               <label className="block text-sm font-medium text-zinc-700">Title</label>

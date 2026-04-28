@@ -145,17 +145,19 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
     if (!selectedSubtopic || !editTitle) return;
     setSaving(true);
     try {
+      let savedNote: Note | null = null;
       if (editingNoteId) {
         // Update existing note
-        await updateNote(editingNoteId, {
+        const result = await updateNote(editingNoteId, {
           title: editTitle,
           contentHtml: editContent,
           isPublished: editPublished,
           watermarkConfig: editWatermark,
         });
+        savedNote = result.data ?? null;
       } else {
         // Create new note
-        await saveNote({
+        const result = await saveNote({
           subtopicId: selectedSubtopic,
           title: editTitle,
           contentHtml: editContent,
@@ -163,15 +165,22 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
           isPublished: editPublished,
           watermarkConfig: editWatermark,
         });
+        savedNote = result.data ?? null;
       }
       notesInFlight.delete(selectedSubtopic);
-      fetchNotes(selectedSubtopic).then(setNotes);
+      const refreshed = await fetchNotes(selectedSubtopic);
+      setNotes(refreshed);
+      if (savedNote) {
+        setSelectedNote(savedNote);
+      }
       setIsEditing(false);
       setEditingNoteId(null);
-      setEditTitle('');
-      setEditContent('');
-      setEditPublished(false);
-      setEditWatermark(DEFAULT_WATERMARK_CONFIG);
+      if (!savedNote) {
+        setEditTitle('');
+        setEditContent('');
+        setEditPublished(false);
+        setEditWatermark(DEFAULT_WATERMARK_CONFIG);
+      }
     } finally {
       setSaving(false);
     }

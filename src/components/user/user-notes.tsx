@@ -45,9 +45,17 @@ function createWatermarkTileStyle(text: string, fontSize: number): CSSProperties
 }
 
 function extractTextFromRichJson(input: unknown): string {
-  if (!input || typeof input !== 'object') return '';
-  const node = input as { text?: string; content?: unknown[] };
-  const text = typeof node.text === 'string' ? node.text : '';
+  if (!input) return '';
+
+  if (typeof input === 'string') {
+    return input.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  if (typeof input !== 'object') return '';
+
+  const node = input as { text?: string; content?: unknown[]; html?: string };
+  const htmlText = typeof node.html === 'string' ? node.html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : '';
+  const text = typeof node.text === 'string' ? node.text : htmlText;
   const childText = Array.isArray(node.content)
     ? node.content.map((child) => extractTextFromRichJson(child)).filter(Boolean).join(' ')
     : '';

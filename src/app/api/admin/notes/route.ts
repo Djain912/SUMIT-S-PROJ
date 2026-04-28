@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { AuthError, requireAdminUser } from '@/server/policies/auth';
 import { validateCsrfOrigin } from '@/server/policies/csrf';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
@@ -23,7 +24,6 @@ export async function GET(request: Request) {
       prisma.note.findMany({
         where: {
           subtopicId,
-          isPublished: true,
           isDeleted: false,
         },
         orderBy: { orderIndex: 'asc' },
@@ -33,7 +33,6 @@ export async function GET(request: Request) {
       prisma.note.count({
         where: {
           subtopicId,
-          isPublished: true,
           isDeleted: false,
         },
       }),
@@ -86,6 +85,7 @@ export async function POST(request: Request) {
     const payload = await request.json();
     const input = noteSchema.parse(payload);
     const note = await createNote(input, user.id);
+    revalidatePath('/admin/notes');
 
     return NextResponse.json({ success: true, data: note }, { status: 201 });
   } catch (error) {

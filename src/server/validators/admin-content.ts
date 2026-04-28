@@ -47,7 +47,9 @@ export const noteUpdateSchema = noteSchema.partial().omit({ subtopicId: true }).
 });
 
 export const questionOptionSchema = z.object({
-  contentJson: z.any(),
+  contentJson: z.unknown().refine((value) => value !== undefined, {
+    message: 'Option contentJson is required',
+  }),
   isCorrect: z.coerce.boolean().default(false),
   orderIndex: z.coerce.number().int().nonnegative().default(0),
 });
@@ -56,8 +58,10 @@ export const questionSchema = z.object({
   level: cmtLevelSchema.optional().nullable(),
   chapterId: z.string().optional().nullable(),
   subtopicId: z.string().optional().nullable(),
-  promptJson: z.any(),
-  explanationJson: z.any().optional().nullable(),
+  promptJson: z.unknown().refine((value) => value !== undefined, {
+    message: 'promptJson is required',
+  }),
+  explanationJson: z.unknown().optional().nullable(),
   questionType: z.enum(['SINGLE_CHOICE', 'MULTI_CHOICE']).default('SINGLE_CHOICE'),
   difficulty: z.enum(['EASY', 'MEDIUM', 'HARD']).optional().nullable(),
   isPublished: z.coerce.boolean().default(false),

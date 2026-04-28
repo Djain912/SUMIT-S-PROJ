@@ -11,12 +11,27 @@ export default function AdminError({
 }) {
   useEffect(() => {
     console.error('Admin dashboard error:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error details:', {
+        message: error.message,
+        digest: error.digest,
+        stack: error.stack,
+      });
+    }
   }, [error]);
 
   return (
     <div className="flex min-h-[400px] flex-col items-center justify-center gap-4 text-center">
       <h2 className="text-lg font-medium">Something went wrong</h2>
-      <p className="text-sm text-zinc-500">{error.message ?? 'An unexpected error occurred.'}</p>
+      <p className="text-sm text-zinc-500">
+        {error.message ?? 'An unexpected error occurred.'}
+        {process.env.NODE_ENV === 'development' && error.digest && (
+          <>
+            <br />
+            <span className="text-xs text-zinc-400">Digest: {error.digest}</span>
+          </>
+        )}
+      </p>
       <button
         onClick={reset}
         className="rounded-md bg-zinc-900 px-4 py-2 text-sm text-white hover:bg-zinc-700"

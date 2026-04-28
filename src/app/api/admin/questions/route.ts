@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { Prisma } from '@prisma/client';
+import { z } from 'zod';
 import { AuthError, requireAdminUser } from '@/server/policies/auth';
 import { validateCsrfOrigin } from '@/server/policies/csrf';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
@@ -18,7 +20,7 @@ export async function GET(request: Request) {
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') ?? '50', 10)));
     const skip = (page - 1) * limit;
 
-    const where: Prisma.QuestionWhereInput = { isPublished: true, isDeleted: false };
+    const where: Prisma.QuestionWhereInput = { isDeleted: false };
     if (level) where.level = level;
     if (chapterId) where.chapterId = chapterId;
     if (subtopicId) where.subtopicId = subtopicId;
@@ -83,11 +85,17 @@ export async function POST(request: Request) {
     const payload = await request.json();
     const input = questionSchema.parse(payload);
     const question = await createQuestion(input, user.id);
+    revalidatePath('/admin/questions');
 
     return NextResponse.json({ success: true, data: question }, { status: 201 });
   } catch (error) {
+    console.error('Create question error:', error);
     if (error instanceof AuthError) {
       return NextResponse.json({ success: false, error: { message: error.message } }, { status: error.statusCode });
+    }
+
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ success: false, error: { message: 'Validation error', details: error.errors } }, { status: 400 });
     }
 
     return NextResponse.json({ success: false, error: { message: 'Unable to create question' } }, { status: 500 });

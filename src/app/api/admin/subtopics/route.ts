@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { AuthError, requireAdminUser } from '@/server/policies/auth';
 import { validateCsrfOrigin } from '@/server/policies/csrf';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
@@ -23,7 +24,6 @@ export async function GET(request: Request) {
       prisma.subtopic.findMany({
         where: {
           chapterId,
-          isPublished: true,
           isDeleted: false,
         },
         orderBy: { orderIndex: 'asc' },
@@ -33,7 +33,6 @@ export async function GET(request: Request) {
       prisma.subtopic.count({
         where: {
           chapterId,
-          isPublished: true,
           isDeleted: false,
         },
       }),
@@ -86,6 +85,7 @@ export async function POST(request: Request) {
     const payload = await request.json();
     const input = subtopicInputSchema.parse(payload);
     const subtopic = await createSubtopic(input);
+    revalidatePath('/admin/subtopics');
 
     return NextResponse.json({ success: true, data: subtopic }, { status: 201 });
   } catch (error) {

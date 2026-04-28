@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { AuthError, requireAdminUser } from '@/server/policies/auth';
 import { validateCsrfOrigin } from '@/server/policies/csrf';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
@@ -39,6 +40,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     const payload = await request.json();
     const input = subtopicInputSchema.parse(payload);
     const subtopic = await updateSubtopic(id, input);
+    revalidatePath('/admin/subtopics');
 
     return NextResponse.json({ success: true, data: subtopic });
   } catch (error) {
@@ -82,6 +84,7 @@ export async function DELETE(_request: Request, context: { params: Promise<{ id:
 
     const { id } = await context.params;
     await deleteSubtopic(id);
+    revalidatePath('/admin/subtopics');
 
     return NextResponse.json({ success: true });
   } catch (error) {

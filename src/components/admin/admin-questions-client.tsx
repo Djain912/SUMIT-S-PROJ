@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AdminLevelTabs, type AdminLevel } from '@/components/admin/admin-level-tabs';
 import { TinyMceEditor } from '@/components/admin/tinymce-editor';
 
@@ -24,7 +24,7 @@ type Chapter = {
 
 type QuestionOption = {
   id: string;
-  contentHtml: string;
+  contentJson: Record<string, unknown>;
   isCorrect: boolean;
   orderIndex: number;
 };
@@ -34,8 +34,8 @@ type Question = {
   level: Level | null;
   chapterId: string | null;
   subtopicId: string | null;
-  promptHtml: string | null;
-  explanationHtml: string | null;
+  promptJson: Record<string, unknown>;
+  explanationJson: Record<string, unknown> | null;
   questionType: QuestionType;
   difficulty: Difficulty | null;
   isPublished: boolean;
@@ -45,11 +45,63 @@ type Question = {
 const chaptersInFlight = new Map<Level, Promise<Chapter[]>>();
 const questionsInFlight = new Map<string, Promise<Question[]>>();
 
+const emptyDoc = { type: 'doc', content: [{ type: 'paragraph' }] };
+
+function extractTextFromRichJson(input: unknown): string {
+  if (!input) {
+    return '';
+  }
+
+  if (typeof input === 'string') {
+    return input.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  if (typeof input !== 'object') {
+    return '';
+  }
+
+  const node = input as { text?: string; content?: unknown[]; html?: string };
+  const html = typeof node.html === 'string' ? node.html : '';
+  const htmlText = html ? html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : '';
+  const text = typeof node.text === 'string' ? node.text : htmlText;
+  const childText = Array.isArray(node.content)
+    ? node.content.map((child) => extractTextFromRichJson(child)).filter(Boolean).join(' ')
+    : '';
+
+  return `${text} ${childText}`.trim();
+}
+
+function getHtmlFromRichJson(input: unknown): string {
+  if (!input) {
+    return '';
+  }
+
+  if (typeof input === 'string') {
+    return input;
+  }
+
+  if (typeof input === 'object') {
+    const html = (input as { html?: string }).html;
+    if (typeof html === 'string') {
+      return html;
+    }
+  }
+
+  return '';
+}
+
+function createEmptyOptions() {
+  return [
+    { contentHtml: '', isCorrect: true },
+    { contentHtml: '', isCorrect: false },
+    { contentHtml: '', isCorrect: false },
+    { contentHtml: '', isCorrect: false },
+  ];
+}
+
 async function fetchChapters(level: Level): Promise<Chapter[]> {
   const existing = chaptersInFlight.get(level);
-  if (existing) {
-    return existing;
-  }
+  if (existing) return existing;
 
   const request = (async () => {
     const res = await fetch(`/api/admin/chapters?level=${level}`);
@@ -58,18 +110,13 @@ async function fetchChapters(level: Level): Promise<Chapter[]> {
   })();
 
   chaptersInFlight.set(level, request);
-  request.finally(() => {
-    chaptersInFlight.delete(level);
-  });
-
+  request.finally(() => chaptersInFlight.delete(level));
   return request;
 }
 
 async function fetchQuestions(subtopicId: string): Promise<Question[]> {
   const existing = questionsInFlight.get(subtopicId);
-  if (existing) {
-    return existing;
-  }
+  if (existing) return existing;
 
   const request = (async () => {
     const res = await fetch(`/api/admin/questions?subtopicId=${subtopicId}`);
@@ -78,52 +125,27 @@ async function fetchQuestions(subtopicId: string): Promise<Question[]> {
   })();
 
   questionsInFlight.set(subtopicId, request);
-  request.finally(() => {
-    questionsInFlight.delete(subtopicId);
-  });
-
+  request.finally(() => questionsInFlight.delete(subtopicId));
   return request;
-}
-
-async function saveQuestion(data: {
-  subtopicId: string;
-  level: Level;
-  promptHtml: string;
-  explanationHtml: string;
-  questionType: QuestionType;
-  difficulty: Difficulty;
-  isPublished: boolean;
-  options: { contentHtml: string; isCorrect: boolean }[];
-}) {
-  const res = await fetch('/api/admin/questions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  return res.json();
 }
 
 export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: Level }) {
   const [level, setLevel] = useState<Level>(initialLevel);
   const [chapters, setChapters] = useState<Chapter[]>([]);
-  const [selectedChapter, setSelectedChapter] = useState<string>('');
-  const [selectedSubtopic, setSelectedSubtopic] = useState<string>('');
+  const [selectedChapter, setSelectedChapter] = useState('');
+  const [selectedSubtopic, setSelectedSubtopic] = useState('');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  
+  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
   const [editPrompt, setEditPrompt] = useState('');
   const [editExplanation, setEditExplanation] = useState('');
   const [editQuestionType, setEditQuestionType] = useState<QuestionType>('SINGLE_CHOICE');
   const [editDifficulty, setEditDifficulty] = useState<Difficulty>('MEDIUM');
   const [editPublished, setEditPublished] = useState(false);
-  const [editOptions, setEditOptions] = useState<{ contentHtml: string; isCorrect: boolean }[]>([
-    { contentHtml: '', isCorrect: true },
-    { contentHtml: '', isCorrect: false },
-    { contentHtml: '', isCorrect: false },
-    { contentHtml: '', isCorrect: false },
-  ]);
-  const [saving, setSaving] = useState(false);
+  const [editOptions, setEditOptions] = useState(createEmptyOptions());
 
   useEffect(() => {
     fetchChapters(level).then(setChapters);
@@ -132,6 +154,9 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
   useEffect(() => {
     if (selectedSubtopic) {
       fetchQuestions(selectedSubtopic).then(setQuestions);
+    } else {
+      setQuestions([]);
+      setSelectedQuestion(null);
     }
   }, [selectedSubtopic]);
 
@@ -141,32 +166,128 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
     setSelectedSubtopic('');
     setQuestions([]);
     setSelectedQuestion(null);
+    setIsEditing(false);
+    setEditingQuestionId(null);
   }, [initialLevel]);
 
-  const selectedChapterData = chapters.find(c => c.id === selectedChapter);
-  const subtopicQuestions = questions.filter(q => q.subtopicId === selectedSubtopic);
+  const selectedChapterData = useMemo(
+    () => chapters.find((chapter) => chapter.id === selectedChapter) ?? null,
+    [chapters, selectedChapter],
+  );
 
-  const handleSave = async () => {
-    if (!selectedSubtopic || !editPrompt) return;
+  const subtopicQuestions = useMemo(
+    () => questions.filter((question) => question.subtopicId === selectedSubtopic),
+    [questions, selectedSubtopic],
+  );
+
+  function startNewQuestion() {
+    setEditingQuestionId(null);
+    setSelectedQuestion(null);
+    setIsEditing(true);
+    setEditPrompt('');
+    setEditExplanation('');
+    setEditQuestionType('SINGLE_CHOICE');
+    setEditDifficulty('MEDIUM');
+    setEditPublished(false);
+    setEditOptions(createEmptyOptions());
+  }
+
+  function loadQuestionIntoEditor(question: Question) {
+    setEditingQuestionId(question.id);
+    setSelectedQuestion(question);
+    setIsEditing(false);
+    setEditPrompt(getHtmlFromRichJson(question.promptJson));
+    setEditExplanation(getHtmlFromRichJson(question.explanationJson));
+    setEditQuestionType(question.questionType);
+    setEditDifficulty(question.difficulty ?? 'MEDIUM');
+    setEditPublished(question.isPublished);
+    setEditOptions(
+      question.options.map((option) => ({
+        contentHtml: getHtmlFromRichJson(option.contentJson),
+        isCorrect: option.isCorrect,
+      })),
+    );
+  }
+
+  async function saveCurrentQuestion() {
+    if (!selectedSubtopic || !editPrompt.trim()) {
+      return;
+    }
+
     setSaving(true);
     try {
-      await saveQuestion({
-        subtopicId: selectedSubtopic,
+      const payload = {
         level,
-        promptHtml: editPrompt,
-        explanationHtml: editExplanation,
+        chapterId: selectedChapter || null,
+        subtopicId: selectedSubtopic || null,
+        promptJson: { html: editPrompt },
+        explanationJson: editExplanation ? { html: editExplanation } : null,
         questionType: editQuestionType,
         difficulty: editDifficulty,
         isPublished: editPublished,
-        options: editOptions,
+        options: editOptions.map((option, index) => ({
+          contentJson: { html: option.contentHtml },
+          isCorrect: option.isCorrect,
+          orderIndex: index,
+        })),
+      };
+
+      const url = editingQuestionId ? `/api/admin/questions/${editingQuestionId}` : '/api/admin/questions';
+      const method = editingQuestionId ? 'PATCH' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
-      questionsInFlight.delete(selectedSubtopic);
-      fetchQuestions(selectedSubtopic).then(setQuestions);
+      const result = await res.json();
+
+      if (!result.success) {
+        throw new Error(result.error?.message || 'Failed to save question');
+      }
+
+      const refreshed = await fetchQuestions(selectedSubtopic);
+      setQuestions(refreshed);
+      const savedQuestion = result.data as Question | undefined;
+      if (savedQuestion) {
+        setSelectedQuestion(savedQuestion);
+        loadQuestionIntoEditor(savedQuestion);
+      }
       setIsEditing(false);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to save question');
     } finally {
       setSaving(false);
     }
-  };
+  }
+
+  async function handleDeleteQuestion(questionId: string) {
+    if (!window.confirm('Delete this question?')) {
+      return;
+    }
+
+    const res = await fetch(`/api/admin/questions/${questionId}`, { method: 'DELETE' });
+    const result = await res.json();
+
+    if (!result.success) {
+      alert(result.error?.message || 'Failed to delete question');
+      return;
+    }
+
+    questionsInFlight.delete(selectedSubtopic);
+    const refreshed = await fetchQuestions(selectedSubtopic);
+    setQuestions(refreshed);
+
+    if (selectedQuestion?.id === questionId) {
+      const nextSelected = refreshed[0] ?? null;
+      setSelectedQuestion(nextSelected);
+      if (nextSelected) {
+        loadQuestionIntoEditor(nextSelected);
+      } else {
+        startNewQuestion();
+      }
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -186,6 +307,8 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
             setSelectedSubtopic('');
             setQuestions([]);
             setSelectedQuestion(null);
+            setEditingQuestionId(null);
+            setIsEditing(false);
           }}
         />
       </div>
@@ -201,13 +324,15 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
                 setSelectedSubtopic('');
                 setQuestions([]);
                 setSelectedQuestion(null);
+                setIsEditing(false);
+                setEditingQuestionId(null);
               }}
               className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
             >
               <option value="">Select chapter</option>
-              {chapters.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.title}
+              {chapters.map((chapter) => (
+                <option key={chapter.id} value={chapter.id}>
+                  {chapter.title}
                 </option>
               ))}
             </select>
@@ -217,61 +342,81 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
             <label className="block text-sm font-medium text-zinc-700">Subtopic</label>
             <select
               value={selectedSubtopic}
-              onChange={(e) => setSelectedSubtopic(e.target.value)}
+              onChange={(e) => {
+                setSelectedSubtopic(e.target.value);
+                setSelectedQuestion(null);
+                setIsEditing(false);
+                setEditingQuestionId(null);
+              }}
               className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
             >
               <option value="">Select subtopic</option>
-              {selectedChapterData?.subtopics.map((st) => (
-                <option key={st.id} value={st.id}>
-                  {st.title}
+              {selectedChapterData?.subtopics.map((subtopic) => (
+                <option key={subtopic.id} value={subtopic.id}>
+                  {subtopic.title}
                 </option>
               ))}
             </select>
           </div>
 
-          {subtopicQuestions.length > 0 && (
+          {selectedSubtopic ? (
             <div>
-              <label className="block text-sm font-medium text-zinc-700">Questions ({subtopicQuestions.length})</label>
-              <div className="mt-1 space-y-1">
-                {subtopicQuestions.map((q) => (
+              <div className="flex items-center justify-between gap-3">
+                <label className="block text-sm font-medium text-zinc-700">Questions ({subtopicQuestions.length})</label>
+                <button
+                  type="button"
+                  onClick={startNewQuestion}
+                  className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+                >
+                  Add another question
+                </button>
+              </div>
+              <div className="mt-2 space-y-2">
+                {subtopicQuestions.map((question) => (
                   <button
-                    key={q.id}
-                    onClick={() => {
-                      setSelectedQuestion(q);
-                      setEditPrompt(q.promptHtml || '');
-                      setEditExplanation(q.explanationHtml || '');
-                      setEditQuestionType(q.questionType);
-                      setEditDifficulty(q.difficulty || 'MEDIUM');
-                      setEditPublished(q.isPublished);
-                      setIsEditing(false);
-                    }}
-                    className={`w-full rounded-lg border px-3 py-2 text-left text-sm ${
-                      selectedQuestion?.id === q.id
-                        ? 'border-blue-600 bg-blue-50'
-                        : 'border-zinc-200 hover:bg-zinc-50'
+                    key={question.id}
+                    type="button"
+                    onClick={() => loadQuestionIntoEditor(question)}
+                    className={`w-full rounded-xl border px-3 py-3 text-left text-sm transition ${
+                      selectedQuestion?.id === question.id ? 'border-blue-600 bg-blue-50' : 'border-zinc-200 hover:bg-zinc-50'
                     }`}
                   >
-                    <span className="block truncate">
-                      {q.promptHtml?.replace(/<[^>]*>/g, '').slice(0, 40) || 'Question'}
+                    <span className="block truncate font-medium text-zinc-950">
+                      {extractTextFromRichJson(question.promptJson).slice(0, 60) || 'Question'}
                     </span>
                     <span className="mt-1 block text-xs text-zinc-500">
-                      {q.questionType} · {q.difficulty}
-                      {q.isPublished && ' · Published'}
+                      {question.questionType} · {question.difficulty}
+                      {question.isPublished && ' · Published'}
                     </span>
                   </button>
                 ))}
               </div>
             </div>
-          )}
+          ) : null}
         </div>
 
         <div className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
           {!selectedSubtopic ? (
-            <p className="text-center text-zinc-500">
-              Select a chapter and subtopic to view or create questions
-            </p>
+            <p className="text-center text-zinc-500">Select a chapter and subtopic to view or create questions</p>
           ) : isEditing ? (
             <div className="space-y-4">
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-zinc-950">{editingQuestionId ? 'Editing question' : 'Creating question'}</p>
+                  <p className="text-xs text-zinc-500">Keep the same subtopic selected to add multiple questions quickly.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditing(false);
+                    setEditingQuestionId(null);
+                  }}
+                  className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+                >
+                  Close editor
+                </button>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-zinc-700">Question Type</label>
@@ -300,110 +445,117 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
 
               <div>
                 <label className="block text-sm font-medium text-zinc-700">Question</label>
-                <TinyMceEditor
-                  value={editPrompt}
-                  onChange={setEditPrompt}
-                  placeholder="Write the question..."
-                />
+                <TinyMceEditor value={editPrompt} onChange={setEditPrompt} placeholder="Write the question..." />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-zinc-700">Options</label>
                 <div className="mt-2 space-y-2">
-                  {editOptions.map((opt, i) => (
-                    <div key={i} className="flex items-center gap-2">
+                  {editOptions.map((option, index) => (
+                    <div key={index} className="flex items-center gap-2">
                       <input
                         type={editQuestionType === 'SINGLE_CHOICE' ? 'radio' : 'checkbox'}
                         name="correctOption"
-                        checked={opt.isCorrect}
+                        checked={option.isCorrect}
                         onChange={() => {
-                          const newOpts = editOptions.map((o, idx) => ({
-                            ...o,
-                            isCorrect: editQuestionType === 'SINGLE_CHOICE' 
-                              ? idx === i 
-                              : idx === i ? !o.isCorrect : o.isCorrect,
-                          }));
-                          setEditOptions(newOpts);
+                          setEditOptions((current) =>
+                            current.map((item, itemIndex) => {
+                              if (editQuestionType === 'SINGLE_CHOICE') {
+                                return { ...item, isCorrect: itemIndex === index };
+                              }
+
+                              return {
+                                ...item,
+                                isCorrect: itemIndex === index ? !item.isCorrect : item.isCorrect,
+                              };
+                            }),
+                          );
                         }}
                       />
                       <input
-                        value={opt.contentHtml}
+                        value={option.contentHtml}
                         onChange={(e) => {
-                          const newOpts = [...editOptions];
-                          newOpts[i] = { ...newOpts[i], contentHtml: e.target.value };
-                          setEditOptions(newOpts);
+                          const nextOptions = [...editOptions];
+                          nextOptions[index] = { ...nextOptions[index], contentHtml: e.target.value };
+                          setEditOptions(nextOptions);
                         }}
-                        placeholder={`Option ${i + 1}`}
+                        placeholder={`Option ${index + 1}`}
                         className="flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm"
                       />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const nextOptions = editOptions.filter((_, itemIndex) => itemIndex !== index).map((item, itemIndex) => ({ ...item, orderIndex: itemIndex }));
+                          setEditOptions(nextOptions.length > 0 ? nextOptions : createEmptyOptions());
+                        }}
+                        className="rounded-full border border-zinc-200 px-3 py-2 text-xs text-red-600 hover:bg-red-50"
+                      >
+                        Remove
+                      </button>
                     </div>
                   ))}
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setEditOptions((current) => [...current, { contentHtml: '', isCorrect: false }])}
+                  className="mt-3 rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+                >
+                  Add option
+                </button>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-zinc-700">Explanation</label>
-                <TinyMceEditor
-                  value={editExplanation}
-                  onChange={setEditExplanation}
-                  placeholder="Explain the answer..."
-                />
+                <TinyMceEditor value={editExplanation} onChange={setEditExplanation} placeholder="Explain the answer..." />
               </div>
 
-              <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2 text-sm text-zinc-700">
-                  <input
-                    type="checkbox"
-                    checked={editPublished}
-                    onChange={(e) => setEditPublished(e.target.checked)}
-                    className="rounded border-zinc-300"
-                  />
-                  Published
-                </label>
-              </div>
+              <label className="flex items-center gap-2 text-sm text-zinc-700">
+                <input
+                  type="checkbox"
+                  checked={editPublished}
+                  onChange={(e) => setEditPublished(e.target.checked)}
+                  className="rounded border-zinc-300"
+                />
+                Published
+              </label>
 
               <div className="flex gap-2">
                 <button
+                  type="button"
                   onClick={() => setIsEditing(false)}
                   className="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={handleSave}
+                  type="button"
+                  onClick={() => void saveCurrentQuestion()}
                   disabled={saving}
                   className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 disabled:opacity-50"
                 >
-                  {saving ? 'Saving...' : 'Save Question'}
+                  {saving ? 'Saving...' : editingQuestionId ? 'Update Question' : 'Save Question'}
                 </button>
+                {!editingQuestionId ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void saveCurrentQuestion().then(() => {
+                        if (!saving) {
+                          startNewQuestion();
+                        }
+                      });
+                    }}
+                    disabled={saving}
+                    className="rounded-md border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
+                  >
+                    {saving ? 'Saving...' : 'Save and add another'}
+                  </button>
+                ) : null}
               </div>
             </div>
-          ) : !selectedQuestion ? (
+          ) : selectedQuestion ? (
             <div className="space-y-4">
-              <p className="text-zinc-700">No questions for this subtopic yet</p>
-              <button
-                onClick={() => {
-                  setEditPrompt('');
-                  setEditExplanation('');
-                  setEditQuestionType('SINGLE_CHOICE');
-                  setEditDifficulty('MEDIUM');
-                  setEditPublished(false);
-                  setEditOptions([
-                    { contentHtml: '', isCorrect: true },
-                    { contentHtml: '', isCorrect: false },
-                    { contentHtml: '', isCorrect: false },
-                    { contentHtml: '', isCorrect: false },
-                  ]);
-                  setIsEditing(true);
-                }}
-                className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
-              >
-                Create Question
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-3">
                 <div>
                   <span className="text-sm text-zinc-500">
                     {selectedQuestion.questionType} · {selectedQuestion.difficulty}
@@ -414,44 +566,76 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
                     </span>
                   )}
                 </div>
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="text-sm font-medium text-zinc-600 hover:text-zinc-950"
-                >
-                  Edit
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      startNewQuestion();
+                    }}
+                    className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+                  >
+                    Add another question
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      loadQuestionIntoEditor(selectedQuestion);
+                      setIsEditing(true);
+                    }}
+                    className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleDeleteQuestion(selectedQuestion.id)}
+                    className="rounded-full border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                  >
+                    Delete question
+                  </button>
+                </div>
               </div>
-              <div
-                className="prose prose-zinc max-w-none rounded-lg bg-zinc-50 p-4"
-                dangerouslySetInnerHTML={{ __html: selectedQuestion.promptHtml || '' }}
-              />
+
+              <div className="rounded-lg bg-zinc-50 p-4">
+                <p className="text-sm leading-7 text-zinc-900">
+                  {extractTextFromRichJson(selectedQuestion.promptJson) || 'Question text unavailable'}
+                </p>
+              </div>
+
               <div>
                 <p className="text-sm font-medium text-zinc-700">Options</p>
                 <div className="mt-2 space-y-2">
-                  {selectedQuestion.options.map((opt, i) => (
+                  {selectedQuestion.options.map((option) => (
                     <div
-                      key={i}
-                      className={`rounded-lg border p-3 ${
-                        opt.isCorrect ? 'border-green-300 bg-green-50' : 'border-zinc-200'
-                      }`}
+                      key={option.id}
+                      className={`rounded-lg border p-3 ${option.isCorrect ? 'border-green-300 bg-green-50' : 'border-zinc-200'}`}
                     >
-                      <span className="text-sm text-zinc-900">{opt.contentHtml}</span>
-                      {opt.isCorrect && (
-                        <span className="ml-2 text-xs text-green-700">(Correct)</span>
-                      )}
+                      <span className="text-sm text-zinc-900">{extractTextFromRichJson(option.contentJson) || 'Option'}</span>
+                      {option.isCorrect && <span className="ml-2 text-xs text-green-700">(Correct)</span>}
                     </div>
                   ))}
                 </div>
               </div>
-              {selectedQuestion.explanationHtml && (
+
+              {selectedQuestion.explanationJson ? (
                 <div>
                   <p className="text-sm font-medium text-zinc-700">Explanation</p>
-                  <div
-                    className="mt-2 rounded-lg bg-zinc-50 p-4 text-sm text-zinc-700"
-                    dangerouslySetInnerHTML={{ __html: selectedQuestion.explanationHtml }}
-                  />
+                  <div className="mt-2 rounded-lg bg-zinc-50 p-4 text-sm text-zinc-700">
+                    {extractTextFromRichJson(selectedQuestion.explanationJson) || 'No explanation available.'}
+                  </div>
                 </div>
-              )}
+              ) : null}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-zinc-700">No questions for this subtopic yet</p>
+              <button
+                type="button"
+                onClick={startNewQuestion}
+                className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
+              >
+                Create Question
+              </button>
             </div>
           )}
         </div>
