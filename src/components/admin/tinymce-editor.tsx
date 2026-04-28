@@ -9,47 +9,11 @@ interface RichTextEditorProps {
   placeholder?: string;
 }
 
-interface CloudinarySignature {
-  cloudName: string;
-  apiKey: string;
-  timestamp: number;
-  signature: string;
-  folder: string;
-  resourceType: string;
-}
-
 const initPlugins = [
   'lists', 'link', 'image', 'table', 'wordcount',
 ];
 
 const toolbar = 'undo redo | blocks | bold italic underline | alignleft aligncenter alignright | bullist numlist | link image table | removeformat';
-
-async function getCloudinarySignature(): Promise<CloudinarySignature | null> {
-  try {
-    const response = await fetch('/api/admin/uploads/signature', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-    });
-    
-    if (!response.ok) {
-      console.error('Signature API HTTP error:', response.status, await response.text());
-      return null;
-    }
-    
-    const payload = await response.json();
-    
-    if (!payload.success) {
-      console.error('Signature API error:', payload.error);
-      return null;
-    }
-    
-    return payload.data;
-  } catch (e) {
-    console.error('Failed to get upload signature:', e);
-  }
-  return null;
-}
 
 interface BlobInfo {
   blob: () => File;

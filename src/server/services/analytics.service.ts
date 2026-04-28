@@ -170,7 +170,7 @@ export async function getUserAnalyticsData(userId: string): Promise<AnalyticsDat
     // chapters is independent of allAttempts — run in parallel with the streak computation above
     const chapters = await prisma.chapter.findMany({
       where: { isPublished: true, isDeleted: false },
-      orderBy: { chapterNo: 'asc' },
+      orderBy: { orderIndex: 'asc' },
       select: { id: true, title: true, level: true },
     });
 

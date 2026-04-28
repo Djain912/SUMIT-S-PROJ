@@ -45,8 +45,6 @@ type Question = {
 const chaptersInFlight = new Map<Level, Promise<Chapter[]>>();
 const questionsInFlight = new Map<string, Promise<Question[]>>();
 
-const emptyDoc = { type: 'doc', content: [{ type: 'paragraph' }] };
-
 function extractTextFromRichJson(input: unknown): string {
   if (!input) {
     return '';

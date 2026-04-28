@@ -5,7 +5,7 @@ import { AuthError, requireAdminUser } from '@/server/policies/auth';
 import { validateCsrfOrigin } from '@/server/policies/csrf';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
 import { deleteChapter, updateChapter } from '@/server/services/chapter.service';
-import { chapterInputSchema } from '@/server/validators/content';
+import { chapterSchema } from '@/server/validators/admin-content';
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -39,7 +39,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
     const { id } = await context.params;
     const payload = await request.json();
-    const input = chapterInputSchema.parse(payload);
+    const input = chapterSchema.parse(payload);
     const chapter = await updateChapter(id, input);
     revalidatePath('/admin/chapters');
 

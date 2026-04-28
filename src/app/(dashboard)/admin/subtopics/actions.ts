@@ -14,7 +14,7 @@ function toSlug(title: string): string {
 }
 
 async function uniqueSubtopicSlug(chapterId: string, base: string, excludeId?: string): Promise<string> {
-  let slug = toSlug(base) || 'subtopic';
+  const slug = toSlug(base) || 'subtopic';
   let suffix = 0;
   while (true) {
     const candidate = suffix === 0 ? slug : `${slug}-${suffix}`;

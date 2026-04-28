@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db/prisma';
 interface SubtopicProgress {
   id: string;
   title: string;
-  subtopicNo: number;
+  orderIndex: number;
   progress: number;
   totalQuestions: number;
   questionsAnswered: number;
@@ -13,7 +13,7 @@ interface SubtopicProgress {
 interface ChapterProgress {
   id: string;
   title: string;
-  chapterNo: number;
+  orderIndex: number;
   isLocked: boolean;
   progress: number;
   totalNotes: number;
@@ -37,7 +37,7 @@ export async function getUserDashboardData(userId: string, level: string) {
           isPublished: true,
           isDeleted: false,
         },
-        orderBy: { chapterNo: 'asc' },
+        orderBy: { orderIndex: 'asc' },
         include: {
           subtopics: {
             where: { isPublished: true, isDeleted: false },
@@ -118,7 +118,7 @@ export async function getUserDashboardData(userId: string, level: string) {
         return {
           id: ch.id,
           title: ch.title,
-          chapterNo: ch.chapterNo,
+          orderIndex: ch.orderIndex,
           isLocked: index > 0 && (chapterStats.get(chapters[index - 1].id)?.total ?? 0) === 0,
           progress,
           totalNotes: ch.subtopics.reduce((sum, st) => sum + st.notes.length, 0),
@@ -131,7 +131,7 @@ export async function getUserDashboardData(userId: string, level: string) {
             return {
               id: st.id,
               title: st.title,
-              subtopicNo: st.orderIndex,
+              orderIndex: st.orderIndex,
               progress,
               totalQuestions: stTotalQs,
               questionsAnswered: stStats.total,

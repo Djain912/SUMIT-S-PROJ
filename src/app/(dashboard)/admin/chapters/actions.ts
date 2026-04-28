@@ -16,7 +16,7 @@ function toSlug(title: string): string {
 }
 
 async function uniqueChapterSlug(level: Level, base: string, excludeId?: string): Promise<string> {
-  let slug = toSlug(base) || 'chapter';
+  const slug = toSlug(base) || 'chapter';
   let suffix = 0;
   while (true) {
     const candidate = suffix === 0 ? slug : `${slug}-${suffix}`;
@@ -39,7 +39,7 @@ export async function createChapter(formData: FormData) {
       level,
       title,
       slug,
-      chapterNo: Number(formData.get('orderIndex') || 0),
+      orderIndex: Number(formData.get('orderIndex') || 0),
       isPublished: formData.get('isPublished') === 'on',
     },
   });
@@ -57,7 +57,7 @@ export async function updateChapter(formData: FormData) {
     data: {
       title,
       slug,
-      chapterNo: Number(formData.get('orderIndex') || 0),
+      orderIndex: Number(formData.get('orderIndex') || 0),
       isPublished: formData.get('isPublished') === 'on',
     },
   });

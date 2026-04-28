@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db/prisma';
 import { Prisma } from '@prisma/client';
 
-export async function listNotes(subtopicId: string, includeDeleted = false) {
+export async function listNotes(subtopicId: string) {
   return prisma.note.findMany({
     where: {
       subtopicId,

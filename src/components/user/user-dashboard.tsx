@@ -16,7 +16,7 @@ export type SectionData = {
 export type ChapterData = {
   id: string;
   title: string;
-  chapterNo: number;
+  orderIndex: number;
   subtopics: SubtopicData[];
   isLocked: boolean;
   progress: number;
@@ -27,7 +27,7 @@ export type ChapterData = {
 export type SubtopicData = {
   id: string;
   title: string;
-  subtopicNo: number;
+  orderIndex: number;
   progress: number;
   totalQuestions: number;
   questionsAnswered: number;
@@ -168,13 +168,13 @@ export function RecentAttempts({ attempts }: RecentAttemptsProps) {
 interface ChapterRowProps {
   id: string;
   title: string;
-  chapterNo: number;
+  orderIndex: number;
   subtopics?: SubtopicData[];
   isLocked?: boolean;
   progress?: number;
 }
 
-function ChapterRow({ id, title, chapterNo, subtopics = [], isLocked = false, progress = 0 }: ChapterRowProps) {
+function ChapterRow({ id, title, orderIndex, subtopics = [], isLocked = false, progress = 0 }: ChapterRowProps) {
   const [expanded, setExpanded] = useState(false);
   const hasSubtopics = subtopics.length > 0;
 
@@ -193,7 +193,7 @@ return (
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </span>
-              Chapter {chapterNo}: {title}
+              Chapter {orderIndex}: {title}
             </button>
           ) : (
             <span className="font-medium text-zinc-900">{title}</span>
@@ -235,7 +235,7 @@ return (
             <div key={st.id} className="flex flex-col gap-2 rounded-lg bg-zinc-50 p-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-zinc-700">Subtopic {st.subtopicNo}: {st.title}</span>
+                  <span className="text-sm text-zinc-700">Subtopic {st.orderIndex}: {st.title}</span>
                   {st.questionsAnswered > 0 && (
                     <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                       st.progress >= 70 ? 'bg-green-100 text-green-700' :
@@ -376,7 +376,7 @@ export function UserDashboardClient({ initialData }: { initialData?: DashboardDa
                     key={chapter.id}
                     id={chapter.id}
                     title={chapter.title}
-                    chapterNo={chapter.chapterNo}
+                    orderIndex={chapter.orderIndex}
                     subtopics={chapter.subtopics}
                     isLocked={chapter.isLocked}
                     progress={chapter.progress}

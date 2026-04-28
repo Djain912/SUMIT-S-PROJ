@@ -20,14 +20,6 @@ async function fetchSession(supabase: SupabaseClient): Promise<SessionState> {
     return cachedSession;
   }
 
-  const { data: { session }, error } = await supabase.auth.getSession();
-  
-  if (error || !session) {
-    cachedSession = { status: 'guest' };
-    sessionLoaded = true;
-    return cachedSession;
-  }
-
   try {
     const response = await fetch('/api/auth/session', { 
       cache: 'no-store',
@@ -47,14 +39,21 @@ async function fetchSession(supabase: SupabaseClient): Promise<SessionState> {
       }
     }
   } catch {
-    // Fall through to guest
+    // Fall through to direct auth lookup
   }
 
-  const role = session.user.email?.toLowerCase() === 'admin@financeprep.com' ? 'ADMIN' : 'USER';
+  const { data: userData, error } = await supabase.auth.getUser();
+
+  if (error || !userData.user) {
+    cachedSession = { status: 'guest' };
+    sessionLoaded = true;
+    return cachedSession;
+  }
+
   cachedSession = {
     status: 'authenticated',
-    role,
-    email: session.user.email || '',
+    role: userData.user.email?.toLowerCase() === 'admin@financeprep.com' ? 'ADMIN' : 'USER',
+    email: userData.user.email || '',
   };
   sessionLoaded = true;
   return cachedSession;
@@ -84,7 +83,7 @@ export function AppNavbar() {
 
     void loadSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_OUT') {
         cachedSession = null;
         sessionLoaded = false;
@@ -92,10 +91,9 @@ export function AppNavbar() {
           setSession({ status: 'guest' });
         }
       } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        if (session) {
-          cachedSession = null;
-          sessionLoaded = false;
-        }
+        cachedSession = null;
+        sessionLoaded = false;
+        void loadSession();
       }
     });
 

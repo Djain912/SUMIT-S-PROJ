@@ -19,7 +19,7 @@ const tabs: { id: Tab; label: string; href: string }[] = [
 
 export function AdminLayout() {
   const [selectedLevel, setSelectedLevel] = useState<Level>('LEVEL_1');
-  const [activeTab, setActiveTab] = useState<Tab>('dashboard');
+  const activeTab: Tab = 'dashboard';
 
   const currentLevelData = {
     LEVEL_1: { chapters: 0, subtopics: 0, notes: 0, questions: 0 },

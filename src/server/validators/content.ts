@@ -6,7 +6,7 @@ export const chapterInputSchema = z.object({
   level: cmtLevelSchema,
   title: z.string().min(1).max(200),
   description: z.string().max(1000).optional().nullable(),
-  chapterNo: z.coerce.number().int().nonnegative().default(0),
+  orderIndex: z.coerce.number().int().nonnegative().default(0),
   isPublished: z.boolean().default(false),
 });
 
@@ -14,7 +14,7 @@ export const subtopicInputSchema = z.object({
   chapterId: z.string().min(1),
   title: z.string().min(1).max(200),
   description: z.string().max(1000).optional().nullable(),
-  subtopicNo: z.coerce.number().int().nonnegative().default(0),
+  orderIndex: z.coerce.number().int().nonnegative().default(0),
   isPublished: z.boolean().default(false),
 });
 

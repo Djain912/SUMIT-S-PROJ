@@ -17,17 +17,17 @@ export async function GET(request: Request) {
           ...(level ? { level } : {}),
           isDeleted: false,
         },
-        orderBy: { chapterNo: 'asc' },
+        orderBy: { orderIndex: 'asc' },
         select: {
           id: true,
           level: true,
           title: true,
           description: true,
-          chapterNo: true,
+          orderIndex: true,
           isPublished: true,
           subtopics: {
             where: { isDeleted: false },
-            orderBy: { subtopicNo: 'asc' },
+            orderBy: { orderIndex: 'asc' },
             select: {
               id: true,
               chapterId: true,

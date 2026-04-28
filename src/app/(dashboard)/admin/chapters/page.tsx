@@ -13,7 +13,7 @@ function getSelectedLevel(level?: string): Level {
 async function getChaptersByLevel(level: Level) {
   return prisma.chapter.findMany({
     where: { level },
-    orderBy: { chapterNo: 'asc' },
+    orderBy: { orderIndex: 'asc' },
     include: {
       _count: { select: { subtopics: true, questions: true } },
     },

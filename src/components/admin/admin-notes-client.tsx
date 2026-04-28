@@ -74,22 +74,6 @@ async function fetchNotes(subtopicId: string): Promise<Note[]> {
   return request;
 }
 
-async function saveNote(data: {
-  subtopicId: string;
-  title: string;
-  contentHtml: string;
-  orderIndex: number;
-  isPublished: boolean;
-  watermarkConfig: WatermarkConfig;
-}) {
-  const res = await fetch('/api/admin/notes', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  return res.json();
-}
-
 async function updateNote(id: string, data: { title: string; contentHtml: string; isPublished: boolean; watermarkConfig: WatermarkConfig }) {
   const res = await fetch(`/api/admin/notes/${id}`, {
     method: 'PATCH',

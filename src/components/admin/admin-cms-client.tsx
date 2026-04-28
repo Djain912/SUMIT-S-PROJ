@@ -159,7 +159,6 @@ export function AdminCmsClient() {
   const [subtopics, setSubtopics] = useState<Subtopic[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [activeSection, setActiveSection] = useState<(typeof sectionLinks)[number]['key']>('chapters');
   const [selectedLevel, setSelectedLevel] = useState<Level>('LEVEL_1');
   const [selectedChapterId, setSelectedChapterId] = useState('');
   const [selectedSubtopicId, setSelectedSubtopicId] = useState('');
@@ -318,7 +317,20 @@ export function AdminCmsClient() {
   }
 
   useEffect(() => {
-    void Promise.all([loadChapters(selectedLevel), loadQuestions()]);
+    void Promise.all([
+      (async () => {
+        const chapterData = await apiJson<Chapter[]>(`/api/admin/chapters?level=${selectedLevel}`);
+        setChapters(chapterData);
+        setSelectedChapterId((current) => {
+          if (chapterData.some((chapter) => chapter.id === current)) {
+            return current;
+          }
+
+          return chapterData[0]?.id ?? '';
+        });
+      })(),
+      loadQuestions(),
+    ]);
   }, [selectedLevel]);
 
   useEffect(() => {
@@ -388,7 +400,6 @@ export function AdminCmsClient() {
   );
 
   function openSection(section: (typeof sectionLinks)[number]['key']) {
-    setActiveSection(section);
     const anchor = sectionLinks.find((item) => item.key === section);
 
     if (anchor) {
@@ -1224,7 +1235,6 @@ export function AdminCmsClient() {
                               orderIndex: optionIndex,
                             })),
                           });
-                          setActiveSection('questions');
                         }}
                         className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs"
                       >

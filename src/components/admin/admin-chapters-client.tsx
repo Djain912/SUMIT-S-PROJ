@@ -10,7 +10,6 @@ type Level = AdminLevel;
 type Chapter = {
   id: string;
   title: string;
-  chapterNo: number;
   orderIndex: number;
   isPublished: boolean;
   level: Level;
@@ -96,7 +95,7 @@ export function AdminChaptersClient({
                     <div className="min-w-0">
                       <p className="text-base font-semibold text-zinc-950">{chapter.title}</p>
                       <p className="mt-1 text-xs text-zinc-500">
-                        Chapter {chapter.chapterNo} - {chapter._count.subtopics} subtopics - {chapter._count.questions} questions
+                        Chapter {chapter.orderIndex} - {chapter._count.subtopics} subtopics - {chapter._count.questions} questions
                       </p>
                     </div>
 
@@ -144,7 +143,7 @@ export function AdminChaptersClient({
                           <input
                             name="orderIndex"
                             type="number"
-                            defaultValue={chapter.chapterNo}
+                            defaultValue={chapter.orderIndex}
                             className="mt-1 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
                           />
                         </div>

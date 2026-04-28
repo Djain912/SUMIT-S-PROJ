@@ -5,7 +5,7 @@ import { validateCsrfOrigin } from '@/server/policies/csrf';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
 import { prisma } from '@/lib/db/prisma';
 import { createSubtopic } from '@/server/services/subtopic.service';
-import { subtopicInputSchema } from '@/server/validators/content';
+import { subtopicSchema } from '@/server/validators/admin-content';
 
 export async function GET(request: Request) {
   try {
@@ -26,7 +26,7 @@ export async function GET(request: Request) {
           chapterId,
           isDeleted: false,
         },
-        orderBy: { subtopicNo: 'asc' },
+        orderBy: { orderIndex: 'asc' },
         take: limit,
         skip,
       }),
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
     }
 
     const payload = await request.json();
-    const input = subtopicInputSchema.parse(payload);
+    const input = subtopicSchema.parse(payload);
     const subtopic = await createSubtopic(input);
     revalidatePath('/admin/subtopics');
 

@@ -15,13 +15,13 @@ export async function GET(_request: Request, context: { params: Promise<{ chapte
         chapterId,
         isPublished: true,
       },
-      orderBy: [{ subtopicNo: 'asc' }, { title: 'asc' }],
+      orderBy: [{ orderIndex: 'asc' }, { title: 'asc' }],
       select: {
         id: true,
         chapterId: true,
         title: true,
         description: true,
-        subtopicNo: true,
+        orderIndex: true,
       },
     });
 

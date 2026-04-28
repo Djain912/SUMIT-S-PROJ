@@ -5,7 +5,7 @@ import { AuthError, requireAdminUser } from '@/server/policies/auth';
 import { validateCsrfOrigin } from '@/server/policies/csrf';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
 import { deleteSubtopic, updateSubtopic } from '@/server/services/subtopic.service';
-import { subtopicInputSchema } from '@/server/validators/content';
+import { subtopicSchema } from '@/server/validators/admin-content';
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -39,7 +39,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
     const { id } = await context.params;
     const payload = await request.json();
-    const input = subtopicInputSchema.parse(payload);
+    const input = subtopicSchema.parse(payload);
     const subtopic = await updateSubtopic(id, input);
     revalidatePath('/admin/subtopics');
 
