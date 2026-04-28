@@ -293,18 +293,15 @@ export function SectionCard({ title, children }: SectionCardProps) {
   );
 }
 
-export function UserDashboardClient() {
-  const [selectedLevel, setSelectedLevel] = useState<Level>('LEVEL_1');
+export function UserDashboardClient({ initialData }: { initialData?: DashboardData }) {
+  const [selectedLevel, setSelectedLevel] = useState<Level>(
+    (initialData?.level as Level) ?? 'LEVEL_1',
+  );
 
-  const {
-    data,
-    isLoading,
-    error,
-  } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['dashboard', selectedLevel],
     queryFn: () => fetchDashboard(selectedLevel),
-    staleTime: 60_000,
-    retry: 1,
+    initialData: selectedLevel === ((initialData?.level as Level) ?? 'LEVEL_1') ? initialData : undefined,
   });
 
   return (

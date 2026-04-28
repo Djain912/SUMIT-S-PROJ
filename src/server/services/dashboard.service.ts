@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db/prisma';
 interface SubtopicProgress {
   id: string;
   title: string;
+  subtopicNo: number;
   progress: number;
   totalQuestions: number;
   questionsAnswered: number;
@@ -54,7 +55,7 @@ export async function getUserDashboardData(userId: string, level: string) {
           level: targetLevel,
           status: 'COMPLETED',
         },
-        select: { totalQuestions: true, correctCount: true, scorePercentage: true },
+        select: { id: true, totalQuestions: true, correctCount: true, scorePercentage: true, completedAt: true, mode: true },
       }),
       prisma.quizAttemptItem.findMany({
         where: {
@@ -102,12 +103,9 @@ export async function getUserDashboardData(userId: string, level: string) {
     const completedChapters = Array.from(chapterStats.values()).filter(s => s.total > 0).length;
     const totalProgress = totalChapters > 0 ? Math.round((completedChapters / totalChapters) * 100) : 0;
 
-    const recentAttempts = await prisma.quizAttempt.findMany({
-      where: { userId, level: targetLevel, status: 'COMPLETED' },
-      orderBy: { completedAt: 'desc' },
-      take: 5,
-      select: { id: true, totalQuestions: true, correctCount: true, scorePercentage: true, completedAt: true, mode: true },
-    });
+    const recentAttempts = [...quizAttempts]
+      .sort((a, b) => (b.completedAt?.getTime() ?? 0) - (a.completedAt?.getTime() ?? 0))
+      .slice(0, 5);
 
     const sections: SectionData[] = [{
       id: 'section-chapters',

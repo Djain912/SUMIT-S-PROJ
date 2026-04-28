@@ -167,32 +167,20 @@ export async function getUserAnalyticsData(userId: string): Promise<AnalyticsDat
       longestStreak = Math.max(longestStreak, streak);
     }
 
+    // chapters is independent of allAttempts — run in parallel with the streak computation above
     const chapters = await prisma.chapter.findMany({
-      where: {
-        isPublished: true,
-        isDeleted: false,
-      },
+      where: { isPublished: true, isDeleted: false },
       orderBy: { chapterNo: 'asc' },
-      select: {
-        id: true,
-        title: true,
-        level: true,
-      },
+      select: { id: true, title: true, level: true },
     });
 
     const chapterIds = chapters.map(c => c.id);
+
     const subtopics = await prisma.subtopic.findMany({
-      where: {
-        chapterId: { in: chapterIds },
-        isPublished: true,
-        isDeleted: false,
-      },
-      select: {
-        id: true,
-        title: true,
-        chapterId: true,
-      },
+      where: { chapterId: { in: chapterIds }, isPublished: true, isDeleted: false },
+      select: { id: true, title: true, chapterId: true },
     });
+
     const subtopicIds = subtopics.map(s => s.id);
 
     const attemptItems = await prisma.quizAttemptItem.findMany({
@@ -244,9 +232,14 @@ export async function getUserAnalyticsData(userId: string): Promise<AnalyticsDat
       chapterStats.set(chId, current);
     }
 
+    const subtopicMap = new Map(subtopics.map(s => [s.id, s]));
+    const chapterMap = new Map(chapters.map(c => [c.id, c]));
+    // pre-group subtopicAnalysis by chapterId to avoid O(n²) filter inside chapterAnalysis.map
+    const subtopicAnalysisByChapter = new Map<string, SubtopicAnalysis[]>();
+
     const subtopicAnalysis: SubtopicAnalysis[] = subtopicIds.map(id => {
-      const st = subtopics.find(s => s.id === id);
-      const ch = st ? chapters.find(c => c.id === st.chapterId) : null;
+      const st = subtopicMap.get(id);
+      const ch = st ? chapterMap.get(st.chapterId) : null;
       const stats = subtopicStats.get(id) || { attempts: 0, questions: 0, correct: 0, totalTime: 0, lastAt: null };
       const accuracy = stats.questions > 0 ? Math.round((stats.correct / stats.questions) * 100) : 0;
       const avgTime = stats.questions > 0 ? Math.round(stats.totalTime / stats.questions) : 0;
@@ -277,11 +270,16 @@ export async function getUserAnalyticsData(userId: string): Promise<AnalyticsDat
       .sort((a, b) => b.accuracy - a.accuracy)
       .slice(0, 10);
 
+    for (const s of subtopicAnalysis) {
+      const arr = subtopicAnalysisByChapter.get(s.chapterId) ?? [];
+      arr.push(s);
+      subtopicAnalysisByChapter.set(s.chapterId, arr);
+    }
+
     const chapterAnalysis: ChapterAnalysis[] = chapters.map(ch => {
-      const stats = chapterStats.get(ch.id) || { attempts: 0, questions: 0, correct: 0 };
+      const stats = chapterStats.get(ch.id) ?? { attempts: 0, questions: 0, correct: 0 };
       const accuracy = stats.questions > 0 ? Math.round((stats.correct / stats.questions) * 100) : 0;
-      const chSubtopics = subtopics.filter(s => s.chapterId === ch.id);
-      
+
       return {
         id: ch.id,
         title: ch.title,
@@ -290,7 +288,7 @@ export async function getUserAnalyticsData(userId: string): Promise<AnalyticsDat
         totalQuestions: stats.questions,
         correctAnswers: stats.correct,
         accuracy,
-        subtopics: subtopicAnalysis.filter(s => s.chapterId === ch.id),
+        subtopics: subtopicAnalysisByChapter.get(ch.id) ?? [],
       };
     }).filter(c => c.totalAttempts > 0);
 

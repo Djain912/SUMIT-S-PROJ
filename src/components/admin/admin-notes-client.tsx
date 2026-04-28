@@ -156,18 +156,17 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
     if (!selectedSubtopic || !editTitle) return;
     setSaving(true);
     try {
-      let savedNote: Note | null = null;
       if (editingNoteId) {
-        // Update existing note
         const result = await updateNote(editingNoteId, {
           title: editTitle,
           contentHtml: editContent,
           isPublished: editPublished,
           watermarkConfig: editWatermark,
         });
-        savedNote = result.data ?? null;
+        const saved: Note = result.data;
+        setNotes(prev => prev.map(n => (n.id === editingNoteId ? saved : n)));
+        setSelectedNote(saved);
       } else {
-        // Create new note
         const result = await saveOrUpdateNote(null, {
           subtopicId: selectedSubtopic,
           title: editTitle,
@@ -176,10 +175,13 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
           isPublished: editPublished,
           watermarkConfig: editWatermark,
         });
-        savedNote = result.data ?? null;
+        const saved: Note = result.data;
+        setNotes(prev => [...prev, saved]);
+        setSelectedNote(saved);
       }
       notesInFlight.delete(selectedSubtopic);
-      window.location.reload();
+      setIsEditing(false);
+      setEditingNoteId(null);
     } finally {
       setSaving(false);
     }
@@ -451,7 +453,9 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
                     onClick={async () => {
                       if (!confirm('Delete this note?')) return;
                       await deleteNote(selectedNote.id);
-                      window.location.reload();
+                      notesInFlight.delete(selectedNote.subtopicId);
+                      setNotes(prev => prev.filter(n => n.id !== selectedNote.id));
+                      setSelectedNote(null);
                     }}
                     className="text-sm font-medium text-red-600 hover:text-red-800"
                   >

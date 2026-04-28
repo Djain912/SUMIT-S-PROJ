@@ -19,3 +19,6 @@ tsconfig.tsbuildinfo
 *.err
 .next-dev.log
 .next-dev.err
+
+# Graphify
+graphify-out

@@ -246,14 +246,15 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
         throw new Error(result.error?.message || 'Failed to save question');
       }
 
-      window.location.reload();
-      const refreshed = await fetchQuestions(selectedSubtopic);
-      setQuestions(refreshed);
-      const savedQuestion = result.data as Question | undefined;
-      if (savedQuestion) {
-        setSelectedQuestion(savedQuestion);
-        loadQuestionIntoEditor(savedQuestion);
+      const savedQuestion = result.data as Question;
+      questionsInFlight.delete(selectedSubtopic);
+      if (editingQuestionId) {
+        setQuestions(prev => prev.map(q => q.id === editingQuestionId ? savedQuestion : q));
+      } else {
+        setQuestions(prev => [...prev, savedQuestion]);
       }
+      setSelectedQuestion(savedQuestion);
+      loadQuestionIntoEditor(savedQuestion);
       setIsEditing(false);
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Failed to save question');
@@ -275,7 +276,13 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
       return;
     }
 
-    window.location.reload();
+    questionsInFlight.delete(selectedSubtopic);
+    setQuestions(prev => prev.filter(q => q.id !== questionId));
+    if (selectedQuestion?.id === questionId) {
+      setSelectedQuestion(null);
+      setIsEditing(false);
+      setEditingQuestionId(null);
+    }
   }
 
   return (

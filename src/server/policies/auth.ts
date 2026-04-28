@@ -86,13 +86,17 @@ export class AuthError extends Error {
 
 export async function requireAuthenticatedUser() {
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.auth.getUser();
 
-  if (error || !data.user) {
+  // getSession() verifies the JWT from the cookie locally — no Supabase network call.
+  // getUser() re-validates with Supabase servers on every request; we only need that for
+  // sensitive mutations, not for standard auth gating.
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+
+  if (sessionError || !sessionData.session) {
     throw new AuthError('Authentication required');
   }
 
-  const authUser = data.user;
+  const authUser = sessionData.session.user;
   const cachedUser = getCachedUser(authUser.id);
   if (cachedUser) {
     return cachedUser;

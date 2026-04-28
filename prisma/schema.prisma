@@ -84,8 +84,9 @@ model Chapter {
   id          String      @id @default(cuid())
   level       CmtLevel
   title       String
+  slug        String
   description String?
-  chapterNo   Int         @default(0)
+  orderIndex  Int         @default(0)
   isPublished Boolean     @default(false)
   isDeleted   Boolean     @default(false)
   deletedAt   DateTime?
@@ -93,19 +94,21 @@ model Chapter {
   updatedAt   DateTime    @updatedAt
 
   subtopics   Subtopic[]
-  questions  Question[]
+  questions   Question[]
 
-  @@index([level, isPublished, chapterNo])
+  @@unique([level, slug])
+  @@index([level, isPublished, orderIndex])
   @@index([level, isDeleted])
-  @@index([level, isDeleted, chapterNo])
+  @@index([level, isDeleted, orderIndex])
 }
 
 model Subtopic {
   id          String      @id @default(cuid())
   chapterId   String
   title       String
+  slug        String
   description String?
-  subtopicNo  Int         @default(0)
+  orderIndex  Int         @default(0)
   isPublished Boolean     @default(false)
   isDeleted   Boolean     @default(false)
   deletedAt   DateTime?
@@ -116,9 +119,10 @@ model Subtopic {
   notes       Note[]
   questions   Question[]
 
-  @@index([chapterId, isPublished, subtopicNo])
+  @@unique([chapterId, slug])
+  @@index([chapterId, isPublished, orderIndex])
   @@index([chapterId, isDeleted])
-  @@index([chapterId, isDeleted, subtopicNo])
+  @@index([chapterId, isDeleted, orderIndex])
 }
 
 model Note {
