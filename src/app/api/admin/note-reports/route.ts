@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
-import { Prisma, QuestionReportStatus } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db/prisma';
 import { requireAdminUser } from '@/server/policies/auth';
+import { validateCsrfOrigin } from '@/server/policies/csrf';
+
+const reportStatuses = ['PENDING', 'REVIEWED', 'DISMISSED'] as const;
+type ReportStatusValue = (typeof reportStatuses)[number];
 
 export async function GET(request: Request) {
   try {
@@ -16,7 +20,10 @@ export async function GET(request: Request) {
     const where: Prisma.NoteReportWhereInput = {};
     
     if (status) {
-      where.status = status as QuestionReportStatus;
+      if (!reportStatuses.includes(status as ReportStatusValue)) {
+        return NextResponse.json({ success: false, error: { message: 'Invalid status' } }, { status: 400 });
+      }
+      where.status = status as ReportStatusValue;
     }
     if (noteId) {
       where.noteId = noteId;
@@ -80,6 +87,13 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    if (!validateCsrfOrigin(request)) {
+      return NextResponse.json(
+        { success: false, error: { message: 'Invalid request origin' } },
+        { status: 403 },
+      );
+    }
+
     await requireAdminUser();
     const body = await request.json();
     const { reportId, status } = body;
@@ -88,9 +102,13 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: false, error: { message: 'Missing reportId or status' } }, { status: 400 });
     }
 
+    if (!reportStatuses.includes(status as ReportStatusValue)) {
+      return NextResponse.json({ success: false, error: { message: 'Invalid status' } }, { status: 400 });
+    }
+
     const updated = await prisma.noteReport.update({
       where: { id: reportId },
-      data: { status: status as QuestionReportStatus },
+      data: { status: status as ReportStatusValue },
     });
 
     return NextResponse.json({ success: true, data: updated });

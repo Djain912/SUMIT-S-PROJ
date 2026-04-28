@@ -48,15 +48,15 @@ enum QuestionDifficulty {
   HARD
 }
 
-enum QuestionReportStatus {
-  PENDING
-  REVIEWED
-  DISMISSED
-}
-
 enum QuizFlagColor {
   YELLOW
   RED
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  DISMISSED
 }
 
 model User {
@@ -265,6 +265,7 @@ model QuizAttemptItem {
   @@unique([attemptId, questionId])
   @@index([attemptId, questionOrder])
   @@index([attemptId, flagColor])
+  @@index([attemptId, isCorrect])
   @@index([questionId])
 }
 
@@ -273,7 +274,7 @@ model QuestionReport {
   questionId  String
   userId      String
   reason      String
-  status      QuestionReportStatus    @default(PENDING)
+  status      ReportStatus            @default(PENDING)
   createdAt   DateTime                @default(now())
   updatedAt   DateTime                @updatedAt
 
@@ -289,7 +290,7 @@ model NoteReport {
   noteId      String
   userId      String
   reason      String
-  status      QuestionReportStatus    @default(PENDING)
+  status      ReportStatus            @default(PENDING)
   createdAt   DateTime                @default(now())
   updatedAt   DateTime                @updatedAt
 

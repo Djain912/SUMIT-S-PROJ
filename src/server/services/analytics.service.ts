@@ -67,53 +67,52 @@ interface AnalyticsData {
 }
 
 export async function getUserAnalyticsData(userId: string): Promise<AnalyticsData> {
-  try {
-    const allAttempts = await prisma.quizAttempt.findMany({
-      where: {
-        userId,
-        status: 'COMPLETED',
-      },
-      orderBy: { completedAt: 'desc' },
-      select: {
-        id: true,
-        mode: true,
-        level: true,
-        totalQuestions: true,
-        correctCount: true,
-        scorePercentage: true,
-        completedAt: true,
-        items: {
-          select: {
-            timeSpentSeconds: true,
-          },
+  const allAttempts = await prisma.quizAttempt.findMany({
+    where: {
+      userId,
+      status: 'COMPLETED',
+    },
+    orderBy: { completedAt: 'desc' },
+    select: {
+      id: true,
+      mode: true,
+      level: true,
+      totalQuestions: true,
+      correctCount: true,
+      scorePercentage: true,
+      completedAt: true,
+      items: {
+        select: {
+          timeSpentSeconds: true,
         },
       },
-    });
+    },
+  });
 
-    if (allAttempts.length === 0) {
-      return {
-        overallStats: {
-          totalAttempts: 0,
-          totalQuestions: 0,
-          correctAnswers: 0,
-          overallAccuracy: 0,
-          averageScore: 0,
-          totalTimeSpentMinutes: 0,
-          currentStreak: 0,
-          longestStreak: 0,
-        },
-        levelSummaries: [],
-        weakTopics: [],
-        strongTopics: [],
-        chapterAnalysis: [],
-        recentAttempts: [],
-      };
-    }
+  if (allAttempts.length === 0) {
+    return {
+      overallStats: {
+        totalAttempts: 0,
+        totalQuestions: 0,
+        correctAnswers: 0,
+        overallAccuracy: 0,
+        averageScore: 0,
+        totalTimeSpentMinutes: 0,
+        currentStreak: 0,
+        longestStreak: 0,
+      },
+      levelSummaries: [],
+      weakTopics: [],
+      strongTopics: [],
+      chapterAnalysis: [],
+      recentAttempts: [],
+    };
+  }
 
-    const totalAttempts = allAttempts.length;
-    const totalQuestions = allAttempts.reduce((sum, a) => sum + a.totalQuestions, 0);
-    const correctAnswers = allAttempts.reduce((sum, a) => sum + a.correctCount, 0);
-    const overallAccuracy = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
+  const totalAttempts = allAttempts.length;
+  const totalQuestions = allAttempts.reduce((sum, a) => sum + a.totalQuestions, 0);
+  const correctAnswers = allAttempts.reduce((sum, a) => sum + a.correctCount, 0);
+  const overallAccuracy = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
     
     let totalScore = 0;
     let totalTimeSeconds = 0;
@@ -214,6 +213,8 @@ export async function getUserAnalyticsData(userId: string): Promise<AnalyticsDat
           },
         },
       },
+      take: 2000,
+      orderBy: { answeredAt: 'desc' },
     });
 
     const subtopicStats = new Map<string, { attempts: number; questions: number; correct: number; totalTime: number; lastAt: Date | null }>();
@@ -360,24 +361,4 @@ export async function getUserAnalyticsData(userId: string): Promise<AnalyticsDat
       chapterAnalysis,
       recentAttempts,
     };
-  } catch (error) {
-    console.error('Analytics service error:', error);
-    return {
-      overallStats: {
-        totalAttempts: 0,
-        totalQuestions: 0,
-        correctAnswers: 0,
-        overallAccuracy: 0,
-        averageScore: 0,
-        totalTimeSpentMinutes: 0,
-        currentStreak: 0,
-        longestStreak: 0,
-      },
-      levelSummaries: [],
-      weakTopics: [],
-      strongTopics: [],
-      chapterAnalysis: [],
-      recentAttempts: [],
-    };
-  }
 }

@@ -1,13 +1,21 @@
 import { NextResponse } from 'next/server';
 import { AuthError, requireAdminUser } from '@/server/policies/auth';
+import { validateCsrfOrigin } from '@/server/policies/csrf';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
 import { deleteQuestion, updateQuestion } from '@/server/services/question.service';
 import { questionSchema } from '@/server/validators/admin-content';
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    if (!validateCsrfOrigin(request)) {
+      return NextResponse.json(
+        { success: false, error: { message: 'Invalid request origin' } },
+        { status: 403 },
+      );
+    }
+
     const user = await requireAdminUser();
-    const decision = enforceRateLimit({
+    const decision = await enforceRateLimit({
       request,
       key: 'admin:questions:patch',
       maxRequests: 180,
@@ -44,8 +52,15 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
 export async function DELETE(_request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    if (!validateCsrfOrigin(_request)) {
+      return NextResponse.json(
+        { success: false, error: { message: 'Invalid request origin' } },
+        { status: 403 },
+      );
+    }
+
     const user = await requireAdminUser();
-    const decision = enforceRateLimit({
+    const decision = await enforceRateLimit({
       request: _request,
       key: 'admin:questions:delete',
       maxRequests: 60,

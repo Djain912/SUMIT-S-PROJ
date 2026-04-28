@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { AuthError, requireAdminUser } from '@/server/policies/auth';
+import { validateCsrfOrigin } from '@/server/policies/csrf';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
 import { prisma } from '@/lib/db/prisma';
 
@@ -98,9 +99,16 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    if (!validateCsrfOrigin(request)) {
+      return NextResponse.json(
+        { success: false, error: { message: 'Invalid request origin' } },
+        { status: 403 },
+      );
+    }
+
     const user = await requireAdminUser();
     
-    const decision = enforceRateLimit({
+    const decision = await enforceRateLimit({
       request,
       key: 'admin:reports:patch',
       maxRequests: 120,

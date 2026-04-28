@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { AuthError, requireAdminUser } from '@/server/policies/auth';
+import { validateCsrfOrigin } from '@/server/policies/csrf';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
-import { createSubtopic, listSubtopics } from '@/server/services/subtopic.service';
+import { prisma } from '@/lib/db/prisma';
+import { createSubtopic } from '@/server/services/subtopic.service';
 import { subtopicInputSchema } from '@/server/validators/content';
 
 export async function GET(request: Request) {
@@ -9,13 +11,39 @@ export async function GET(request: Request) {
     await requireAdminUser();
     const { searchParams } = new URL(request.url);
     const chapterId = searchParams.get('chapterId');
+    const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') ?? '50', 10)));
+    const skip = (page - 1) * limit;
 
     if (!chapterId) {
       return NextResponse.json({ success: false, error: { message: 'chapterId is required' } }, { status: 400 });
     }
 
-    const subtopics = await listSubtopics(chapterId);
-    return NextResponse.json({ success: true, data: subtopics });
+    const [subtopics, total] = await Promise.all([
+      prisma.subtopic.findMany({
+        where: {
+          chapterId,
+          isPublished: true,
+          isDeleted: false,
+        },
+        orderBy: { orderIndex: 'asc' },
+        take: limit,
+        skip,
+      }),
+      prisma.subtopic.count({
+        where: {
+          chapterId,
+          isPublished: true,
+          isDeleted: false,
+        },
+      }),
+    ]);
+
+    return NextResponse.json({
+      success: true,
+      data: subtopics,
+      meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    });
   } catch (error) {
     if (error instanceof AuthError) {
       return NextResponse.json({ success: false, error: { message: error.message } }, { status: error.statusCode });
@@ -27,8 +55,15 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    if (!validateCsrfOrigin(request)) {
+      return NextResponse.json(
+        { success: false, error: { message: 'Invalid request origin' } },
+        { status: 403 },
+      );
+    }
+
     const user = await requireAdminUser();
-    const decision = enforceRateLimit({
+    const decision = await enforceRateLimit({
       request,
       key: 'admin:subtopics:post',
       maxRequests: 80,

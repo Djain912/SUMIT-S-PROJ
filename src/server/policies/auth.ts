@@ -13,17 +13,36 @@ type SessionUser = {
   updatedAt: Date;
 };
 
-function getSuperAdminEmail() {
+function getSuperAdminEmail(): string {
   const configuredEmail =
     process.env.SUPER_ADMIN_EMAIL ??
     process.env.ADMIN_EMAIL ??
     process.env.ADMIN_EMAILS?.split(',')[0];
 
-  return configuredEmail?.trim().toLowerCase() || null;
+  const email = configuredEmail?.trim().toLowerCase();
+
+  if (!email) {
+    // Fail loudly — a silent null means all admin routes break with no explanation
+    throw new Error(
+      'SUPER_ADMIN_EMAIL environment variable is not set. ' +
+      'Set it in your .env / Vercel project settings.',
+    );
+  }
+
+  return email;
+}
+
+function tryGetSuperAdminEmail(): string | null {
+  try {
+    return getSuperAdminEmail();
+  } catch {
+    return null;
+  }
 }
 
 function getRoleForEmail(email: string): 'ADMIN' | 'USER' {
-  return email.toLowerCase() === getSuperAdminEmail() ? 'ADMIN' : 'USER';
+  const adminEmail = tryGetSuperAdminEmail();
+  return adminEmail && email.toLowerCase() === adminEmail ? 'ADMIN' : 'USER';
 }
 
 function isPrismaDatabaseError(error: unknown) {
@@ -151,7 +170,13 @@ export async function requireAuthenticatedUser() {
 export async function requireAdminUser() {
   const user = await requireAuthenticatedUser();
 
-  if (user.role !== 'ADMIN' || getRoleForEmail(user.email) !== 'ADMIN') {
+  try {
+    getSuperAdminEmail();
+  } catch {
+    throw new AuthError('Admin access is not configured on this server', 503);
+  }
+
+  if (user.role !== 'ADMIN') {
     throw new AuthError('Admin access required', 403);
   }
 

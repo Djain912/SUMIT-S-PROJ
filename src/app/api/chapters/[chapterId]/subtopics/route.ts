@@ -28,7 +28,7 @@ export async function GET(_request: Request, context: { params: Promise<{ chapte
 
     return NextResponse.json({ success: true, data: subtopics }, {
       headers: {
-        'Cache-Control': 'private, no-store',
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
       },
     });
   } catch (error) {

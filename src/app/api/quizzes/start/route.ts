@@ -1,13 +1,21 @@
 import { NextResponse } from 'next/server';
 import { AuthError, requireAuthenticatedUser } from '@/server/policies/auth';
+import { validateCsrfOrigin } from '@/server/policies/csrf';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
 import { startQuizAttempt } from '@/server/services/quiz.service';
 import { quizSelectionSchema } from '@/server/validators/quiz';
 
 export async function POST(request: Request) {
   try {
+    if (!validateCsrfOrigin(request)) {
+      return NextResponse.json(
+        { success: false, error: { message: 'Invalid request origin' } },
+        { status: 403 },
+      );
+    }
+
     const user = await requireAuthenticatedUser();
-    const decision = enforceRateLimit({
+    const decision = await enforceRateLimit({
       request,
       key: 'quiz:start:post',
       maxRequests: 30,

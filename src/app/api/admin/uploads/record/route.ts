@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { AuthError, requireAdminUser } from '@/server/policies/auth';
+import { validateCsrfOrigin } from '@/server/policies/csrf';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
 import { createMediaAsset } from '@/server/services/media.service';
 
@@ -15,8 +16,15 @@ const bodySchema = z.object({
 
 export async function POST(request: Request) {
   try {
+    if (!validateCsrfOrigin(request)) {
+      return NextResponse.json(
+        { success: false, error: { message: 'Invalid request origin' } },
+        { status: 403 },
+      );
+    }
+
     const user = await requireAdminUser();
-    const decision = enforceRateLimit({
+    const decision = await enforceRateLimit({
       request,
       key: 'admin:uploads:record:post',
       maxRequests: 120,

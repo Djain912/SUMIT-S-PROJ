@@ -1,8 +1,9 @@
-import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const protectedRoutes = ['/user', '/admin'];
+const protectedAdminRoutes = ['/admin'];
 const publicAdminRoutes = ['/admin/login'];
+const protectedUserRoutes = ['/user'];
+const authRoutes = ['/sign-in', '/sign-up', '/reset-password'];
 
 function applySecurityHeaders(response: NextResponse) {
   response.headers.set('X-Frame-Options', 'DENY');
@@ -17,53 +18,41 @@ function applySecurityHeaders(response: NextResponse) {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Public admin login — no auth needed
   if (publicAdminRoutes.some((route) => pathname.startsWith(route))) {
-    return applySecurityHeaders(NextResponse.next());
+    return applySecurityHeaders(NextResponse.next({ request }));
   }
 
-  const isProtected = protectedRoutes.some((route) => pathname.startsWith(route));
-  if (!isProtected) {
-    return applySecurityHeaders(NextResponse.next());
-  }
+  const isProtectedAdmin = protectedAdminRoutes.some((r) => pathname.startsWith(r));
+  const isProtectedUser = protectedUserRoutes.some((r) => pathname.startsWith(r));
+  const isProtected = isProtectedAdmin || isProtectedUser;
+  const isAuthPage = authRoutes.some((r) => pathname.startsWith(r));
 
-  const response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  });
+  // Fast cookie-only check — no Supabase network call in middleware
+  const hasSessionCookie = request.cookies
+    .getAll()
+    .some(
+      (cookie) =>
+        cookie.name === 'sb-access-token' ||
+        cookie.name.includes('-auth-token'),
+    );
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name) {
-          return request.cookies.get(name)?.value;
-        },
-        set(name, value, options) {
-          response.cookies.set({ name, value, ...options });
-        },
-        remove(name, options) {
-          response.cookies.set({ name, value: '', ...options, maxAge: 0 });
-        },
-      },
-    },
-  );
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  if (isProtected && !hasSessionCookie) {
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = pathname.startsWith('/admin') ? '/admin/login' : '/sign-in';
+    redirectUrl.pathname = isProtectedAdmin ? '/admin/login' : '/sign-in';
     redirectUrl.searchParams.set('next', pathname);
     return applySecurityHeaders(NextResponse.redirect(redirectUrl));
   }
 
-  return applySecurityHeaders(response);
+  return applySecurityHeaders(NextResponse.next({ request }));
 }
 
 export const config = {
-  matcher: ['/user/:path*', '/admin/:path*'],
+  matcher: [
+    '/admin/:path*',
+    '/user/:path*',
+    '/sign-in',
+    '/sign-up',
+    '/reset-password',
+  ],
 };

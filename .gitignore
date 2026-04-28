@@ -9,3 +9,13 @@ coverage
 .env.production.local
 .DS_Store
 prisma/dev.db
+
+# Build artifacts
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# Dev logs
+*.log
+*.err
+.next-dev.log
+.next-dev.err

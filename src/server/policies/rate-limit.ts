@@ -1,5 +1,10 @@
-type Bucket = {
-  timestamps: number[];
+import { Ratelimit } from '@upstash/ratelimit';
+import { Redis } from '@upstash/redis';
+
+export type RateLimitDecision = {
+  allowed: boolean;
+  remaining: number;
+  retryAfterSeconds: number;
 };
 
 type EnforceRateLimitParams = {
@@ -10,65 +15,56 @@ type EnforceRateLimitParams = {
   identifier?: string;
 };
 
-export type RateLimitDecision = {
-  allowed: boolean;
-  remaining: number;
-  retryAfterSeconds: number;
-};
-
-const store = new Map<string, Bucket>();
-
-function getClientIp(request: Request) {
+function getClientIp(request: Request): string {
   const forwardedFor = request.headers.get('x-forwarded-for');
-  if (forwardedFor) {
-    const [firstIp] = forwardedFor.split(',');
-    return firstIp.trim();
-  }
-
-  const realIp = request.headers.get('x-real-ip');
-  if (realIp) {
-    return realIp.trim();
-  }
-
-  return 'unknown-ip';
+  if (forwardedFor) return forwardedFor.split(',')[0].trim();
+  return request.headers.get('x-real-ip') ?? 'unknown-ip';
 }
 
-function getClientIdentifier(request: Request, explicitIdentifier?: string) {
-  if (explicitIdentifier) {
-    return explicitIdentifier;
-  }
+// Lazily initialised so builds without Upstash env vars still succeed
+let ratelimitCache: Map<string, Ratelimit> | null = null;
 
-  return getClientIp(request);
+function getRatelimiter(key: string, maxRequests: number, windowMs: number): Ratelimit {
+  if (!ratelimitCache) ratelimitCache = new Map();
+
+  const cacheKey = `${key}:${maxRequests}:${windowMs}`;
+  if (!ratelimitCache.has(cacheKey)) {
+    const redis = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL!,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+    });
+    ratelimitCache.set(
+      cacheKey,
+      new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(maxRequests, `${windowMs}ms`),
+        prefix: key,
+      }),
+    );
+  }
+  return ratelimitCache.get(cacheKey)!;
 }
 
-export function enforceRateLimit({ request, key, maxRequests, windowMs, identifier }: EnforceRateLimitParams): RateLimitDecision {
-  const now = Date.now();
-  const clientIdentifier = getClientIdentifier(request, identifier);
-  const bucketKey = `${key}:${clientIdentifier}`;
+export async function enforceRateLimit({
+  request,
+  key,
+  maxRequests,
+  windowMs,
+  identifier,
+}: EnforceRateLimitParams): Promise<RateLimitDecision> {
+  const id = identifier ?? getClientIp(request);
 
-  const existing = store.get(bucketKey) ?? { timestamps: [] };
-  const validWindowStart = now - windowMs;
-  existing.timestamps = existing.timestamps.filter((timestamp) => timestamp >= validWindowStart);
-
-  if (existing.timestamps.length >= maxRequests) {
-    const oldestTimestamp = existing.timestamps[0];
-    const retryAfterMs = oldestTimestamp + windowMs - now;
-
-    store.set(bucketKey, existing);
-
-    return {
-      allowed: false,
-      remaining: 0,
-      retryAfterSeconds: Math.max(1, Math.ceil(retryAfterMs / 1000)),
-    };
+  // Fallback if Upstash not configured (dev mode)
+  if (!process.env.UPSTASH_REDIS_REST_URL) {
+    return { allowed: true, remaining: maxRequests, retryAfterSeconds: 0 };
   }
 
-  existing.timestamps.push(now);
-  store.set(bucketKey, existing);
+  const limiter = getRatelimiter(key, maxRequests, windowMs);
+  const result = await limiter.limit(id);
 
   return {
-    allowed: true,
-    remaining: Math.max(0, maxRequests - existing.timestamps.length),
-    retryAfterSeconds: 0,
+    allowed: result.success,
+    remaining: result.remaining,
+    retryAfterSeconds: result.success ? 0 : Math.ceil((result.reset - Date.now()) / 1000),
   };
 }

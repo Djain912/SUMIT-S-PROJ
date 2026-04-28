@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useCallback, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Lock } from 'lucide-react';
 
 type Level = 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3';
@@ -56,8 +57,6 @@ interface ApiResponse<T> {
 
 const levelOptions: Level[] = ['LEVEL_1', 'LEVEL_2', 'LEVEL_3'];
 
-const dashboardInFlight = new Map<Level, Promise<DashboardData>>();
-
 async function fetchDashboard(level: Level): Promise<DashboardData> {
   const response = await fetch(`/api/user/dashboard?level=${level}`);
   const payload = await response.json() as ApiResponse<DashboardData>;
@@ -65,21 +64,6 @@ async function fetchDashboard(level: Level): Promise<DashboardData> {
     throw new Error(payload.error?.message ?? 'Failed to load dashboard');
   }
   return payload.data!;
-}
-
-function fetchDashboardInFlight(level: Level): Promise<DashboardData> {
-  const existing = dashboardInFlight.get(level);
-  if (existing) {
-    return existing;
-  }
-
-  const request = fetchDashboard(level);
-  dashboardInFlight.set(level, request);
-  request.finally(() => {
-    dashboardInFlight.delete(level);
-  });
-
-  return request;
 }
 
 interface ProgressStatsProps {
@@ -310,26 +294,17 @@ export function SectionCard({ title, children }: SectionCardProps) {
 
 export function UserDashboardClient() {
   const [selectedLevel, setSelectedLevel] = useState<Level>('LEVEL_1');
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  const loadData = useCallback(async (level: Level) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const dashboardData = await fetchDashboardInFlight(level);
-      setData(dashboardData);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadData(selectedLevel);
-  }, [selectedLevel, loadData]);
+  const {
+    data,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ['dashboard', selectedLevel],
+    queryFn: () => fetchDashboard(selectedLevel),
+    staleTime: 60_000,
+    retry: 1,
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -367,7 +342,7 @@ export function UserDashboardClient() {
             </div>
           </div>
         ) : error ? (
-          <div className="py-3 text-center text-sm text-red-600">{error}</div>
+          <div className="py-3 text-center text-sm text-red-600">{error instanceof Error ? error.message : 'Failed to load'}</div>
         ) : data ? (
           <ProgressStats
             totalProgress={data.totalProgress}

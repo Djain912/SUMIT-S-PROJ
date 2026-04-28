@@ -26,6 +26,8 @@
     "@tiptap/extension-link": "^2.11.0",
     "@tiptap/react": "^2.11.0",
     "@tiptap/starter-kit": "^2.11.0",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.37.0",
     "class-variance-authority": "^0.7.1",
     "cloudinary": "^2.5.0",
     "clsx": "^2.1.1",

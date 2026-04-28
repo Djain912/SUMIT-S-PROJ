@@ -3,7 +3,7 @@ import { createSupabaseServerClient } from '@/lib/auth/supabase';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
 
 export async function POST(request: Request) {
-  const decision = enforceRateLimit({
+  const decision = await enforceRateLimit({
     request,
     key: 'auth:logout:post',
     maxRequests: 20,

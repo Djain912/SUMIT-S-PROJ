@@ -27,8 +27,7 @@ interface SectionData {
 }
 
 export async function getUserDashboardData(userId: string, level: string) {
-  try {
-    const targetLevel = level as 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3';
+  const targetLevel = level as 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3';
     
     const [chapters, quizAttempts, attemptItems] = await Promise.all([
       prisma.chapter.findMany({
@@ -64,6 +63,8 @@ export async function getUserDashboardData(userId: string, level: string) {
         include: {
           question: { select: { subtopicId: true, chapterId: true } },
         },
+        take: 2000,
+        orderBy: { answeredAt: 'desc' },
       }),
     ]);
 
@@ -157,14 +158,4 @@ export async function getUserDashboardData(userId: string, level: string) {
         mode: a.mode,
       })),
     };
-  } catch (error) {
-    console.error('Dashboard service error:', error);
-    return {
-      level,
-      sections: [{ id: 'section-chapters', title: 'Chapters', chapters: [] }],
-      totalProgress: 0,
-      assessmentScore: 0,
-      totalQuestionsAnswered: 0,
-    };
-  }
 }

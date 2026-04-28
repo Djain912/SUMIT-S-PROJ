@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { AuthError, requireAuthenticatedUser } from '@/server/policies/auth';
+import { validateCsrfOrigin } from '@/server/policies/csrf';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
 import { prisma } from '@/lib/db/prisma';
 
@@ -8,10 +9,17 @@ export async function PATCH(
   context: { params: Promise<{ attemptId: string; itemId: string }> }
 ) {
   try {
+    if (!validateCsrfOrigin(request)) {
+      return NextResponse.json(
+        { success: false, error: { message: 'Invalid request origin' } },
+        { status: 403 },
+      );
+    }
+
     const user = await requireAuthenticatedUser();
     const { attemptId, itemId } = await context.params;
     
-    const decision = enforceRateLimit({
+    const decision = await enforceRateLimit({
       request,
       key: 'user:flag:question',
       maxRequests: 500,

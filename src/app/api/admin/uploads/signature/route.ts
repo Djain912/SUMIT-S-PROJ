@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { AuthError, requireAdminUser } from '@/server/policies/auth';
+import { validateCsrfOrigin } from '@/server/policies/csrf';
 import { createUploadSignature } from '@/lib/cloudinary/server';
 
 const bodySchema = z.object({
@@ -9,6 +10,13 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: Request) {
+  if (!validateCsrfOrigin(request)) {
+    return NextResponse.json(
+      { success: false, error: { message: 'Invalid request origin' } },
+      { status: 403 },
+    );
+  }
+
   try {
     await requireAdminUser();
   } catch (error) {
