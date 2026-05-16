@@ -1,8 +1,3 @@
-import { createBrowserClient } from '@supabase/ssr';
-
-export function createSupabaseBrowserClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
-}
+// Compatibility shim — kept so any remaining imports don't break during migration.
+// Browser-side auth is now handled by next-auth/react (useSession, signIn, signOut).
+export {};

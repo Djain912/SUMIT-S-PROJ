@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { AdminLevelTabs, type AdminLevel } from '@/components/admin/admin-level-tabs';
 import { TinyMceEditor } from '@/components/admin/tinymce-editor';
 
@@ -128,6 +129,7 @@ async function fetchQuestions(subtopicId: string): Promise<Question[]> {
 }
 
 export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: Level }) {
+  const router = useRouter();
   const [level, setLevel] = useState<Level>(initialLevel);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [selectedChapter, setSelectedChapter] = useState('');
@@ -254,6 +256,7 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
       setSelectedQuestion(savedQuestion);
       loadQuestionIntoEditor(savedQuestion);
       setIsEditing(false);
+      router.refresh();
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Failed to save question');
     } finally {
@@ -281,6 +284,7 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
       setIsEditing(false);
       setEditingQuestionId(null);
     }
+    router.refresh();
   }
 
   return (

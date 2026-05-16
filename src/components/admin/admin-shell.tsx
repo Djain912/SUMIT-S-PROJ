@@ -2,12 +2,11 @@
 
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { LayoutDashboard, BookOpen, FileText, ListChecks, Flag, ShieldCheck, Menu, X, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { createSupabaseBrowserClient } from '@/lib/auth/supabase-browser';
-import { useRouter } from 'next/navigation';
+import { signOut } from 'next-auth/react';
 
 type Level = 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3';
 
@@ -37,7 +36,6 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const searchParams = useSearchParams();
   const selectedLevel = getSelectedLevel(searchParams.get('level'));
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [supabase] = useState(() => createSupabaseBrowserClient());
 
   function getHref(href: string, level = selectedLevel) {
     const params = new URLSearchParams(searchParams);
@@ -45,12 +43,10 @@ export function AdminShell({ children }: { children: ReactNode }) {
     return `${href}?${params.toString()}`;
   }
 
-  const handleNavClick = () => {
-    setSidebarOpen(false);
-  };
+  const handleNavClick = () => setSidebarOpen(false);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await signOut({ redirect: false });
     router.push('/');
     router.refresh();
   };
@@ -143,7 +139,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
       </aside>
 
       {sidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-30 bg-black/50 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />

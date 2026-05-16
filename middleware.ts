@@ -1,47 +1,69 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { decode } from 'next-auth/jwt';
 
-const protectedAdminRoutes = ['/admin'];
-const publicAdminRoutes = ['/admin/login'];
-const protectedUserRoutes = ['/user'];
-const authRoutes = ['/sign-in', '/sign-up', '/reset-password'];
+function applySecurityHeaders(res: NextResponse) {
+  res.headers.set('X-Frame-Options', 'DENY');
+  res.headers.set('X-Content-Type-Options', 'nosniff');
+  res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  return res;
+}
 
-function applySecurityHeaders(response: NextResponse) {
-  response.headers.set('X-Frame-Options', 'DENY');
-  response.headers.set('X-Content-Type-Options', 'nosniff');
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-  response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
-  response.headers.set('Cross-Origin-Resource-Policy', 'same-site');
-  return response;
+function getSessionToken(request: NextRequest): string | undefined {
+  const plain = request.cookies.get('authjs.session-token')?.value;
+  if (plain) return plain;
+  const chunks: string[] = [];
+  for (let i = 0; i < 10; i++) {
+    const chunk = request.cookies.get(`authjs.session-token.${i}`)?.value;
+    if (!chunk) break;
+    chunks.push(chunk);
+  }
+  return chunks.length > 0 ? chunks.join('') : undefined;
 }
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Public admin login — no auth needed
-  if (publicAdminRoutes.some((route) => pathname.startsWith(route))) {
+  // /admin/login is public — always allow
+  if (pathname === '/admin/login' || pathname.startsWith('/admin/login/')) {
     return applySecurityHeaders(NextResponse.next({ request }));
   }
 
-  const isProtectedAdmin = protectedAdminRoutes.some((r) => pathname.startsWith(r));
-  const isProtectedUser = protectedUserRoutes.some((r) => pathname.startsWith(r));
-  const isProtected = isProtectedAdmin || isProtectedUser;
-  const isAuthPage = authRoutes.some((r) => pathname.startsWith(r));
+  const isAdminRoute = pathname === '/admin' || pathname.startsWith('/admin/');
+  const isUserRoute = pathname === '/user' || pathname.startsWith('/user/');
 
-  // Fast cookie-only check — no Supabase network call in middleware
-  const hasSessionCookie = request.cookies
-    .getAll()
-    .some(
-      (cookie) =>
-        cookie.name === 'sb-access-token' ||
-        cookie.name.includes('-auth-token'),
-    );
+  if (!isAdminRoute && !isUserRoute) {
+    return applySecurityHeaders(NextResponse.next({ request }));
+  }
 
-  if (isProtected && !hasSessionCookie) {
-    const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = isProtectedAdmin ? '/admin/login' : '/sign-in';
-    redirectUrl.searchParams.set('next', pathname);
-    return applySecurityHeaders(NextResponse.redirect(redirectUrl));
+  // Decode JWT — no DB call, pure cookie read
+  const rawToken = getSessionToken(request);
+  let token: { role?: string } | null = null;
+  if (rawToken) {
+    try {
+      token = await decode({
+        token: rawToken,
+        secret: process.env.AUTH_SECRET!,
+        salt: 'authjs.session-token',
+      }) as { role?: string };
+    } catch {
+      token = null;
+    }
+  }
+
+  // Not logged in → send to sign-in
+  if (!token) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/sign-in';
+    url.searchParams.set('next', pathname);
+    return applySecurityHeaders(NextResponse.redirect(url));
+  }
+
+  // Non-admin on admin route → send to sign-in
+  if (isAdminRoute && token.role !== 'ADMIN') {
+    const url = request.nextUrl.clone();
+    url.pathname = '/sign-in';
+    return applySecurityHeaders(NextResponse.redirect(url));
   }
 
   return applySecurityHeaders(NextResponse.next({ request }));
@@ -49,10 +71,9 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    '/admin',
     '/admin/:path*',
+    '/user',
     '/user/:path*',
-    '/sign-in',
-    '/sign-up',
-    '/reset-password',
   ],
 };

@@ -22,22 +22,46 @@ export default async function AdminDashboardPage({
   let stats = { chapters: 0, subtopics: 0, notes: 0, questions: 0 };
 
   try {
-    const [chapters, subtopics, notes, questions] = await Promise.all([
-      prisma.chapter.count({ where: { level: selectedLevel, isDeleted: false } }),
-      prisma.subtopic.count({ where: { chapter: { level: selectedLevel, isDeleted: false } } }),
-      prisma.note.count({ where: { subtopic: { chapter: { level: selectedLevel } }, isDeleted: false } }),
-      prisma.question.count({
-        where: {
-          isDeleted: false,
-          OR: [
-            { level: selectedLevel },
-            { chapter: { level: selectedLevel, isDeleted: false } },
-            { subtopic: { chapter: { level: selectedLevel }, isDeleted: false } },
-          ],
-        },
-      }),
-    ]);
-    stats = { chapters, subtopics, notes, questions };
+    // Fetch chapter IDs for this level once, then use them as filters — avoids
+    // expensive nested relation traversal in counts.
+    const chaptersForLevel = await prisma.chapter.findMany({
+      where: { level: selectedLevel, isDeleted: false },
+      select: { id: true },
+    });
+    const chapterIds = chaptersForLevel.map((c) => c.id);
+
+    if (chapterIds.length === 0) {
+      stats = { chapters: 0, subtopics: 0, notes: 0, questions: 0 };
+    } else {
+      const subtopicsForLevel = await prisma.subtopic.findMany({
+        where: { chapterId: { in: chapterIds }, isDeleted: false },
+        select: { id: true },
+      });
+      const subtopicIds = subtopicsForLevel.map((s) => s.id);
+
+      const [notes, questions] = await Promise.all([
+        prisma.note.count({
+          where: { subtopicId: { in: subtopicIds }, isDeleted: false },
+        }),
+        prisma.question.count({
+          where: {
+            isDeleted: false,
+            OR: [
+              { level: selectedLevel },
+              { chapterId: { in: chapterIds } },
+              { subtopicId: { in: subtopicIds } },
+            ],
+          },
+        }),
+      ]);
+
+      stats = {
+        chapters: chapterIds.length,
+        subtopics: subtopicIds.length,
+        notes,
+        questions,
+      };
+    }
   } catch {
     stats = { chapters: 0, subtopics: 0, notes: 0, questions: 0 };
   }

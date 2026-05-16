@@ -1,23 +1,10 @@
-import { redirect } from 'next/navigation';
-import { createSupabaseServerClient } from '@/lib/auth/supabase';
 import { SignInForm } from '@/components/auth/sign-in-form';
-import { requireAuthenticatedUser } from '@/server/policies/auth';
 
 type SignInPageProps = {
-  searchParams?: Promise<{
-    next?: string;
-  }>;
+  searchParams?: Promise<{ next?: string }>;
 };
 
 export default async function SignInPage({ searchParams }: SignInPageProps) {
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase.auth.getUser();
-
-  if (data.user) {
-    const appUser = await requireAuthenticatedUser();
-    redirect(appUser.role === 'ADMIN' ? '/admin' : '/user');
-  }
-
   const resolvedSearchParams = await searchParams;
   const nextPath =
     resolvedSearchParams?.next &&

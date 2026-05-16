@@ -1,17 +1,6 @@
-import { redirect } from 'next/navigation';
-import { createSupabaseServerClient } from '@/lib/auth/supabase';
 import { SignUpForm } from '@/components/auth/sign-up-form';
-import { requireAuthenticatedUser } from '@/server/policies/auth';
 
-export default async function SignUpPage() {
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase.auth.getUser();
-
-  if (data.user) {
-    const appUser = await requireAuthenticatedUser();
-    redirect(appUser.role === 'ADMIN' ? '/admin' : '/user');
-  }
-
+export default function SignUpPage() {
   return (
     <div className="w-full max-w-md space-y-6">
       <div>

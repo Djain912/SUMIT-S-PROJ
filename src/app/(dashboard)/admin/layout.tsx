@@ -12,7 +12,7 @@ export default async function AdminLayout({
     await requireAdminUser();
   } catch (error) {
     if (error instanceof AuthError) {
-      redirect('/admin/login');
+      redirect('/sign-in');
     }
     throw error;
   }

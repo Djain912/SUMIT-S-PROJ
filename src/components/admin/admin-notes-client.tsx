@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { AdminLevelTabs, type AdminLevel } from '@/components/admin/admin-level-tabs';
 import { TinyMceEditor } from '@/components/admin/tinymce-editor';
 import { DEFAULT_WATERMARK_CONFIG, sanitizeWatermarkConfig, type WatermarkConfig, type WatermarkPosition } from '@/lib/utils/watermark';
@@ -102,6 +103,7 @@ async function saveOrUpdateNote(id: string | null, data: Record<string, unknown>
 }
 
 export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: Level }) {
+  const router = useRouter();
   const [level, setLevel] = useState<Level>(initialLevel);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [selectedChapter, setSelectedChapter] = useState<string>('');
@@ -166,6 +168,7 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
       notesInFlight.delete(selectedSubtopic);
       setIsEditing(false);
       setEditingNoteId(null);
+      router.refresh();
     } finally {
       setSaving(false);
     }
@@ -440,6 +443,7 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
                       notesInFlight.delete(selectedNote.subtopicId);
                       setNotes(prev => prev.filter(n => n.id !== selectedNote.id));
                       setSelectedNote(null);
+                      router.refresh();
                     }}
                     className="text-sm font-medium text-red-600 hover:text-red-800"
                   >

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useState } from 'react';
-import { createSupabaseBrowserClient } from '@/lib/auth/supabase-browser';
+import { signIn } from 'next-auth/react';
 
 export function SignUpForm() {
   const router = useRouter();
@@ -19,18 +19,7 @@ export function SignUpForm() {
     setErrorMessage(null);
     setSuccessMessage(null);
 
-    const supabase = createSupabaseBrowserClient();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/user')}`,
-      },
-    });
-
-    if (error) {
-      setErrorMessage(error.message);
-      setIsLoading(false);
-    }
+    await signIn('google', { callbackUrl: '/user' });
   };
 
   const handleSignUp = async (event: FormEvent<HTMLFormElement>) => {
@@ -39,34 +28,31 @@ export function SignUpForm() {
     setErrorMessage(null);
     setSuccessMessage(null);
 
-    const supabase = createSupabaseBrowserClient();
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-        },
-      },
+    // Register via API route, then sign in
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, fullName }),
     });
 
-    if (error) {
-      setErrorMessage(error.message);
+    const data = await res.json();
+
+    if (!res.ok) {
+      setErrorMessage(data?.error?.message ?? 'Failed to create account.');
       setIsLoading(false);
       return;
     }
 
-    if (!data.session) {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+    const result = await signIn('credentials', {
+      email,
+      password,
+      redirect: false,
+    });
 
-      if (signInError) {
-        setSuccessMessage('Account created. Check your inbox to verify your email, then sign in.');
-        setIsLoading(false);
-        return;
-      }
+    if (result?.error) {
+      setSuccessMessage('Account created! Please sign in.');
+      setIsLoading(false);
+      return;
     }
 
     router.replace('/user');
@@ -98,7 +84,7 @@ export function SignUpForm() {
             placeholder="Your name"
             type="text"
             value={fullName}
-            onChange={(event) => setFullName(event.target.value)}
+            onChange={(e) => setFullName(e.target.value)}
             autoComplete="name"
             required
           />
@@ -110,7 +96,7 @@ export function SignUpForm() {
             placeholder="you@example.com"
             type="email"
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
             required
           />
@@ -122,7 +108,7 @@ export function SignUpForm() {
             placeholder="At least 8 characters"
             type="password"
             value={password}
-            onChange={(event) => setPassword(event.target.value)}
+            onChange={(e) => setPassword(e.target.value)}
             autoComplete="new-password"
             required
             minLength={8}

@@ -1,112 +1,51 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { FormEvent, useState } from 'react';
-import { createSupabaseBrowserClient } from '@/lib/auth/supabase-browser';
-
-type ExpectedRole = 'ADMIN' | 'USER';
+import { signIn } from 'next-auth/react';
 
 type SignInFormProps = {
   allowGoogle?: boolean;
-  expectedRole?: ExpectedRole;
   redirectTo?: string;
   showSignUpLink?: boolean;
   submitLabel?: string;
 };
 
-async function loadSessionRole(): Promise<ExpectedRole | null> {
-  const response = await fetch('/api/auth/session', { cache: 'no-store' });
-  const payload = await response.json();
-
-  if (!response.ok || !payload?.success) {
-    return null;
-  }
-
-  return payload.data?.role ?? null;
-}
-
-async function waitForSessionRole(maxAttempts = 4): Promise<ExpectedRole | null> {
-  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-    const role = await loadSessionRole();
-    if (role) {
-      return role;
-    }
-
-    await new Promise((resolve) => {
-      setTimeout(resolve, 150 * (attempt + 1));
-    });
-  }
-
-  return null;
-}
-
 export function SignInForm({
   allowGoogle = true,
-  expectedRole = 'USER',
   redirectTo = '/user',
   showSignUpLink = true,
   submitLabel = 'Sign in',
 }: SignInFormProps) {
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  async function finishSignIn() {
-    const supabase = createSupabaseBrowserClient();
-    const role = await waitForSessionRole();
-
-    if (expectedRole === 'ADMIN' && role !== 'ADMIN') {
-      await supabase.auth.signOut();
-      setErrorMessage('This portal is only for the configured super admin account.');
-      setIsLoading(false);
-      return;
-    }
-
-    const nextPath = role === 'ADMIN' ? '/admin' : redirectTo;
-    router.replace(nextPath);
-    router.refresh();
-  }
 
   const signInWithEmail = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsLoading(true);
     setErrorMessage(null);
 
-    const supabase = createSupabaseBrowserClient();
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const result = await signIn('credentials', { email, password, redirect: false });
 
-    if (error) {
-      setErrorMessage(error.message);
+    if (result?.error) {
+      setErrorMessage('Invalid email or password.');
       setIsLoading(false);
       return;
     }
 
-    await finishSignIn();
+    // Fetch session to get role, then navigate
+    const res = await fetch('/api/auth/session');
+    const sess = await res.json();
+    const role = sess?.data?.role;
+    window.location.href = role === 'ADMIN' ? '/admin' : redirectTo;
   };
 
   const signInWithGoogle = async () => {
     setIsLoading(true);
     setErrorMessage(null);
-
-    const supabase = createSupabaseBrowserClient();
-    const nextParam = encodeURIComponent(redirectTo);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${nextParam}`,
-      },
-    });
-
-    if (error) {
-      setErrorMessage(error.message);
-      setIsLoading(false);
-    }
+    await signIn('google', { callbackUrl: `${window.location.origin}${redirectTo}` });
   };
 
   return (
@@ -121,7 +60,6 @@ export function SignInForm({
           >
             Continue with Google
           </button>
-
           <div className="my-4 flex items-center gap-3">
             <span className="h-px flex-1 bg-zinc-200" />
             <span className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-400">or</span>
@@ -138,7 +76,7 @@ export function SignInForm({
             placeholder="you@example.com"
             type="email"
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
             required
           />
@@ -150,8 +88,8 @@ export function SignInForm({
             placeholder="Enter your password"
             type="password"
             value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            autoComplete={expectedRole === 'ADMIN' ? 'current-password' : 'current-password'}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
             required
           />
         </div>
