@@ -67,27 +67,22 @@ interface AnalyticsData {
 }
 
 export async function getUserAnalyticsData(userId: string): Promise<AnalyticsData> {
-  const allAttempts = await prisma.quizAttempt.findMany({
-    where: {
-      userId,
-      status: 'COMPLETED',
-    },
-    orderBy: { completedAt: 'desc' },
-    select: {
-      id: true,
-      mode: true,
-      level: true,
-      totalQuestions: true,
-      correctCount: true,
-      scorePercentage: true,
-      completedAt: true,
-      items: {
-        select: {
-          timeSpentSeconds: true,
-        },
+  const [allAttempts] = await Promise.all([
+    prisma.quizAttempt.findMany({
+      where: { userId, status: 'COMPLETED' },
+      orderBy: { completedAt: 'desc' },
+      select: {
+        id: true,
+        mode: true,
+        level: true,
+        totalQuestions: true,
+        correctCount: true,
+        scorePercentage: true,
+        completedAt: true,
+        items: { select: { timeSpentSeconds: true } },
       },
-    },
-  });
+    }),
+  ]);
 
   if (allAttempts.length === 0) {
     return {
@@ -167,43 +162,42 @@ export async function getUserAnalyticsData(userId: string): Promise<AnalyticsDat
       longestStreak = Math.max(longestStreak, streak);
     }
 
-    // chapters is independent of allAttempts — run in parallel with the streak computation above
-    const chapters = await prisma.chapter.findMany({
-      where: { isPublished: true, isDeleted: false },
-      orderBy: { orderIndex: 'asc' },
-      select: { id: true, title: true, level: true },
-    });
-
-    const chapterIds = chapters.map(c => c.id);
-
-    const subtopics = await prisma.subtopic.findMany({
-      where: { chapterId: { in: chapterIds }, isPublished: true, isDeleted: false },
-      select: { id: true, title: true, chapterId: true },
-    });
-
-    const subtopicIds = subtopics.map(s => s.id);
-
-    const attemptItems = await prisma.quizAttemptItem.findMany({
-      where: {
-        attempt: {
-          userId,
-          status: 'COMPLETED',
-        },
-        question: {
-          subtopicId: { in: subtopicIds },
-        },
-      },
-      include: {
-        question: {
-          select: {
-            subtopicId: true,
-            chapterId: true,
+    // Fetch chapters, subtopics, and attempt items in parallel
+    const [chapters, attemptItems] = await Promise.all([
+      prisma.chapter.findMany({
+        where: { isPublished: true, isDeleted: false },
+        orderBy: { orderIndex: 'asc' },
+        select: {
+          id: true,
+          title: true,
+          level: true,
+          subtopics: {
+            where: { isPublished: true, isDeleted: false },
+            select: { id: true, title: true },
           },
         },
-      },
-      take: 2000,
-      orderBy: { answeredAt: 'desc' },
-    });
+      }),
+      prisma.quizAttemptItem.findMany({
+        where: {
+          attempt: { userId, status: 'COMPLETED' },
+        },
+        select: {
+          isCorrect: true,
+          timeSpentSeconds: true,
+          answeredAt: true,
+          question: {
+            select: { subtopicId: true, chapterId: true },
+          },
+        },
+        take: 2000,
+        orderBy: { answeredAt: 'desc' },
+      }),
+    ]);
+
+    const subtopics = chapters.flatMap(c =>
+      c.subtopics.map(s => ({ id: s.id, title: s.title, chapterId: c.id }))
+    );
+    const subtopicIds = subtopics.map(s => s.id);
 
     const subtopicStats = new Map<string, { attempts: number; questions: number; correct: number; totalTime: number; lastAt: Date | null }>();
     

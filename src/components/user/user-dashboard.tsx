@@ -24,6 +24,13 @@ export type ChapterData = {
   totalQuestions: number;
 };
 
+export type NoteShell = {
+  id: string;
+  title: string;
+  orderIndex: number;
+  isPublished: boolean;
+};
+
 export type SubtopicData = {
   id: string;
   title: string;
@@ -32,6 +39,7 @@ export type SubtopicData = {
   totalQuestions: number;
   questionsAnswered: number;
   isLocked: boolean;
+  notes: NoteShell[];
 };
 
 interface DashboardData {
@@ -82,9 +90,9 @@ export function ProgressStats({ totalProgress, assessmentScore, totalQuestionsAn
             <span className="text-zinc-600">Progress</span>
             <span className="text-zinc-500">{totalProgress}%</span>
           </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-200">
+          <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-100">
             <div
-              className="h-full rounded-full bg-blue-600"
+              className="h-full rounded-full bg-indigo-600 transition-all"
               style={{ width: `${totalProgress}%` }}
             />
           </div>
@@ -165,6 +173,88 @@ export function RecentAttempts({ attempts }: RecentAttemptsProps) {
   );
 }
 
+function SubtopicRow({ subtopic: st }: { subtopic: SubtopicData }) {
+  const [expanded, setExpanded] = useState(false);
+  const hasNotes = st.notes.length > 0;
+
+  return (
+    <div className="flex flex-col gap-2 rounded-lg bg-zinc-50 p-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {hasNotes ? (
+            <button
+              type="button"
+              onClick={() => setExpanded(!expanded)}
+              className="flex items-center gap-2 text-sm text-zinc-700"
+            >
+              <span className={`transition-transform ${expanded ? 'rotate-90' : ''}`}>
+                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </span>
+              {st.title}
+            </button>
+          ) : (
+            <span className="text-sm text-zinc-700">{st.title}</span>
+          )}
+          {st.questionsAnswered > 0 && (
+            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+              st.progress >= 70 ? 'bg-green-100 text-green-700' :
+              st.progress >= 50 ? 'bg-yellow-100 text-yellow-700' :
+              'bg-red-100 text-red-700'
+            }`}>
+              {st.progress}%
+            </span>
+          )}
+        </div>
+        <div className="flex gap-1">
+          <Link
+            href={`/user/notes?subtopic=${st.id}`}
+            className="rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-500"
+          >
+            Notes
+          </Link>
+          <Link
+            href={`/user/quiz?mode=SUBTOPIC&subtopic=${st.id}`}
+            className="rounded border border-indigo-200 bg-indigo-50 px-2 py-1 text-xs text-indigo-600 hover:bg-indigo-100 transition"
+          >
+            Quiz
+          </Link>
+        </div>
+      </div>
+      {st.questionsAnswered > 0 && (
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-200">
+          <div
+            className="h-full rounded-full bg-indigo-600 transition-all"
+            style={{ width: `${st.progress}%` }}
+          />
+        </div>
+      )}
+      {hasNotes && expanded && (
+        <div className="flex flex-col gap-1 pt-1 pl-4 border-l-2 border-zinc-200">
+          {st.notes.map((note) => (
+            <div key={note.id} className="flex items-center justify-between py-1">
+              <span className="text-xs text-zinc-600">{note.title}</span>
+              {note.isPublished ? (
+                <Link
+                  href={`/user/notes?note=${note.id}`}
+                  className="rounded border border-zinc-200 px-2 py-0.5 text-xs text-zinc-500 hover:bg-zinc-100"
+                >
+                  Read
+                </Link>
+              ) : (
+                <span className="rounded border border-zinc-100 px-2 py-0.5 text-xs text-zinc-400">
+                  Coming soon
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface ChapterRowProps {
   id: string;
   title: string;
@@ -223,7 +313,7 @@ return (
           </Link>
           <Link
             href={`/user/quiz?mode=CHAPTER&chapter=${id}`}
-            className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white"
+            className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 transition"
           >
             Quiz
           </Link>
@@ -232,44 +322,7 @@ return (
       {hasSubtopics && expanded && (
         <div className="flex flex-col gap-2 pt-2 pl-4">
           {subtopics.map((st) => (
-            <div key={st.id} className="flex flex-col gap-2 rounded-lg bg-zinc-50 p-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-zinc-700">Subtopic {st.orderIndex}: {st.title}</span>
-                  {st.questionsAnswered > 0 && (
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                      st.progress >= 70 ? 'bg-green-100 text-green-700' :
-                      st.progress >= 50 ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-red-100 text-red-700'
-                    }`}>
-                      {st.progress}%
-                    </span>
-                  )}
-                </div>
-                <div className="flex gap-1">
-                  <Link
-                    href={`/user/notes?subtopic=${st.id}`}
-                    className="rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-500"
-                  >
-                    Notes
-                  </Link>
-                  <Link
-                    href={`/user/quiz?mode=SUBTOPIC&subtopic=${st.id}`}
-                    className="rounded border border-blue-200 bg-blue-50 px-2 py-1 text-xs text-blue-600"
-                  >
-                    Quiz
-                  </Link>
-                </div>
-              </div>
-              {st.questionsAnswered > 0 && (
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-200">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-blue-600 via-sky-500 to-emerald-500"
-                    style={{ width: `${st.progress}%` }}
-                  />
-                </div>
-              )}
-            </div>
+            <SubtopicRow key={st.id} subtopic={st} />
           ))}
         </div>
       )}
@@ -302,6 +355,7 @@ export function UserDashboardClient({ initialData }: { initialData?: DashboardDa
     queryKey: ['dashboard', selectedLevel],
     queryFn: () => fetchDashboard(selectedLevel),
     initialData: selectedLevel === ((initialData?.level as Level) ?? 'LEVEL_1') ? initialData : undefined,
+    staleTime: 60_000,
   });
 
   return (
@@ -311,7 +365,7 @@ export function UserDashboardClient({ initialData }: { initialData?: DashboardDa
           <h1 className="text-xl font-semibold text-zinc-900">
             {selectedLevel.replace('_', ' ')}
           </h1>
-          <p className="text-lg font-semibold text-blue-600">{data?.totalProgress ?? 0}%</p>
+          <p className="text-lg font-semibold text-indigo-600">{data?.totalProgress ?? 0}%</p>
         </div>
 
         <div className="flex flex-wrap gap-2 mb-4">
@@ -320,10 +374,10 @@ export function UserDashboardClient({ initialData }: { initialData?: DashboardDa
               key={level}
               type="button"
               onClick={() => setSelectedLevel(level)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
+              className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
                 selectedLevel === level
-                  ? 'bg-zinc-900 text-white'
-                  : 'bg-zinc-100 text-zinc-600'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
               }`}
             >
               {level.replace('_', ' ')}

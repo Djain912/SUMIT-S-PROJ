@@ -235,37 +235,65 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
             </select>
           </div>
 
-          {notes.length > 0 && (
+          {selectedSubtopic && (
             <div>
-              <label className="block text-sm font-medium text-zinc-700">Notes ({notes.length})</label>
-              <div className="mt-1 space-y-1">
-                {notes.map((note) => (
-                  <button
-                    key={note.id}
-                    onClick={() => {
-                      setSelectedNote(note);
-                      setEditTitle(note.title);
-                      setEditContent(note.contentHtml || '');
-                      setEditPublished(note.isPublished);
-                      setEditWatermark(sanitizeWatermarkConfig(note.watermarkConfig));
-                      setIsEditing(false);
-                      setEditingNoteId(null);
-                    }}
-                    className={`w-full rounded-lg border px-3 py-2 text-left text-sm ${
-                      selectedNote?.id === note.id
-                        ? 'border-blue-600 bg-blue-50'
-                        : 'border-zinc-200 hover:bg-zinc-50'
-                    }`}
-                  >
-                    {note.title}
-                    {note.isPublished && (
-                      <span className="ml-2 rounded bg-green-100 px-1.5 py-0.5 text-xs text-green-700">
-                        Published
-                      </span>
-                    )}
-                  </button>
-                ))}
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-medium text-zinc-700">
+                  Notes {notes.length > 0 ? `(${notes.length})` : ''}
+                </label>
+                <button
+                  onClick={() => {
+                    setSelectedNote(null);
+                    setEditTitle('');
+                    setEditContent('');
+                    setEditPublished(false);
+                    setEditWatermark(DEFAULT_WATERMARK_CONFIG);
+                    setIsEditing(true);
+                    setEditingNoteId(null);
+                  }}
+                  className="rounded-md bg-zinc-950 px-2.5 py-1 text-xs font-semibold text-white hover:bg-zinc-700"
+                >
+                  + New Note
+                </button>
               </div>
+              {notes.length > 0 ? (
+                <div className="mt-2 space-y-1">
+                  {notes.map((note) => (
+                    <button
+                      key={note.id}
+                      onClick={() => {
+                        setSelectedNote(note);
+                        setEditTitle(note.title);
+                        setEditContent(note.contentHtml || '');
+                        setEditPublished(note.isPublished);
+                        setEditWatermark(sanitizeWatermarkConfig(note.watermarkConfig));
+                        setIsEditing(false);
+                        setEditingNoteId(null);
+                      }}
+                      className={`w-full rounded-lg border px-3 py-2 text-left text-sm ${
+                        selectedNote?.id === note.id
+                          ? 'border-blue-600 bg-blue-50'
+                          : 'border-zinc-200 hover:bg-zinc-50'
+                      }`}
+                    >
+                      <span className="block truncate">{note.title}</span>
+                      <span className="mt-0.5 block">
+                        {note.isPublished ? (
+                          <span className="rounded bg-green-100 px-1.5 py-0.5 text-xs text-green-700">
+                            Published
+                          </span>
+                        ) : (
+                          <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700">
+                            Draft
+                          </span>
+                        )}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-2 text-xs text-zinc-400">No notes yet — click + New Note to create one.</p>
+              )}
             </div>
           )}
         </div>
@@ -274,6 +302,10 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
           {!selectedSubtopic ? (
             <p className="text-center text-zinc-500">
               Select a chapter and subtopic to view or create notes
+            </p>
+          ) : !isEditing && !selectedNote ? (
+            <p className="text-center text-zinc-400 text-sm">
+              Select a note from the list or click <span className="font-semibold text-zinc-600">+ New Note</span> to create one.
             </p>
           ) : isEditing ? (
             <div className="space-y-4">
@@ -401,24 +433,7 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
                 </button>
               </div>
             </div>
-          ) : !selectedNote ? (
-            <div className="space-y-4">
-              <p className="text-zinc-700">No notes for this subtopic yet</p>
-              <button
-                onClick={() => {
-                  setEditTitle('');
-                  setEditContent('');
-                  setEditPublished(false);
-                  setEditWatermark(DEFAULT_WATERMARK_CONFIG);
-                  setIsEditing(true);
-                  setEditingNoteId(null);
-                }}
-                className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
-              >
-                Create Note
-              </button>
-            </div>
-          ) : (
+          ) : selectedNote ? (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-zinc-900">{selectedNote.title}</h2>
@@ -456,7 +471,7 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
                 dangerouslySetInnerHTML={{ __html: selectedNote.contentHtml || '' }}
               />
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </div>

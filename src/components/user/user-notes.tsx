@@ -94,13 +94,15 @@ export function UserNotesClient() {
       const params = new URLSearchParams(window.location.search);
       const subtopicId = params.get('subtopic');
       const chapterId = params.get('chapter');
+      const noteId = params.get('note');
 
       const searchParams = new URLSearchParams();
       if (subtopicId) searchParams.set('subtopicId', subtopicId);
-      if (chapterId) searchParams.set('chapterId', chapterId);
+      else if (chapterId) searchParams.set('chapterId', chapterId);
+      else if (noteId) searchParams.set('note', noteId);
 
       const response = await fetch(`/api/notes?${searchParams.toString()}`);
-      const payload = await response.json() as ApiResponse<Note[]>;
+      const payload = await response.json() as ApiResponse<Note[]> & { _openNoteId?: string | null };
 
       if (!response.ok || !payload.success) {
         throw new Error(payload.error?.message ?? 'Failed to load notes');
@@ -109,7 +111,10 @@ export function UserNotesClient() {
       const data = payload.data ?? [];
       setNotes(data);
       if (data.length > 0) {
-        setSelectedNote(data[0]);
+        const target = payload._openNoteId
+          ? (data.find(n => n.id === payload._openNoteId) ?? data[0])
+          : data[0];
+        setSelectedNote(target);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load notes');
@@ -236,84 +241,68 @@ export function UserNotesClient() {
 
   return (
     <div
-      className="space-y-6"
-      onContextMenu={(event) => {
-        event.preventDefault();
-        setProtectionNotice('Right-click is restricted on protected notes.');
-        window.setTimeout(() => setProtectionNotice(null), 1500);
-      }}
-      onCopy={(event) => {
-        event.preventDefault();
-        setProtectionNotice('Copy is disabled on protected notes.');
-        window.setTimeout(() => setProtectionNotice(null), 1500);
-      }}
-      onCut={(event) => event.preventDefault()}
-      onDragStart={(event) => event.preventDefault()}
+      onContextMenu={(e) => { e.preventDefault(); setProtectionNotice('Right-click is restricted.'); window.setTimeout(() => setProtectionNotice(null), 1500); }}
+      onCopy={(e) => { e.preventDefault(); setProtectionNotice('Copy is disabled on protected notes.'); window.setTimeout(() => setProtectionNotice(null), 1500); }}
+      onCut={(e) => e.preventDefault()}
+      onDragStart={(e) => e.preventDefault()}
     >
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-zinc-500">Notes Center</p>
-          <h1 className="mt-1 text-2xl font-semibold text-zinc-900">Study Materials</h1>
-        </div>
-        <div className="flex gap-2">
-          <Link href="/user" className="rounded-lg border border-zinc-200 px-4 py-2 text-sm text-zinc-600 hover:bg-zinc-50">
-            Back to Chapters
-          </Link>
-        </div>
-      </div>
-
       {reportSuccess && (
-        <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">
-          Note reported successfully. Thank you for your feedback!
+        <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          Note reported successfully. Thank you!
         </div>
       )}
-
       {protectionNotice && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           {protectionNotice}
         </div>
       )}
 
       {isLoading ? (
-        <div className="grid gap-6 lg:grid-cols-[280px_1fr] animate-pulse">
-          <div className="space-y-3">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <div key={index} className="h-10 rounded-lg bg-zinc-200" />
-            ))}
+        <div className="grid gap-6 lg:grid-cols-[260px_1fr] animate-pulse">
+          <div className="space-y-2">
+            {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-11 rounded-xl bg-zinc-100" />)}
           </div>
-          <div className="rounded-xl border border-zinc-200 bg-white p-6">
-            <div className="h-6 w-1/2 rounded bg-zinc-200" />
+          <div className="rounded-2xl border border-zinc-100 bg-white p-6">
+            <div className="h-6 w-1/2 rounded-lg bg-zinc-200" />
             <div className="mt-5 space-y-3">
-              {Array.from({ length: 8 }).map((_, index) => (
-                <div key={index} className="h-4 rounded bg-zinc-100" />
-              ))}
+              {Array.from({ length: 8 }).map((_, i) => <div key={i} className={`h-4 rounded bg-zinc-100 ${i % 3 === 2 ? 'w-3/4' : 'w-full'}`} />)}
             </div>
           </div>
         </div>
       ) : error ? (
-        <div className="py-12 text-center text-red-600">{error}</div>
+        <div className="rounded-2xl border border-zinc-100 bg-white py-16 text-center text-sm text-rose-600">{error}</div>
       ) : notes.length === 0 ? (
-        <div className="py-12 text-center text-zinc-500">No notes available for this selection.</div>
+        <div className="rounded-2xl border border-zinc-100 bg-white py-16 text-center text-sm text-zinc-500">
+          No notes available for this selection.
+          <div className="mt-4"><Link href="/user" className="inline-flex rounded-full border border-zinc-200 px-4 py-2 text-sm text-zinc-600 hover:bg-zinc-50">Back to Dashboard</Link></div>
+        </div>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-zinc-500">Select Note</p>
-            {notes.map((note) => (
-              <button
-                key={note.id}
-                onClick={() => setSelectedNote(note)}
-                className={`w-full rounded-lg border px-4 py-3 text-left text-sm transition-colors ${
-                  selectedNote?.id === note.id
-                    ? 'border-blue-600 bg-blue-50 text-blue-900'
-                    : 'border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300'
-                }`}
-              >
-                {note.title}
-              </button>
-            ))}
-          </div>
+        <>
+          {/* Mobile: show back button when reading */}
+          {selectedNote && (
+            <button type="button" onClick={() => setSelectedNote(null)}
+              className="mb-4 flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-800 lg:hidden">
+              ← All notes
+            </button>
+          )}
 
-          <div className="relative overflow-hidden rounded-xl border border-zinc-200 bg-white p-6">
+          <div className="grid gap-4 lg:grid-cols-[260px_1fr]">
+            {/* Sidebar — hidden on mobile when a note is selected */}
+            <div className={`${selectedNote ? 'hidden lg:block' : 'block'} space-y-1.5`}>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-zinc-400">{notes.length} note{notes.length !== 1 ? 's' : ''}</p>
+              {notes.map((note) => (
+                <button key={note.id} onClick={() => setSelectedNote(note)}
+                  className={`w-full rounded-xl border px-4 py-3 text-left text-sm font-medium transition ${
+                    selectedNote?.id === note.id
+                      ? 'border-indigo-300 bg-indigo-50 text-indigo-900'
+                      : 'border-zinc-100 bg-white text-zinc-700 hover:border-zinc-200 hover:bg-zinc-50'
+                  }`}>
+                  {note.title}
+                </button>
+              ))}
+            </div>
+
+          <div className={`${selectedNote ? 'block' : 'hidden lg:block'} relative overflow-hidden rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm sm:p-6`}>
             {selectedNote ? (
               <>
                 {watermark.enabled && watermark.position === 'TILE' && (
@@ -415,10 +404,13 @@ export function UserNotesClient() {
                 </div>
               </>
             ) : (
-              <p className="text-zinc-500">Select a note to view its content.</p>
+              <div className="flex h-full min-h-[200px] items-center justify-center rounded-2xl border border-dashed border-zinc-200 bg-white">
+                <p className="text-sm text-zinc-400">Select a note from the list to start reading.</p>
+              </div>
             )}
           </div>
         </div>
+        </>
       )}
     </div>
   );

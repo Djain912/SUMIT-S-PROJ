@@ -3,21 +3,21 @@
 @tailwind utilities;
 
 :root {
-  --background: 220 25% 98%;
+  --background: 0 0% 100%;
   --foreground: 222 47% 11%;
   --card: 0 0% 100%;
   --card-foreground: 222 47% 11%;
-  --primary: 221 83% 53%;
+  --primary: 239 84% 67%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 215 100% 97%;
+  --secondary: 240 5% 96%;
   --secondary-foreground: 222 47% 11%;
-  --muted: 210 40% 96%;
-  --muted-foreground: 215 16% 47%;
-  --accent: 38 92% 95%;
-  --accent-foreground: 25 84% 31%;
-  --border: 214 32% 91%;
-  --input: 214 32% 91%;
-  --ring: 221 83% 53%;
+  --muted: 240 5% 96%;
+  --muted-foreground: 240 4% 46%;
+  --accent: 240 5% 96%;
+  --accent-foreground: 222 47% 11%;
+  --border: 240 6% 90%;
+  --input: 240 6% 90%;
+  --ring: 239 84% 67%;
 }
 
 * {
@@ -30,11 +30,7 @@ html {
 
 body {
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top left, rgba(59, 130, 246, 0.08), transparent 35%),
-    radial-gradient(circle at top right, rgba(249, 115, 22, 0.08), transparent 28%),
-    radial-gradient(circle at bottom left, rgba(34, 197, 94, 0.06), transparent 30%),
-    hsl(var(--background));
+  background: hsl(var(--background));
   color: hsl(var(--foreground));
   font-family: var(--font-inter), 'Segoe UI', Arial, sans-serif;
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
@@ -44,8 +40,8 @@ body {
 }
 
 ::selection {
-  background: hsl(var(--foreground));
-  color: hsl(var(--background));
+  background: hsl(239 84% 67% / 0.15);
+  color: hsl(239 84% 40%);
 }
 
 input,

@@ -1,5 +1,12 @@
 import { prisma } from '@/lib/db/prisma';
 
+interface NoteShell {
+  id: string;
+  title: string;
+  orderIndex: number;
+  isPublished: boolean;
+}
+
 interface SubtopicProgress {
   id: string;
   title: string;
@@ -8,6 +15,7 @@ interface SubtopicProgress {
   totalQuestions: number;
   questionsAnswered: number;
   isLocked: boolean;
+  notes: NoteShell[];
 }
 
 interface ChapterProgress {
@@ -43,7 +51,7 @@ export async function getUserDashboardData(userId: string, level: string) {
             where: { isPublished: true, isDeleted: false },
             orderBy: { orderIndex: 'asc' },
             include: {
-              notes: { where: { isPublished: true, isDeleted: false }, select: { id: true } },
+              notes: { where: { isDeleted: false }, orderBy: { orderIndex: 'asc' }, select: { id: true, title: true, orderIndex: true, isPublished: true } },
               questions: { where: { isPublished: true, isDeleted: false }, select: { id: true } },
             },
           },
@@ -136,6 +144,7 @@ export async function getUserDashboardData(userId: string, level: string) {
               totalQuestions: stTotalQs,
               questionsAnswered: stStats.total,
               isLocked: false,
+              notes: st.notes.map(n => ({ id: n.id, title: n.title, orderIndex: n.orderIndex, isPublished: n.isPublished })),
             };
           }),
         };
