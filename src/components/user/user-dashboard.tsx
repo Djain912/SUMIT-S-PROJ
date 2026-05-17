@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Lock } from 'lucide-react';
+import { Lock, ChevronRight, Search, ChevronsDownUp, ChevronsUpDown } from 'lucide-react';
 
 type Level = 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3';
 
@@ -173,9 +173,22 @@ export function RecentAttempts({ attempts }: RecentAttemptsProps) {
   );
 }
 
-function SubtopicRow({ subtopic: st }: { subtopic: SubtopicData }) {
-  const [expanded, setExpanded] = useState(false);
+function progressBadgeClass(p: number) {
+  if (p >= 70) return 'bg-green-100 text-green-700';
+  if (p >= 50) return 'bg-yellow-100 text-yellow-700';
+  return 'bg-red-100 text-red-700';
+}
+
+interface SubtopicRowProps {
+  subtopic: SubtopicData;
+  forceExpanded: boolean | null;
+}
+
+function SubtopicRow({ subtopic: st, forceExpanded }: SubtopicRowProps) {
+  const [localExpanded, setLocalExpanded] = useState(false);
   const hasNotes = st.notes.length > 0;
+  // forceExpanded=true means expand all, false = collapse all, null = user controls locally
+  const expanded = forceExpanded !== null ? forceExpanded : localExpanded;
 
   return (
     <div className="flex flex-col gap-2 rounded-lg bg-zinc-50 p-3">
@@ -184,25 +197,20 @@ function SubtopicRow({ subtopic: st }: { subtopic: SubtopicData }) {
           {hasNotes ? (
             <button
               type="button"
-              onClick={() => setExpanded(!expanded)}
+              onClick={() => {
+                // Local toggle always overrides forceExpanded after user interacts
+                setLocalExpanded(!expanded);
+              }}
               className="flex items-center gap-2 text-sm text-zinc-700"
             >
-              <span className={`transition-transform ${expanded ? 'rotate-90' : ''}`}>
-                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </span>
+              <ChevronRight className={`h-3 w-3 transition-transform ${expanded ? 'rotate-90' : ''}`} />
               {st.title}
             </button>
           ) : (
             <span className="text-sm text-zinc-700">{st.title}</span>
           )}
           {st.questionsAnswered > 0 && (
-            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-              st.progress >= 70 ? 'bg-green-100 text-green-700' :
-              st.progress >= 50 ? 'bg-yellow-100 text-yellow-700' :
-              'bg-red-100 text-red-700'
-            }`}>
+            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${progressBadgeClass(st.progress)}`}>
               {st.progress}%
             </span>
           )}
@@ -210,7 +218,7 @@ function SubtopicRow({ subtopic: st }: { subtopic: SubtopicData }) {
         <div className="flex gap-1">
           <Link
             href={`/user/notes?subtopic=${st.id}`}
-            className="rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-500"
+            className="rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-500 hover:bg-zinc-50"
           >
             Notes
           </Link>
@@ -256,63 +264,52 @@ function SubtopicRow({ subtopic: st }: { subtopic: SubtopicData }) {
 }
 
 interface ChapterRowProps {
-  id: string;
-  title: string;
-  orderIndex: number;
-  subtopics?: SubtopicData[];
-  isLocked?: boolean;
-  progress?: number;
+  chapter: ChapterData;
+  forceExpanded: boolean | null;
 }
 
-function ChapterRow({ id, title, orderIndex, subtopics = [], isLocked = false, progress = 0 }: ChapterRowProps) {
-  const [expanded, setExpanded] = useState(false);
-  const hasSubtopics = subtopics.length > 0;
+function ChapterRow({ chapter: ch, forceExpanded }: ChapterRowProps) {
+  const [localExpanded, setLocalExpanded] = useState(false);
+  const hasSubtopics = ch.subtopics.length > 0;
+  const expanded = forceExpanded !== null ? forceExpanded : localExpanded;
 
-return (
+  return (
     <div className="flex flex-col gap-3 p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {hasSubtopics ? (
             <button
               type="button"
-              onClick={() => setExpanded(!expanded)}
+              onClick={() => setLocalExpanded(!expanded)}
               className="flex items-center gap-2 font-medium text-zinc-900"
             >
-              <span className={`transition-transform ${expanded ? 'rotate-90' : ''}`}>
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </span>
-              Chapter {orderIndex}: {title}
+              <ChevronRight className={`h-4 w-4 transition-transform ${expanded ? 'rotate-90' : ''}`} />
+              Chapter {ch.orderIndex}: {ch.title}
             </button>
           ) : (
-            <span className="font-medium text-zinc-900">{title}</span>
+            <span className="font-medium text-zinc-900">{ch.title}</span>
           )}
-          {isLocked && (
+          {ch.isLocked && (
             <span className="flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500">
               <Lock className="h-3 w-3" />
               Locked
             </span>
           )}
-          {!isLocked && progress > 0 && (
-            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-              progress >= 70 ? 'bg-green-100 text-green-700' :
-              progress >= 50 ? 'bg-yellow-100 text-yellow-700' :
-              'bg-red-100 text-red-700'
-            }`}>
-              {progress}%
+          {!ch.isLocked && ch.progress > 0 && (
+            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${progressBadgeClass(ch.progress)}`}>
+              {ch.progress}%
             </span>
           )}
         </div>
         <div className="flex gap-2">
           <Link
-            href={`/user/notes?chapter=${id}`}
-            className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs text-zinc-600"
+            href={`/user/notes?chapter=${ch.id}`}
+            className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs text-zinc-600 hover:bg-zinc-50"
           >
             Notes
           </Link>
           <Link
-            href={`/user/quiz?mode=CHAPTER&chapter=${id}`}
+            href={`/user/quiz?mode=CHAPTER&chapter=${ch.id}`}
             className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 transition"
           >
             Quiz
@@ -321,8 +318,8 @@ return (
       </div>
       {hasSubtopics && expanded && (
         <div className="flex flex-col gap-2 pt-2 pl-4">
-          {subtopics.map((st) => (
-            <SubtopicRow key={st.id} subtopic={st} />
+          {ch.subtopics.map((st) => (
+            <SubtopicRow key={st.id} subtopic={st} forceExpanded={forceExpanded} />
           ))}
         </div>
       )}
@@ -350,6 +347,9 @@ export function UserDashboardClient({ initialData }: { initialData?: DashboardDa
   const [selectedLevel, setSelectedLevel] = useState<Level>(
     (initialData?.level as Level) ?? 'LEVEL_1',
   );
+  const [search, setSearch] = useState('');
+  // null = user controls per-row; true = expand all; false = collapse all
+  const [forceExpanded, setForceExpanded] = useState<boolean | null>(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['dashboard', selectedLevel],
@@ -357,6 +357,26 @@ export function UserDashboardClient({ initialData }: { initialData?: DashboardDa
     initialData: selectedLevel === ((initialData?.level as Level) ?? 'LEVEL_1') ? initialData : undefined,
     staleTime: 60_000,
   });
+
+  // Client-side search: filter chapters/subtopics by title — no extra API calls
+  const filteredSections = useMemo(() => {
+    if (!data?.sections || !search.trim()) return data?.sections ?? [];
+    const q = search.toLowerCase();
+    return data.sections
+      .map(section => ({
+        ...section,
+        chapters: section.chapters
+          .map(ch => ({
+            ...ch,
+            subtopics: ch.subtopics.filter(st => st.title.toLowerCase().includes(q)),
+          }))
+          .filter(ch => ch.title.toLowerCase().includes(q) || ch.subtopics.length > 0),
+      }))
+      .filter(s => s.chapters.length > 0);
+  }, [data?.sections, search]);
+
+  const handleExpandAll = () => setForceExpanded(true);
+  const handleCollapseAll = () => setForceExpanded(false);
 
   return (
     <div className="flex flex-col gap-6">
@@ -373,7 +393,7 @@ export function UserDashboardClient({ initialData }: { initialData?: DashboardDa
             <button
               key={level}
               type="button"
-              onClick={() => setSelectedLevel(level)}
+              onClick={() => { setSelectedLevel(level); setSearch(''); setForceExpanded(null); }}
               className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
                 selectedLevel === level
                   ? 'bg-indigo-600 text-white'
@@ -404,6 +424,38 @@ export function UserDashboardClient({ initialData }: { initialData?: DashboardDa
         ) : null}
       </div>
 
+      {/* Search + expand/collapse toolbar */}
+      {!isLoading && data && (
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative flex-1 min-w-[180px]">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
+            <input
+              type="search"
+              value={search}
+              onChange={e => { setSearch(e.target.value); if (e.target.value) setForceExpanded(true); }}
+              placeholder="Search chapters & subtopics…"
+              className="w-full rounded-lg border border-zinc-200 bg-white py-2 pl-9 pr-3 text-sm text-zinc-800 placeholder:text-zinc-400 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-200"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleExpandAll}
+            className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-600 hover:bg-zinc-50 transition"
+          >
+            <ChevronsUpDown className="h-3.5 w-3.5" />
+            Expand all
+          </button>
+          <button
+            type="button"
+            onClick={handleCollapseAll}
+            className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-600 hover:bg-zinc-50 transition"
+          >
+            <ChevronsDownUp className="h-3.5 w-3.5" />
+            Collapse all
+          </button>
+        </div>
+      )}
+
       <div className="flex flex-col gap-4">
         {isLoading ? (
           <div className="space-y-4 animate-pulse">
@@ -421,24 +473,22 @@ export function UserDashboardClient({ initialData }: { initialData?: DashboardDa
           <div className="rounded-xl border border-dashed border-zinc-300 bg-white py-8 text-center text-sm text-zinc-500">
             Select a level to view chapters.
           </div>
+        ) : filteredSections.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-zinc-300 bg-white py-8 text-center text-sm text-zinc-500">
+            No chapters or subtopics match &ldquo;{search}&rdquo;.
+          </div>
         ) : (
-          <>
-            {data.sections.map((section) => (
-              <SectionCard key={section.id} title={section.title}>
-                {section.chapters.map((chapter) => (
-                  <ChapterRow
-                    key={chapter.id}
-                    id={chapter.id}
-                    title={chapter.title}
-                    orderIndex={chapter.orderIndex}
-                    subtopics={chapter.subtopics}
-                    isLocked={chapter.isLocked}
-                    progress={chapter.progress}
-                  />
-                ))}
-              </SectionCard>
-            ))}
-          </>
+          filteredSections.map((section) => (
+            <SectionCard key={section.id} title={section.title}>
+              {section.chapters.map((chapter) => (
+                <ChapterRow
+                  key={chapter.id}
+                  chapter={chapter}
+                  forceExpanded={search.trim() ? true : forceExpanded}
+                />
+              ))}
+            </SectionCard>
+          ))
         )}
       </div>
     </div>

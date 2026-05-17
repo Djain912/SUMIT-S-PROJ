@@ -9,6 +9,7 @@ coverage
 .env.production.local
 .DS_Store
 prisma/dev.db
+datauploads
 
 # Build artifacts
 tsconfig.tsbuildinfo

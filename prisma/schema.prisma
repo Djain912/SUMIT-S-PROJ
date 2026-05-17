@@ -184,6 +184,8 @@ model QuizAttempt {
 
   @@index([userId, startedAt])
   @@index([status, startedAt])
+  @@index([userId, level, status])
+  @@index([userId, status, completedAt])
 }
 
 model QuizAttemptItem {
@@ -209,6 +211,7 @@ model QuizAttemptItem {
   @@index([attemptId, isCorrect])
   @@index([questionId])
   @@index([answeredAt])
+  @@index([attemptId, answeredAt])
 }
 
 model QuestionReport {

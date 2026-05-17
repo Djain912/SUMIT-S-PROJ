@@ -4,12 +4,10 @@ import type { QuizAnswerInput, QuizSelectionInput } from '@/server/validators/qu
 
 function shuffle<T>(items: T[]) {
   const output = [...items];
-
   for (let index = output.length - 1; index > 0; index -= 1) {
     const swapIndex = Math.floor(Math.random() * (index + 1));
     [output[index], output[swapIndex]] = [output[swapIndex], output[index]];
   }
-
   return output;
 }
 
@@ -19,32 +17,19 @@ export async function resolveQuizQuestions(selection: QuizSelectionInput) {
     isDeleted: false,
   };
 
-  const orConditions: Prisma.QuestionWhereInput[] = [];
-
   if (selection.level) {
     where.level = selection.level;
   }
 
+  // Build a single clean OR: subtopicId OR chapterId — no duplicate relation joins
+  const orConditions: Prisma.QuestionWhereInput[] = [];
+
   if (selection.selectedSubtopicIds.length > 0) {
-    orConditions.push(
-      { subtopicId: { in: selection.selectedSubtopicIds } },
-      {
-        subtopic: {
-          id: { in: selection.selectedSubtopicIds },
-        },
-      },
-    );
+    orConditions.push({ subtopicId: { in: selection.selectedSubtopicIds } });
   }
 
   if (selection.selectedChapterIds.length > 0) {
-    orConditions.push(
-      { chapterId: { in: selection.selectedChapterIds } },
-      {
-        subtopic: {
-          chapterId: { in: selection.selectedChapterIds },
-        },
-      },
-    );
+    orConditions.push({ chapterId: { in: selection.selectedChapterIds } });
   }
 
   if (orConditions.length > 0) {
@@ -63,6 +48,7 @@ export async function resolveQuizQuestions(selection: QuizSelectionInput) {
       questionType: true,
       difficulty: true,
       options: {
+        where: { isDeleted: false },
         orderBy: { orderIndex: 'asc' },
         select: {
           id: true,
@@ -73,9 +59,8 @@ export async function resolveQuizQuestions(selection: QuizSelectionInput) {
     },
   });
 
-  const uniqueQuestions = Array.from(new Map(questions.map((question) => [question.id, question])).values());
-  const orderedQuestions = selection.randomizeOrder ? shuffle(uniqueQuestions) : uniqueQuestions;
-
+  // DB unique index on id guarantees no duplication — no in-memory dedup needed
+  const orderedQuestions = selection.randomizeOrder ? shuffle(questions) : questions;
   return orderedQuestions.slice(0, selection.questionCount);
 }
 
@@ -99,9 +84,7 @@ export async function startQuizAttempt(userId: string, selection: QuizSelectionI
       },
     },
     include: {
-      items: {
-        orderBy: { questionOrder: 'asc' },
-      },
+      items: { orderBy: { questionOrder: 'asc' } },
     },
   });
 
@@ -109,36 +92,28 @@ export async function startQuizAttempt(userId: string, selection: QuizSelectionI
 }
 
 export async function recordQuizAnswer(userId: string, input: QuizAnswerInput) {
-  const attemptItem = await prisma.quizAttemptItem.findFirst({
-    where: {
-      attemptId: input.attemptId,
-      questionId: input.questionId,
-      attempt: {
-        userId,
+  // Fetch only the option correctness — no need to load all question data
+  const [attemptItem, selectedOption] = await Promise.all([
+    prisma.quizAttemptItem.findFirst({
+      where: {
+        attemptId: input.attemptId,
+        questionId: input.questionId,
+        attempt: { userId },
       },
-    },
-    include: {
-      question: {
-        include: {
-          options: {
-            orderBy: { orderIndex: 'asc' },
-            select: {
-              id: true,
-              contentJson: true,
-              isCorrect: true,
-              orderIndex: true,
-            },
-          },
-        },
+      select: { id: true },
+    }),
+    prisma.questionOption.findFirst({
+      where: {
+        id: input.selectedOptionId,
+        questionId: input.questionId,
       },
-    },
-  });
+      select: { id: true, contentJson: true, isCorrect: true, orderIndex: true },
+    }),
+  ]);
 
   if (!attemptItem) {
     throw new Error('Quiz attempt item not found');
   }
-
-  const selectedOption = attemptItem.question.options.find((option) => option.id === input.selectedOptionId);
 
   if (!selectedOption) {
     throw new Error('Selected option does not belong to the question');
@@ -163,23 +138,24 @@ export async function recordQuizAnswer(userId: string, input: QuizAnswerInput) {
 }
 
 export async function completeQuizAttempt(userId: string, attemptId: string) {
-  const attemptForUser = await prisma.quizAttempt.findFirst({
-    where: {
-      id: attemptId,
-      userId,
-    },
-  });
+  // Single query: aggregate correct count at DB level instead of fetching all items
+  const [attemptForUser, aggregates] = await Promise.all([
+    prisma.quizAttempt.findFirst({
+      where: { id: attemptId, userId },
+      select: { id: true, totalQuestions: true },
+    }),
+    prisma.quizAttemptItem.aggregate({
+      where: { attemptId, isCorrect: true },
+      _count: { id: true },
+    }),
+  ]);
 
   if (!attemptForUser) {
     throw new Error('Quiz attempt not found for user');
   }
 
-  const items = await prisma.quizAttemptItem.findMany({
-    where: { attemptId },
-  });
-
-  const correctCount = items.filter((item) => item.isCorrect).length;
-  const totalQuestions = items.length;
+  const correctCount = aggregates._count.id;
+  const totalQuestions = attemptForUser.totalQuestions;
   const scorePercentage = totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0;
 
   const attempt = await prisma.quizAttempt.update({
@@ -191,9 +167,7 @@ export async function completeQuizAttempt(userId: string, attemptId: string) {
       completedAt: new Date(),
     },
     include: {
-      items: {
-        orderBy: { questionOrder: 'asc' },
-      },
+      items: { orderBy: { questionOrder: 'asc' } },
     },
   });
 
@@ -202,10 +176,7 @@ export async function completeQuizAttempt(userId: string, attemptId: string) {
 
 export async function getQuizAttemptReview(userId: string, attemptId: string) {
   return prisma.quizAttempt.findFirst({
-    where: {
-      id: attemptId,
-      userId,
-    },
+    where: { id: attemptId, userId },
     include: {
       items: {
         orderBy: { questionOrder: 'asc' },
