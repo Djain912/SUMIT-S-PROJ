@@ -70,23 +70,60 @@ function extractTextFromRichJson(input: unknown): string {
   return `${text} ${childText}`.trim();
 }
 
-function getHtmlFromRichJson(input: unknown): string {
-  if (!input) {
-    return '';
-  }
+function tiptapNodeToHtml(node: unknown): string {
+  if (!node || typeof node !== 'object') return '';
+  const n = node as { type?: string; text?: string; marks?: { type: string }[]; content?: unknown[] };
 
-  if (typeof input === 'string') {
-    return input;
-  }
-
-  if (typeof input === 'object') {
-    const html = (input as { html?: string }).html;
-    if (typeof html === 'string') {
-      return html;
+  if (n.type === 'text') {
+    let text = n.text ?? '';
+    // escape HTML entities
+    text = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const marks = n.marks ?? [];
+    for (const m of marks) {
+      if (m.type === 'bold') text = `<strong>${text}</strong>`;
+      else if (m.type === 'italic') text = `<em>${text}</em>`;
+      else if (m.type === 'underline') text = `<u>${text}</u>`;
+      else if (m.type === 'code') text = `<code>${text}</code>`;
     }
+    return text;
   }
 
+  const inner = (n.content ?? []).map(tiptapNodeToHtml).join('');
+
+  switch (n.type) {
+    case 'doc': return inner;
+    case 'paragraph': return `<p>${inner}</p>`;
+    case 'hardBreak': return '<br>';
+    case 'bulletList': return `<ul>${inner}</ul>`;
+    case 'orderedList': return `<ol>${inner}</ol>`;
+    case 'listItem': return `<li>${inner}</li>`;
+    case 'blockquote': return `<blockquote>${inner}</blockquote>`;
+    case 'codeBlock': return `<pre><code>${inner}</code></pre>`;
+    case 'heading': {
+      const level = (node as { attrs?: { level?: number } }).attrs?.level ?? 2;
+      return `<h${level}>${inner}</h${level}>`;
+    }
+    default: return inner;
+  }
+}
+
+function getHtmlFromRichJson(input: unknown): string {
+  if (!input) return '';
+  if (typeof input === 'string') return input;
+  if (typeof input !== 'object') return '';
+  const obj = input as { html?: string; type?: string };
+  // { html: "..." } format (manually created questions)
+  if (typeof obj.html === 'string') return obj.html;
+  // TipTap doc format (seeded questions)
+  if (obj.type === 'doc') return tiptapNodeToHtml(input);
   return '';
+}
+
+/** Options are plain-text inputs — strip any block-level wrapper tags TinyMCE or TipTap may have added */
+function getPlainTextFromRichJson(input: unknown): string {
+  const html = getHtmlFromRichJson(input);
+  // Remove wrapping <p>...</p> if the entire string is a single paragraph
+  return html.replace(/^<p>([\s\S]*?)<\/p>$/, '$1').trim();
 }
 
 function createEmptyOptions() {
@@ -203,7 +240,7 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
     setEditPublished(question.isPublished);
     setEditOptions(
       question.options.map((option) => ({
-        contentHtml: getHtmlFromRichJson(option.contentJson),
+        contentHtml: getPlainTextFromRichJson(option.contentJson),
         isCorrect: option.isCorrect,
       })),
     );

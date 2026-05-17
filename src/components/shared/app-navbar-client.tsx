@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { signOut } from 'next-auth/react';
-import { TrendingUp, Menu, X } from 'lucide-react';
+import { TrendingUp, Menu, X, LayoutDashboard, Brain, BarChart3 } from 'lucide-react';
 
 type Props = {
   isLoggedIn: boolean;
@@ -26,17 +26,17 @@ export function AppNavbarClient({ isLoggedIn, role, userName }: Props) {
 
   const isAdmin = role === 'ADMIN';
 
-  const navLinks = !isLoggedIn
+  const navLinks: { href: string; label: string; icon: React.ElementType | null }[] = !isLoggedIn
     ? [
-        { href: '/', label: 'Home' },
-        { href: '/about', label: 'About' },
+        { href: '/', label: 'Home', icon: null },
+        { href: '/about', label: 'About', icon: null },
       ]
     : isAdmin
-      ? [{ href: '/admin', label: 'Console' }]
+      ? [{ href: '/admin', label: 'Console', icon: null }]
       : [
-          { href: '/user', label: 'Dashboard' },
-          { href: '/user/quiz', label: 'Quiz' },
-          { href: '/user/analytics', label: 'Analytics' },
+          { href: '/user', label: 'Dashboard', icon: LayoutDashboard },
+          { href: '/user/quiz', label: 'Quiz', icon: Brain },
+          { href: '/user/analytics', label: 'Analytics', icon: BarChart3 },
         ];
 
   const handleLogout = async () => {
@@ -49,7 +49,9 @@ export function AppNavbarClient({ isLoggedIn, role, userName }: Props) {
     : '?';
 
   const isActive = (href: string) =>
-    href === '/' ? pathname === '/' : pathname.startsWith(href);
+    href === '/' ? pathname === '/' :
+    href === '/user' ? pathname === '/user' :
+    pathname.startsWith(href);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-zinc-200/60 bg-white/95 backdrop-blur-md">
@@ -60,29 +62,33 @@ export function AppNavbarClient({ isLoggedIn, role, userName }: Props) {
           href={isLoggedIn && !isAdmin ? '/user' : '/'}
           className="flex shrink-0 items-center gap-2"
         >
-          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-600">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-900">
             <TrendingUp className="h-3.5 w-3.5 text-white" />
           </div>
-          <span className="hidden text-sm font-bold tracking-tight text-zinc-950 sm:block">
+          <span className="hidden text-sm font-bold tracking-tight text-zinc-950 sm:block font-heading">
             CMT Prep
           </span>
         </Link>
 
         {/* Desktop nav — centered */}
         <nav className="hidden flex-1 items-center justify-center gap-0.5 md:flex">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors ${
-                isActive(link.href)
-                  ? 'bg-zinc-100 text-zinc-950'
-                  : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800'
-              }`}
-            >
-              {link.label}
-            </Link>
-          ))}
+          {navLinks.map((link) => {
+            const Icon = link.icon;
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                  isActive(link.href)
+                    ? 'bg-zinc-900 text-white'
+                    : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900'
+                }`}
+              >
+                {Icon && <Icon className="h-3.5 w-3.5" />}
+                {link.label}
+              </Link>
+            );
+          })}
         </nav>
 
         {/* Desktop right side */}
@@ -91,7 +97,7 @@ export function AppNavbarClient({ isLoggedIn, role, userName }: Props) {
             <>
               <div
                 title={userName ?? undefined}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-xs font-bold text-white"
               >
                 {initials}
               </div>
@@ -113,7 +119,7 @@ export function AppNavbarClient({ isLoggedIn, role, userName }: Props) {
               </Link>
               <Link
                 href="/sign-up"
-                className="rounded-full bg-indigo-600 px-4 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+                className="rounded-full bg-zinc-900 px-4 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-700"
               >
                 Get started
               </Link>
@@ -136,27 +142,31 @@ export function AppNavbarClient({ isLoggedIn, role, userName }: Props) {
       {open && (
         <div className="border-t border-zinc-100 bg-white md:hidden">
           <div className="flex flex-col gap-1 px-4 py-3">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setOpen(false)}
-                className={`rounded-lg px-3 py-2.5 text-sm font-medium transition ${
-                  isActive(link.href)
-                    ? 'bg-indigo-50 text-indigo-700'
-                    : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900'
-                }`}
-              >
-                {link.label}
-              </Link>
-            ))}
+            {navLinks.map((link) => {
+              const Icon = link.icon;
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setOpen(false)}
+                  className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+                    isActive(link.href)
+                      ? 'bg-zinc-900 text-white'
+                      : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'
+                  }`}
+                >
+                  {Icon && <Icon className="h-4 w-4" />}
+                  {link.label}
+                </Link>
+              );
+            })}
           </div>
 
           <div className="border-t border-zinc-100 px-4 py-3">
             {isLoggedIn ? (
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-xs font-bold text-white">
                     {initials}
                   </div>
                   <span className="text-sm font-medium text-zinc-700 truncate max-w-[160px]">{userName}</span>
@@ -181,7 +191,7 @@ export function AppNavbarClient({ isLoggedIn, role, userName }: Props) {
                 <Link
                   href="/sign-up"
                   onClick={() => setOpen(false)}
-                  className="rounded-full bg-indigo-600 py-2.5 text-center text-sm font-semibold text-white hover:bg-indigo-700"
+                  className="rounded-full bg-zinc-900 py-2.5 text-center text-sm font-semibold text-white hover:bg-zinc-700"
                 >
                   Get started free
                 </Link>

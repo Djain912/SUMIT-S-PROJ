@@ -41,15 +41,51 @@ type ApiResponse<T> = { success: boolean; data?: T; error?: { message?: string }
 
 const levelOptions: Level[] = ['LEVEL_1', 'LEVEL_2', 'LEVEL_3'];
 
-function extractText(input: unknown): string {
+function tiptapToHtml(node: unknown): string {
+  if (!node || typeof node !== 'object') return '';
+  const n = node as { type?: string; text?: string; marks?: { type: string }[]; content?: unknown[]; attrs?: Record<string, unknown> };
+  if (n.type === 'text') {
+    let text = (n.text ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    for (const m of n.marks ?? []) {
+      if (m.type === 'bold') text = `<strong>${text}</strong>`;
+      else if (m.type === 'italic') text = `<em>${text}</em>`;
+      else if (m.type === 'underline') text = `<u>${text}</u>`;
+      else if (m.type === 'code') text = `<code>${text}</code>`;
+    }
+    return text;
+  }
+  if (n.type === 'image') {
+    const src = n.attrs?.src ?? '';
+    const alt = n.attrs?.alt ?? '';
+    return `<img src="${src}" alt="${alt}" class="max-w-full rounded-lg my-2" />`;
+  }
+  const inner = (n.content ?? []).map(tiptapToHtml).join('');
+  switch (n.type) {
+    case 'doc': return inner;
+    case 'paragraph': return `<p>${inner || '<br>'}</p>`;
+    case 'hardBreak': return '<br>';
+    case 'bulletList': return `<ul>${inner}</ul>`;
+    case 'orderedList': return `<ol>${inner}</ol>`;
+    case 'listItem': return `<li>${inner}</li>`;
+    case 'blockquote': return `<blockquote>${inner}</blockquote>`;
+    case 'codeBlock': return `<pre><code>${inner}</code></pre>`;
+    case 'heading': return `<h${n.attrs?.level ?? 2}>${inner}</h${n.attrs?.level ?? 2}>`;
+    default: return inner;
+  }
+}
+
+function richJsonToHtml(input: unknown): string {
   if (!input) return '';
-  if (typeof input === 'string') return input.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  if (typeof input === 'string') return input;
   if (typeof input !== 'object') return '';
-  const node = input as { text?: string; content?: unknown[]; html?: string };
-  const html = typeof node.html === 'string' ? node.html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : '';
-  const text = typeof node.text === 'string' ? node.text : html;
-  const children = Array.isArray(node.content) ? node.content.map(extractText).filter(Boolean).join(' ') : '';
-  return `${text} ${children}`.trim();
+  const obj = input as { html?: string; type?: string };
+  if (typeof obj.html === 'string') return obj.html;
+  if (obj.type === 'doc') return tiptapToHtml(input);
+  return '';
+}
+
+function extractText(input: unknown): string {
+  return richJsonToHtml(input).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 async function apiJson<T>(url: string, options?: RequestInit): Promise<T> {
@@ -272,12 +308,12 @@ export function QuizPlayer() {
             <div className="grid gap-4 sm:grid-cols-3">
               {[
                 { label: 'Level', field: (
-                  <select value={level} onChange={e => setLevel(e.target.value as Level)} className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                  <select value={level} onChange={e => setLevel(e.target.value as Level)} className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-300">
                     {levelOptions.map(l => <option key={l} value={l}>{l.replace('_', ' ')}</option>)}
                   </select>
                 )},
                 { label: 'Mode', field: (
-                  <select value={mode} onChange={e => setMode(e.target.value as QuizMode)} className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                  <select value={mode} onChange={e => setMode(e.target.value as QuizMode)} className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-300">
                     <option value="SUBTOPIC">Subtopic</option>
                     <option value="CHAPTER">Chapter</option>
                     <option value="CUSTOM">Custom</option>
@@ -285,7 +321,7 @@ export function QuizPlayer() {
                   </select>
                 )},
                 { label: 'Questions', field: (
-                  <input type="number" min={5} max={100} value={questionCount} onChange={e => setQuestionCount(Number(e.target.value))} className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+                  <input type="number" min={5} max={100} value={questionCount} onChange={e => setQuestionCount(Number(e.target.value))} className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-300" />
                 )},
               ].map(({ label, field }) => (
                 <div key={label}>
@@ -298,7 +334,7 @@ export function QuizPlayer() {
             {(mode === 'CHAPTER' || mode === 'SUBTOPIC' || mode === 'CUSTOM') && (
               <div>
                 <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500">Chapter</label>
-                <select value={selectedChapterId} onChange={e => setSelectedChapterId(e.target.value)} className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                <select value={selectedChapterId} onChange={e => setSelectedChapterId(e.target.value)} className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-300">
                   {chapters.length === 0 && <option value="">No published chapters</option>}
                   {chapters.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
                 </select>
@@ -308,7 +344,7 @@ export function QuizPlayer() {
             {mode === 'SUBTOPIC' && (
               <div>
                 <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500">Subtopic</label>
-                <select value={selectedSubtopicId} onChange={e => setSelectedSubtopicId(e.target.value)} className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                <select value={selectedSubtopicId} onChange={e => setSelectedSubtopicId(e.target.value)} className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-300">
                   {subtopics.length === 0 && <option value="">No published subtopics</option>}
                   {subtopics.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
                 </select>
@@ -326,7 +362,7 @@ export function QuizPlayer() {
                     <label key={s.id} className="flex cursor-pointer items-center gap-2.5 text-sm text-zinc-700">
                       <input type="checkbox" checked={selectedCustomSubtopicIds.includes(s.id)}
                         onChange={e => setSelectedCustomSubtopicIds(prev => e.target.checked ? [...new Set([...prev, s.id])] : prev.filter(id => id !== s.id))}
-                        className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
+                        className="h-4 w-4 rounded border-zinc-300 accent-zinc-900 focus:ring-zinc-400"
                       />
                       {s.title}
                     </label>
@@ -338,7 +374,7 @@ export function QuizPlayer() {
             {errorMessage && <p className="rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-700">{errorMessage}</p>}
 
             <button type="button" onClick={() => void handleStartQuiz()} disabled={isLoading}
-              className="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-7 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-60">
+              className="inline-flex items-center gap-2 rounded-full bg-zinc-900 px-7 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-700 disabled:opacity-60">
               {isLoading
                 ? <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> Starting…</>
                 : 'Start quiz'}
@@ -361,7 +397,7 @@ export function QuizPlayer() {
           <p className="mt-1 text-sm text-zinc-500">{attempt.correctCount} of {attempt.totalQuestions} correct</p>
           <button type="button"
             onClick={() => { setAttempt(null); setCurrentIndex(0); setIsCompleted(false); }}
-            className="mt-5 inline-flex items-center gap-2 rounded-full bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700">
+            className="mt-5 inline-flex items-center gap-2 rounded-full bg-zinc-900 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-700">
             New quiz
           </button>
         </div>
@@ -377,15 +413,13 @@ export function QuizPlayer() {
                   {item.isCorrect ? 'Correct' : 'Wrong'}
                 </span>
               </div>
-              <p className="mt-2 text-sm leading-6 text-zinc-900">
-                {extractText(item.questionSnapshotJson.promptJson) || 'Question unavailable'}
-              </p>
+              <div className="mt-2 text-sm leading-6 text-zinc-900 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: richJsonToHtml(item.questionSnapshotJson.promptJson) || 'Question unavailable' }} />
               <div className="mt-3 space-y-2 text-sm">
                 <p className="text-zinc-600"><span className="font-medium text-zinc-800">Your answer:</span> {getOptionText(item, item.selectedOptionId)}</p>
                 {item.questionSnapshotJson.explanationJson && (
                   <div className="rounded-xl bg-zinc-50 p-3">
                     <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400 mb-1">Explanation</p>
-                    <p className="text-sm text-zinc-700">{extractText(item.questionSnapshotJson.explanationJson) || 'No explanation.'}</p>
+                    <div className="text-sm text-zinc-700 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: richJsonToHtml(item.questionSnapshotJson.explanationJson) || 'No explanation.' }} />
                   </div>
                 )}
               </div>
@@ -408,7 +442,7 @@ export function QuizPlayer() {
         <span className="shrink-0 font-semibold text-zinc-700">Q{currentIndex + 1} / {attempt.items.length}</span>
         <div className="flex-1">
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-100">
-            <div className="h-full rounded-full bg-indigo-600 transition-all" style={{ width: `${((currentIndex + 1) / attempt.items.length) * 100}%` }} />
+            <div className="h-full rounded-full bg-zinc-900 transition-all" style={{ width: `${((currentIndex + 1) / attempt.items.length) * 100}%` }} />
           </div>
         </div>
         <span className="shrink-0">{answered} answered{flaggedCount > 0 ? ` · ${flaggedCount} flagged` : ''}</span>
@@ -418,21 +452,19 @@ export function QuizPlayer() {
       <div className="rounded-2xl border border-zinc-100 bg-white shadow-sm">
         <div className="p-5 sm:p-7">
           <div className="mb-5 rounded-xl bg-zinc-50 p-4 sm:p-5">
-            <p className="text-base leading-7 text-zinc-900">
-              {extractText(currentQuestion?.promptJson) || 'Question unavailable'}
-            </p>
+            <div className="text-base leading-7 text-zinc-900 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: richJsonToHtml(currentQuestion?.promptJson) || 'Question unavailable' }} />
           </div>
 
           <div className="space-y-2.5">
             {currentQuestion?.options.map((opt, idx) => {
               const selected = currentItem?.selectedOptionId === opt.id;
               return (
-                <label key={opt.id} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${selected ? 'border-indigo-400 bg-indigo-50' : 'border-zinc-100 bg-white hover:border-zinc-200 hover:bg-zinc-50'}`}>
+                <label key={opt.id} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${selected ? 'border-zinc-900 bg-zinc-900/5' : 'border-zinc-100 bg-white hover:border-zinc-300 hover:bg-zinc-50'}`}>
                   <input type="radio" name={`q-${currentQuestion.id}`} checked={selected} onChange={() => updateCurrentSelection(opt.id)} className="sr-only" />
-                  <div className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${selected ? 'bg-indigo-600 text-white' : 'bg-zinc-100 text-zinc-500'}`}>
+                  <div className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${selected ? 'bg-zinc-900 text-white' : 'bg-zinc-100 text-zinc-500'}`}>
                     {letters[idx] ?? idx + 1}
                   </div>
-                  <span className="text-sm leading-6 text-zinc-800">{extractText(opt.contentJson) || 'Option'}</span>
+                  <div className="text-sm leading-6 text-zinc-800 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: richJsonToHtml(opt.contentJson) || 'Option' }} />
                 </label>
               );
             })}
@@ -447,7 +479,7 @@ export function QuizPlayer() {
               Prev
             </button>
             <button type="button" onClick={() => void handleNext()} disabled={isSubmittingAnswer}
-              className="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-60">
+              className="inline-flex items-center gap-2 rounded-full bg-zinc-900 px-5 py-2 text-sm font-semibold text-white transition hover:bg-zinc-700 disabled:opacity-60">
               {isSubmittingAnswer
                 ? <><span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" /> Saving…</>
                 : isLastQuestion ? 'Submit' : 'Next'}
@@ -483,7 +515,7 @@ export function QuizPlayer() {
             <div className="border-t border-zinc-50 px-5 pb-5">
               <textarea value={reportReason} onChange={e => setReportReason(e.target.value)}
                 placeholder="Describe the issue (max 500 characters)" maxLength={500} rows={3}
-                className="mt-3 w-full resize-none rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+                className="mt-3 w-full resize-none rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-300" />
               <div className="mt-2.5 flex gap-2">
                 <button type="button" onClick={() => void handleReport()} disabled={!reportReason.trim() || isReporting}
                   className="rounded-full bg-zinc-900 px-4 py-2 text-xs font-semibold text-white disabled:opacity-50 hover:bg-zinc-700">
@@ -516,7 +548,7 @@ export function QuizPlayer() {
               return (
                 <button key={item.id} type="button" onClick={() => void jumpTo(idx)} disabled={isSubmittingAnswer}
                   title={`Q${idx + 1}${isAnswered ? ' · Answered' : ''}${item.flagColor ? ` · ${item.flagColor}` : ''}`}
-                  className={`flex h-9 w-9 items-center justify-center rounded-lg text-xs font-semibold transition ${isCurrent ? 'ring-2 ring-indigo-600 ring-offset-1' : ''} ${
+                  className={`flex h-9 w-9 items-center justify-center rounded-lg text-xs font-semibold transition ${isCurrent ? 'ring-2 ring-zinc-900 ring-offset-1' : ''} ${
                     item.flagColor === 'YELLOW' ? 'bg-amber-400 text-zinc-900' :
                     item.flagColor === 'RED' ? 'bg-rose-500 text-white' :
                     isAnswered ? 'bg-emerald-100 text-emerald-800' :

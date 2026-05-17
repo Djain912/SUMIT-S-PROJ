@@ -79,8 +79,9 @@ export async function updateQuestion(id: string, input: QuestionFormValues, upda
 }
 
 export async function deleteQuestion(id: string) {
-  return prisma.question.delete({
+  return prisma.question.update({
     where: { id },
+    data: { isDeleted: true, deletedAt: new Date() },
   });
 }
 

@@ -126,7 +126,7 @@ export async function getUserDashboardData(userId: string, level: string) {
         id: ch.id,
         title: ch.title,
         orderIndex: ch.orderIndex,
-        isLocked: index > 0 && (chapterStats.get(chapters[index - 1].id)?.total ?? 0) === 0,
+        isLocked: false,
         progress,
         totalNotes: ch.subtopics.reduce((sum, st) => sum + st.notes.length, 0),
         totalQuestions: totalQs,
