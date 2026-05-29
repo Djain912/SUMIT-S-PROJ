@@ -1,0 +1,25 @@
+.next
+node_modules
+out
+coverage
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.DS_Store
+prisma/dev.db
+datauploads
+
+# Build artifacts
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# Dev logs
+*.log
+*.err
+.next-dev.log
+.next-dev.err
+
+# Graphify
+graphify-out

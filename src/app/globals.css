@@ -1,0 +1,287 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --primary: 239 84% 67%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 240 5% 96%;
+  --secondary-foreground: 222 47% 11%;
+  --muted: 240 5% 96%;
+  --muted-foreground: 240 4% 46%;
+  --accent: 240 5% 96%;
+  --accent-foreground: 222 47% 11%;
+  --border: 240 6% 90%;
+  --input: 240 6% 90%;
+  --ring: 239 84% 67%;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: var(--font-inter), 'Segoe UI', Arial, sans-serif;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: hsl(239 84% 67% / 0.15);
+  color: hsl(239 84% 40%);
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+}
+
+/* Rich text content styling - responsive and properly formatted */
+.prose {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+.prose img {
+  max-width: 100% !important;
+  height: auto !important;
+  display: block;
+  margin: 1.5rem auto;
+  border-radius: 0.5rem;
+}
+
+.prose table {
+  width: 100% !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  margin: 1.5rem 0;
+  overflow-x: auto;
+  display: table !important; /* Force table display */
+  table-layout: auto;
+  /* Override any inline width/height */
+  height: auto !important;
+  border: 1px solid #d4d4d8 !important;
+}
+
+.prose col {
+  width: auto !important;
+}
+
+.prose table thead {
+  background-color: #f4f4f5;
+  display: table-header-group !important;
+}
+
+.prose table tbody {
+  display: table-row-group !important;
+}
+
+.prose table tr {
+  display: table-row !important;
+  height: auto !important;
+}
+
+.prose table th,
+.prose table td {
+  border: 1px solid #d4d4d8 !important;
+  border-width: 1px !important;
+  border-style: solid !important;
+  border-color: #d4d4d8 !important;
+  padding: 0.75rem !important;
+  text-align: left;
+  display: table-cell !important;
+  vertical-align: top;
+  /* Override inline widths */
+  width: auto !important;
+  min-width: 100px;
+}
+
+.prose table th {
+  font-weight: 600;
+  color: #18181b;
+  background-color: #f4f4f5 !important;
+}
+
+.prose table tbody tr:nth-child(even) {
+  background-color: #fafafa;
+}
+
+.prose table tbody tr:hover {
+  background-color: #f4f4f5;
+}
+
+/* Ensure long text in tables wraps */
+.prose table td {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  max-width: 300px;
+}
+
+/* Responsive table wrapper */
+@media (max-width: 768px) {
+  .prose table {
+    font-size: 0.875rem;
+  }
+  
+  .prose table th,
+  .prose table td {
+    padding: 0.5rem;
+  }
+}
+
+/* Table wrapper for horizontal scroll on mobile */
+.prose table {
+  display: table;
+  width: 100%;
+}
+
+/* Wrapper div for table overflow */
+.prose > div:has(table) {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure paragraphs and headings wrap properly */
+.prose p,
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6,
+.prose li {
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.prose .note-content {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  overflow-wrap: anywhere;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  white-space: normal !important;
+}
+
+.prose .note-content table {
+  width: max-content !important;
+  min-width: 100% !important;
+  max-width: none !important;
+}
+
+.prose .note-content table th,
+.prose .note-content table td {
+  max-width: min(22rem, 72vw);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.prose .note-content p,
+.prose .note-content h1,
+.prose .note-content h2,
+.prose .note-content h3,
+.prose .note-content h4,
+.prose .note-content h5,
+.prose .note-content h6,
+.prose .note-content li {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  white-space: normal !important;
+}
+
+/* Protected content - prevent selection without breaking layout */
+.prose.protected-content {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* But allow table layout to work properly */
+.prose.protected-content table,
+.prose.protected-content table * {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  /* Ensure table layout is not affected */
+  display: revert;
+}
+
+/* Lists styling */
+.prose ul,
+.prose ol {
+  padding-left: 1.5rem;
+  margin: 1rem 0;
+}
+
+.prose li {
+  margin: 0.5rem 0;
+}
+
+/* Links styling */
+.prose a {
+  color: #6366f1;
+  text-decoration: underline;
+  word-break: break-all;
+}
+
+.prose a:hover {
+  color: #4f46e5;
+}
+
+/* Code blocks */
+.prose pre {
+  background-color: #f4f4f5;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.prose code {
+  background-color: #f4f4f5;
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+  word-break: break-all;
+}
+
+/* Blockquotes */
+.prose blockquote {
+  border-left: 4px solid #d4d4d8;
+  padding-left: 1rem;
+  margin: 1rem 0;
+  color: #52525b;
+  font-style: italic;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
