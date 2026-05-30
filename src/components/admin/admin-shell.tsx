@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { LayoutDashboard, BookOpen, FileText, ListChecks, Flag, ShieldCheck, Menu, X, LogOut, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, BookOpen, FileText, ListChecks, Flag, ShieldCheck, Menu, X, LogOut, MessageSquare, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { signOut } from 'next-auth/react';
 
@@ -21,6 +21,7 @@ const navItems = [
   { label: 'Question Reports', href: '/admin/question-reports', icon: Flag },
   { label: 'Note Reports', href: '/admin/note-reports', icon: ShieldCheck },
   { label: 'Contact Messages', href: '/admin/contacts', icon: MessageSquare },
+  { label: 'Chatbot Training', href: '/admin/chatbot', icon: Bot },
 ];
 
 function getSelectedLevel(level: string | null): Level {

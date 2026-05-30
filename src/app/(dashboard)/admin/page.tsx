@@ -1,7 +1,5 @@
 import { prisma } from '@/lib/db/prisma';
 import { AdminLevelTabs, type AdminLevel } from '@/components/admin/admin-level-tabs';
-import { SyncKnowledgeButton } from '@/components/admin/SyncKnowledgeButton';
-import { PdfUploadSection } from '@/components/admin/PdfUploadSection';
 import Link from 'next/link';
 
 const levels = ['LEVEL_1', 'LEVEL_2', 'LEVEL_3'] as const;
@@ -84,16 +82,6 @@ export default async function AdminDashboardPage({
         </div>
         <AdminLevelTabs selectedLevel={selectedLevel} />
       </div>
-
-      <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm font-semibold text-zinc-900">Chartix AI Knowledge Base</p>
-          <p className="text-xs text-zinc-500 mt-0.5">After adding or updating notes, sync so the AI chatbot learns the new content.</p>
-        </div>
-        <SyncKnowledgeButton />
-      </div>
-
-      <PdfUploadSection />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {cards.map((item) => (

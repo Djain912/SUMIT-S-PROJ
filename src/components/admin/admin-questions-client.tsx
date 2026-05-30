@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AdminLevelTabs, type AdminLevel } from '@/components/admin/admin-level-tabs';
 import { TinyMceEditor } from '@/components/admin/tinymce-editor';
@@ -184,6 +184,47 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
   const [editPublished, setEditPublished] = useState(false);
   const [editOptions, setEditOptions] = useState(createEmptyOptions());
 
+  // ── AI Generator state ────────────────────────────────────────────────────
+  const [showAiPanel, setShowAiPanel] = useState(false);
+  const [aiCount, setAiCount] = useState(50);
+  const [aiPdfs, setAiPdfs] = useState<File[]>([]);
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiResult, setAiResult] = useState<{ created: number } | null>(null);
+  const [aiError, setAiError] = useState('');
+  const pdfInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleGenerateQuestions() {
+    if (!selectedSubtopic || !selectedChapter) return;
+    setAiGenerating(true);
+    setAiResult(null);
+    setAiError('');
+
+    try {
+      const form = new FormData();
+      form.append('subtopicId', selectedSubtopic);
+      form.append('chapterId', selectedChapter);
+      form.append('level', level);
+      form.append('count', String(aiCount));
+      aiPdfs.forEach((pdf, i) => form.append(`pdf_${i}`, pdf));
+
+      const res = await fetch('/api/admin/generate-questions', { method: 'POST', body: form });
+      const data = await res.json();
+
+      if (!data.success) throw new Error(data.error?.message ?? 'Generation failed');
+
+      setAiResult(data.data);
+      // Reload questions list
+      questionsInFlight.delete(selectedSubtopic);
+      const fresh = await fetchQuestions(selectedSubtopic);
+      setQuestions(fresh);
+      router.refresh();
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : 'Something went wrong');
+    } finally {
+      setAiGenerating(false);
+    }
+  }
+
   useEffect(() => {
     fetchChapters(level).then(setChapters);
   }, [level]);
@@ -301,6 +342,58 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
     }
   }
 
+  async function handleTogglePublish(question: Question) {
+    const res = await fetch(`/api/admin/questions/${question.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        level: question.level,
+        chapterId: question.chapterId,
+        subtopicId: question.subtopicId,
+        promptJson: question.promptJson,
+        explanationJson: question.explanationJson,
+        questionType: question.questionType,
+        difficulty: question.difficulty,
+        isPublished: !question.isPublished,
+        options: question.options.map((o) => ({
+          contentJson: o.contentJson,
+          isCorrect: o.isCorrect,
+          orderIndex: o.orderIndex,
+        })),
+      }),
+    });
+    const result = await res.json();
+    if (!result.success) { alert(result.error?.message || 'Failed to update'); return; }
+    const updated = result.data as Question;
+    setQuestions((prev) => prev.map((q) => q.id === updated.id ? updated : q));
+    setSelectedQuestion(updated);
+    router.refresh();
+  }
+
+  async function handlePublishAll() {
+    const unpublished = subtopicQuestions.filter((q) => !q.isPublished);
+    if (unpublished.length === 0) { alert('All questions are already published.'); return; }
+    if (!window.confirm(`Publish all ${unpublished.length} unpublished questions for this subtopic?`)) return;
+
+    for (const q of unpublished) {
+      await fetch(`/api/admin/questions/${q.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          level: q.level, chapterId: q.chapterId, subtopicId: q.subtopicId,
+          promptJson: q.promptJson, explanationJson: q.explanationJson,
+          questionType: q.questionType, difficulty: q.difficulty, isPublished: true,
+          options: q.options.map((o) => ({ contentJson: o.contentJson, isCorrect: o.isCorrect, orderIndex: o.orderIndex })),
+        }),
+      });
+    }
+    questionsInFlight.delete(selectedSubtopic);
+    const fresh = await fetchQuestions(selectedSubtopic);
+    setQuestions(fresh);
+    setSelectedQuestion(null);
+    router.refresh();
+  }
+
   async function handleDeleteQuestion(questionId: string) {
     if (!window.confirm('Delete this question?')) {
       return;
@@ -406,6 +499,120 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
                   Add another question
                 </button>
               </div>
+              {/* Publish All button — shown when there are unpublished questions */}
+              {subtopicQuestions.some((q) => !q.isPublished) && (
+                <button
+                  type="button"
+                  onClick={() => void handlePublishAll()}
+                  className="mt-2 w-full rounded-xl bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700"
+                >
+                  ✓ Publish All ({subtopicQuestions.filter((q) => !q.isPublished).length} unpublished)
+                </button>
+              )}
+
+              {/* AI Generate button */}
+              <button
+                type="button"
+                onClick={() => { setShowAiPanel((v) => !v); setAiResult(null); setAiError(''); }}
+                className="mt-2 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-left text-xs font-semibold text-zinc-700 hover:bg-zinc-100 flex items-center gap-2"
+              >
+                <span>🤖</span>
+                <span>Generate with AI</span>
+                <span className="ml-auto text-zinc-400">{showAiPanel ? '▲' : '▼'}</span>
+              </button>
+
+              {/* AI Panel */}
+              {showAiPanel && (
+                <div className="mt-2 rounded-xl border border-zinc-200 bg-white p-3 shadow-sm space-y-3">
+                  <p className="text-[11px] text-zinc-500 leading-relaxed">
+                    Upload a PDF (optional) + choose how many questions. AI reads your notes + PDF and generates CMT-level MCQs with explanations. All questions are saved as <strong>unpublished</strong> — review before publishing.
+                  </p>
+
+                  {/* PDF Upload — up to 10 files */}
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-700 mb-1">
+                      PDFs (optional, up to 10)
+                    </label>
+                    <input
+                      ref={pdfInputRef}
+                      type="file"
+                      accept="application/pdf"
+                      multiple
+                      onChange={(e) => {
+                        const selected = Array.from(e.target.files ?? []).slice(0, 10);
+                        setAiPdfs((prev) => {
+                          const combined = [...prev, ...selected];
+                          return combined.slice(0, 10);
+                        });
+                        if (pdfInputRef.current) pdfInputRef.current.value = '';
+                      }}
+                      className="hidden"
+                    />
+                    {aiPdfs.length < 10 && (
+                      <button
+                        type="button"
+                        onClick={() => pdfInputRef.current?.click()}
+                        className="w-full rounded-lg border border-dashed border-zinc-300 px-3 py-2 text-xs text-zinc-500 hover:border-zinc-400 hover:bg-zinc-50 text-center"
+                      >
+                        + Click to add PDFs ({aiPdfs.length}/10)
+                      </button>
+                    )}
+                    {aiPdfs.length > 0 && (
+                      <ul className="mt-2 space-y-1">
+                        {aiPdfs.map((f, i) => (
+                          <li key={i} className="flex items-center justify-between rounded-lg bg-zinc-50 border border-zinc-200 px-2 py-1">
+                            <span className="text-[11px] text-zinc-700 truncate max-w-[180px]">📄 {f.name}</span>
+                            <button
+                              type="button"
+                              onClick={() => setAiPdfs((prev) => prev.filter((_, idx) => idx !== i))}
+                              className="ml-2 text-[10px] text-red-500 hover:underline shrink-0"
+                            >
+                              Remove
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+
+                  {/* Count */}
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-700 mb-1">Questions to generate</label>
+                    <select
+                      value={aiCount}
+                      onChange={(e) => setAiCount(Number(e.target.value))}
+                      className="w-full rounded-lg border border-zinc-200 px-3 py-1.5 text-xs"
+                    >
+                      <option value={25}>25 questions (~1 min)</option>
+                      <option value={50}>50 questions (~2 min)</option>
+                      <option value={75}>75 questions (~3 min)</option>
+                      <option value={100}>100 questions (~4 min)</option>
+                    </select>
+                  </div>
+
+                  {/* Generate Button */}
+                  <button
+                    type="button"
+                    onClick={() => void handleGenerateQuestions()}
+                    disabled={aiGenerating}
+                    className="w-full rounded-lg bg-zinc-900 px-3 py-2 text-xs font-semibold text-white hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {aiGenerating ? '⏳ Generating... please wait' : '🚀 Generate Questions'}
+                  </button>
+
+                  {/* Result */}
+                  {aiResult && (
+                    <p className="rounded-lg bg-green-50 border border-green-200 px-3 py-2 text-xs text-green-700">
+                      ✅ {aiResult.created} questions created! Review them in the list and publish when ready.
+                    </p>
+                  )}
+                  {aiError && (
+                    <p className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">
+                      ❌ {aiError}
+                    </p>
+                  )}
+                </div>
+              )}
               <div className="mt-2 space-y-2">
                 {subtopicQuestions.map((question) => (
                   <button
@@ -601,15 +808,17 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
                     </span>
                   )}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={() => {
-                      startNewQuestion();
-                    }}
-                    className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+                    onClick={() => void handleTogglePublish(selectedQuestion)}
+                    className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                      selectedQuestion.isPublished
+                        ? 'border border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50'
+                        : 'bg-green-600 text-white hover:bg-green-700'
+                    }`}
                   >
-                    Add another question
+                    {selectedQuestion.isPublished ? 'Unpublish' : '✓ Publish'}
                   </button>
                   <button
                     type="button"
@@ -623,10 +832,17 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
                   </button>
                   <button
                     type="button"
+                    onClick={() => startNewQuestion()}
+                    className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+                  >
+                    Add another
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => void handleDeleteQuestion(selectedQuestion.id)}
                     className="rounded-full border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
                   >
-                    Delete question
+                    Delete
                   </button>
                 </div>
               </div>
@@ -664,13 +880,25 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
           ) : (
             <div className="space-y-4">
               <p className="text-zinc-700">No questions for this subtopic yet</p>
-              <button
-                type="button"
-                onClick={startNewQuestion}
-                className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
-              >
-                Create Question
-              </button>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={startNewQuestion}
+                  className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
+                >
+                  Create Question
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowAiPanel(true); setAiResult(null); setAiError(''); }}
+                  className="rounded-md border border-zinc-300 bg-zinc-50 px-4 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-100"
+                >
+                  🤖 Generate with AI
+                </button>
+              </div>
+              <p className="text-xs text-zinc-400">
+                Use &ldquo;Generate with AI&rdquo; to auto-create CMT-level MCQs from your notes and PDFs.
+              </p>
             </div>
           )}
         </div>
