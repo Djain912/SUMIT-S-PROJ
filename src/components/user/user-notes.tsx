@@ -162,7 +162,7 @@ export function UserNotesClient() {
   useEffect(() => {
     const loadSession = async () => {
       try {
-        const payload = await apiJson<ApiResponse<SessionPayload>>('/api/auth/session');
+        const payload = await apiJson<ApiResponse<SessionPayload>>('/api/me');
         if (payload.success && payload.data?.email) {
           setSessionEmail(payload.data.email);
         }
@@ -317,7 +317,7 @@ export function UserNotesClient() {
           {/* Mobile: show back button when reading */}
           {selectedNote && (
             <button type="button" onClick={() => setSelectedNote(null)}
-              className="mb-4 flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-800 lg:hidden">
+              className="mb-4 flex items-center gap-1.5 text-sm font-medium text-emerald-600 hover:text-emerald-800 lg:hidden">
               ← All notes
             </button>
           )}
@@ -330,7 +330,7 @@ export function UserNotesClient() {
                 <button key={note.id} onClick={() => setSelectedNote(note)}
                   className={`w-full rounded-xl border px-4 py-3 text-left text-sm font-medium transition ${
                     selectedNote?.id === note.id
-                      ? 'border-indigo-300 bg-indigo-50 text-indigo-900'
+                      ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
                       : 'border-zinc-100 bg-white text-zinc-700 hover:border-zinc-200 hover:bg-zinc-50'
                   }`}>
                   {note.title}

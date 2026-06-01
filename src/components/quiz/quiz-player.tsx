@@ -374,7 +374,7 @@ export function QuizPlayer() {
             {errorMessage && <p className="rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-700">{errorMessage}</p>}
 
             <button type="button" onClick={() => void handleStartQuiz()} disabled={isLoading}
-              className="inline-flex items-center gap-2 rounded-full bg-zinc-900 px-7 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-700 disabled:opacity-60">
+              className="inline-flex items-center gap-2 rounded-full bg-emerald-700 px-7 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 disabled:opacity-60">
               {isLoading
                 ? <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> Starting…</>
                 : 'Start quiz'}
@@ -397,7 +397,7 @@ export function QuizPlayer() {
           <p className="mt-1 text-sm text-zinc-500">{attempt.correctCount} of {attempt.totalQuestions} correct</p>
           <button type="button"
             onClick={() => { setAttempt(null); setCurrentIndex(0); setIsCompleted(false); }}
-            className="mt-5 inline-flex items-center gap-2 rounded-full bg-zinc-900 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-700">
+            className="mt-5 inline-flex items-center gap-2 rounded-full bg-emerald-700 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-600">
             New quiz
           </button>
         </div>
@@ -442,7 +442,7 @@ export function QuizPlayer() {
         <span className="shrink-0 font-semibold text-zinc-700">Q{currentIndex + 1} / {attempt.items.length}</span>
         <div className="flex-1">
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-100">
-            <div className="h-full rounded-full bg-zinc-900 transition-all" style={{ width: `${((currentIndex + 1) / attempt.items.length) * 100}%` }} />
+            <div className="h-full rounded-full bg-emerald-600 transition-all" style={{ width: `${((currentIndex + 1) / attempt.items.length) * 100}%` }} />
           </div>
         </div>
         <span className="shrink-0">{answered} answered{flaggedCount > 0 ? ` · ${flaggedCount} flagged` : ''}</span>
@@ -459,9 +459,9 @@ export function QuizPlayer() {
             {currentQuestion?.options.map((opt, idx) => {
               const selected = currentItem?.selectedOptionId === opt.id;
               return (
-                <label key={opt.id} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${selected ? 'border-zinc-900 bg-zinc-900/5' : 'border-zinc-100 bg-white hover:border-zinc-300 hover:bg-zinc-50'}`}>
+                <label key={opt.id} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${selected ? 'border-emerald-600 bg-emerald-50' : 'border-zinc-100 bg-white hover:border-zinc-300 hover:bg-zinc-50'}`}>
                   <input type="radio" name={`q-${currentQuestion.id}`} checked={selected} onChange={() => updateCurrentSelection(opt.id)} className="sr-only" />
-                  <div className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${selected ? 'bg-zinc-900 text-white' : 'bg-zinc-100 text-zinc-500'}`}>
+                  <div className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${selected ? 'bg-emerald-700 text-white' : 'bg-zinc-100 text-zinc-500'}`}>
                     {letters[idx] ?? idx + 1}
                   </div>
                   <div className="prose prose-sm w-full max-w-none break-words text-sm leading-6 text-zinc-800" dangerouslySetInnerHTML={{ __html: richJsonToHtml(opt.contentJson) || 'Option' }} />
@@ -479,7 +479,7 @@ export function QuizPlayer() {
               Prev
             </button>
             <button type="button" onClick={() => void handleNext()} disabled={isSubmittingAnswer}
-              className="inline-flex items-center gap-2 rounded-full bg-zinc-900 px-5 py-2 text-sm font-semibold text-white transition hover:bg-zinc-700 disabled:opacity-60">
+              className="inline-flex items-center gap-2 rounded-full bg-emerald-700 px-5 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:opacity-60">
               {isSubmittingAnswer
                 ? <><span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" /> Saving…</>
                 : isLastQuestion ? 'Submit' : 'Next'}
@@ -518,7 +518,7 @@ export function QuizPlayer() {
                 className="mt-3 w-full resize-none rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-300" />
               <div className="mt-2.5 flex gap-2">
                 <button type="button" onClick={() => void handleReport()} disabled={!reportReason.trim() || isReporting}
-                  className="rounded-full bg-zinc-900 px-4 py-2 text-xs font-semibold text-white disabled:opacity-50 hover:bg-zinc-700">
+                  className="rounded-full bg-emerald-700 px-4 py-2 text-xs font-semibold text-white disabled:opacity-50 hover:bg-emerald-600">
                   {isReporting ? 'Submitting…' : 'Submit report'}
                 </button>
                 <button type="button" onClick={() => { setReportReason(''); setReportOpen(false); }}
@@ -548,7 +548,7 @@ export function QuizPlayer() {
               return (
                 <button key={item.id} type="button" onClick={() => void jumpTo(idx)} disabled={isSubmittingAnswer}
                   title={`Q${idx + 1}${isAnswered ? ' · Answered' : ''}${item.flagColor ? ` · ${item.flagColor}` : ''}`}
-                  className={`flex h-9 w-9 items-center justify-center rounded-lg text-xs font-semibold transition ${isCurrent ? 'ring-2 ring-zinc-900 ring-offset-1' : ''} ${
+                  className={`flex h-9 w-9 items-center justify-center rounded-lg text-xs font-semibold transition ${isCurrent ? 'ring-2 ring-emerald-700 ring-offset-1' : ''} ${
                     item.flagColor === 'YELLOW' ? 'bg-amber-400 text-zinc-900' :
                     item.flagColor === 'RED' ? 'bg-rose-500 text-white' :
                     isAnswered ? 'bg-emerald-100 text-emerald-800' :

@@ -115,31 +115,45 @@ export async function POST(request: Request) {
 
     const levelLabel = level.replace('_', ' ').replace('LEVEL', 'Level');
 
-    const systemPrompt = `You are a senior CMT (Chartered Market Technician) exam question writer. You create rigorous, high-quality MCQ questions that match the exact style, depth, and difficulty of the official CMT examination.
+    const systemPrompt = `You are a senior CMT (Chartered Market Technician) exam question writer with 15+ years of experience writing questions for the official CMT examination. You write questions that appear on the actual CMT ${levelLabel} exam.
 
 OUTPUT FORMAT — return ONLY valid JSON, no markdown, no extra text:
 {
   "questions": [
     {
-      "prompt": "Full question text (can be a scenario + question)",
+      "prompt": "Full question text",
       "options": ["Option A text", "Option B text", "Option C text", "Option D text"],
       "correctIndex": 0,
       "difficulty": "EASY",
-      "explanation": "2-3 sentences explaining why the correct answer is right AND briefly why each wrong answer is incorrect."
+      "explanation": "Clear explanation of why the correct answer is right, and why each wrong answer is incorrect."
     }
   ]
 }
 
-STRICT RULES:
-1. Exactly 4 options per question — no more, no less
-2. correctIndex is 0, 1, 2, or 3 (index into the options array)
-3. Difficulty distribution: ~30% EASY, ~40% MEDIUM, ~30% HARD
-4. Questions MUST test conceptual understanding and real-world application — NOT just definitions or rote memorization
-5. Include market scenario questions: "Given that X is happening in the market, which statement about Y is MOST accurate?"
-6. Match CMT ${levelLabel} exam standards — technical precision, industry terminology, exam-style phrasing
-7. Explanation must be specific — cite the concept, explain why distractors are wrong
-8. Do NOT repeat similar questions — each question must test a distinct concept or angle
-9. Options must be plausible — wrong answers should be common misconceptions, not obviously wrong`;
+QUESTION TYPE DISTRIBUTION — for every 10 questions, write exactly:
+- 4 SCENARIO-BASED: A real market situation is described, student must apply the concept. Example: "A trader notices the S&P 500 made a new high yesterday but the Dow Transportation Average failed to confirm. According to Dow Theory, this MOST likely indicates..."
+- 3 APPLICATION: Student must decide what action to take or what an indicator signal means in practice. Example: "An analyst sees RSI at 78 on a weekly chart. Which of the following is the MOST appropriate interpretation?"
+- 2 CONCEPTUAL: Tests understanding of WHY something works, not just WHAT it is. Example: "Which of the following BEST explains why volume is considered to confirm price trends?"
+- 1 FORMULA/DEFINITION: Tests recall of a key formula, calculation step, or precise definition that a CMT candidate must know. Example: "Which of the following correctly describes how the MACD line is calculated?" or "The look-back period used in a standard RSI calculation is:"
+
+PROHIBITIONS:
+- Simple true/false disguised as MCQ
+- Questions where one option is obviously wrong to anyone who read the topic
+
+DIFFICULTY — the "difficulty" field must be EXACTLY one of these three strings only:
+- "EASY" (30%): Straightforward application, one-step reasoning
+- "MEDIUM" (40%): Requires connecting two concepts or interpreting a market scenario
+- "HARD" (30%): Multi-step reasoning, conflicting signals, or nuanced market judgment calls
+
+IMPORTANT: "difficulty" is SEPARATE from question type. Never put SCENARIO, APPLICATION, CONCEPTUAL, or FORMULA in the difficulty field. Only EASY, MEDIUM, or HARD.
+
+QUALITY STANDARDS:
+1. Exactly 4 options — no "All of the above" or "None of the above"
+2. All 3 wrong answers must be plausible — common real-world mistakes or misconceptions
+3. correctIndex is 0, 1, 2, or 3
+4. Each question tests a DIFFERENT concept or angle — no repetition
+5. Use real markets in scenarios: equities, commodities, forex, indices (Nifty, S&P 500, crude oil, etc.)
+6. Explanation must explain WHY correct is correct AND why each wrong answer is wrong (2-4 sentences)`;
 
     const userPrompt = `Generate CMT ${levelLabel} exam MCQ questions for:
 Topic: "${subtopic.title}"
@@ -174,8 +188,14 @@ ${sourceText
           typeof q.correctIndex === 'number',
       );
 
+    const VALID_DIFFICULTIES = new Set(['EASY', 'MEDIUM', 'HARD']);
+
     for (const q of validQuestions) {
       const correctIdx = Math.max(0, Math.min(q.options.length - 1, q.correctIndex));
+      // GPT sometimes returns question-type labels (CONCEPTUAL, SCENARIO, etc.) instead of
+      // difficulty labels — sanitise to only allow EASY / MEDIUM / HARD.
+      const difficulty = VALID_DIFFICULTIES.has(q.difficulty) ? q.difficulty : 'MEDIUM';
+
       await prisma.question.create({
         data: {
           level: level as 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3',
@@ -186,7 +206,7 @@ ${sourceText
             ? { html: `<p>${q.explanation.trim()}</p>` }
             : undefined,
           questionType: 'SINGLE_CHOICE',
-          difficulty: q.difficulty ?? 'MEDIUM',
+          difficulty: difficulty as 'EASY' | 'MEDIUM' | 'HARD',
           isPublished: false, // admin must review and publish manually
           createdById: user.id,
           updatedById: user.id,

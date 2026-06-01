@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { AdminLevelTabs, type AdminLevel } from '@/components/admin/admin-level-tabs';
 import { TinyMceEditor } from '@/components/admin/tinymce-editor';
@@ -113,7 +113,8 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null); // Track if editing existing note
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
-  const [editContent, setEditContent] = useState('');
+  const [editContent, setEditContent] = useState(''); // used only as initialValue for TinyMCE
+  const editorContentRef = useRef('');              // tracks live content — no re-renders
   const [editPublished, setEditPublished] = useState(false);
   const [editWatermark, setEditWatermark] = useState<WatermarkConfig>(DEFAULT_WATERMARK_CONFIG);
   const [saving, setSaving] = useState(false);
@@ -127,6 +128,12 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
       fetchNotes(selectedSubtopic).then(setNotes);
     }
   }, [selectedSubtopic]);
+
+  // Helper: set both the initialValue state and the live ref together
+  function loadContent(html: string) {
+    setEditContent(html);
+    editorContentRef.current = html;
+  }
 
   useEffect(() => {
     setLevel(initialLevel);
@@ -142,10 +149,13 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
     if (!selectedSubtopic || !editTitle) return;
     setSaving(true);
     try {
+      // Read from ref — this has the latest typed content without causing re-renders
+      const currentHtml = editorContentRef.current;
+
       if (editingNoteId) {
         const result = await updateNote(editingNoteId, {
           title: editTitle,
-          contentHtml: editContent,
+          contentHtml: currentHtml,
           isPublished: editPublished,
           watermarkConfig: editWatermark,
         });
@@ -156,7 +166,7 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
         const result = await saveOrUpdateNote(null, {
           subtopicId: selectedSubtopic,
           title: editTitle,
-          contentHtml: editContent,
+          contentHtml: currentHtml,
           orderIndex: notes.length,
           isPublished: editPublished,
           watermarkConfig: editWatermark,
@@ -245,7 +255,7 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
                   onClick={() => {
                     setSelectedNote(null);
                     setEditTitle('');
-                    setEditContent('');
+                    loadContent('');
                     setEditPublished(false);
                     setEditWatermark(DEFAULT_WATERMARK_CONFIG);
                     setIsEditing(true);
@@ -264,7 +274,7 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
                       onClick={() => {
                         setSelectedNote(note);
                         setEditTitle(note.title);
-                        setEditContent(note.contentHtml || '');
+                        loadContent(note.contentHtml || '');
                         setEditPublished(note.isPublished);
                         setEditWatermark(sanitizeWatermarkConfig(note.watermarkConfig));
                         setIsEditing(false);
@@ -320,9 +330,11 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
               </div>
               <div>
                 <label className="block text-sm font-medium text-zinc-700">Content</label>
+                {/* key forces a full remount when switching notes so initialValue is fresh */}
                 <TinyMceEditor
-                  value={editContent}
-                  onChange={setEditContent}
+                  key={editingNoteId ?? 'new-note'}
+                  initialValue={editContent}
+                  onChange={(val) => { editorContentRef.current = val; }}
                   placeholder="Write your note content..."
                 />
               </div>
@@ -416,7 +428,7 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
                     setIsEditing(false);
                     setEditingNoteId(null);
                     setEditTitle('');
-                    setEditContent('');
+                    loadContent('');
                     setEditPublished(false);
                     setEditWatermark(DEFAULT_WATERMARK_CONFIG);
                   }}
@@ -441,7 +453,7 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
                   <button
                     onClick={() => {
                       setEditTitle(selectedNote.title);
-                      setEditContent(selectedNote.contentHtml || '');
+                      loadContent(selectedNote.contentHtml || '');
                       setEditPublished(selectedNote.isPublished);
                       setEditWatermark(sanitizeWatermarkConfig(selectedNote.watermarkConfig));
                       setIsEditing(true);

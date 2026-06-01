@@ -6,6 +6,7 @@ import { enforceRateLimit } from '@/server/policies/rate-limit';
 import { prisma } from '@/lib/db/prisma';
 import { createNote } from '@/server/services/note.service';
 import { noteSchema } from '@/server/validators/admin-content';
+import { embedNote } from '@/lib/ai/rag';
 
 export async function GET(request: Request) {
   try {
@@ -86,6 +87,31 @@ export async function POST(request: Request) {
     const input = noteSchema.parse(payload);
     const note = await createNote(input, user.id);
     revalidatePath('/admin/notes');
+
+    // Auto-embed into vector store if published, so AI can use it immediately
+    if (note.isPublished && note.contentHtml) {
+      try {
+        const fullNote = await prisma.note.findUnique({
+          where: { id: note.id },
+          select: {
+            id: true, title: true, contentHtml: true,
+            subtopic: { select: { title: true, chapter: { select: { title: true, level: true } } } },
+          },
+        });
+        if (fullNote) {
+          embedNote({
+            id: fullNote.id,
+            title: fullNote.title,
+            contentHtml: fullNote.contentHtml,
+            level: fullNote.subtopic.chapter.level,
+            chapterTitle: fullNote.subtopic.chapter.title,
+            subtopicTitle: fullNote.subtopic.title,
+          }).catch((e) => console.error('[auto-embed create]', e));
+        }
+      } catch (e) {
+        console.error('[auto-embed create lookup]', e);
+      }
+    }
 
     return NextResponse.json({ success: true, data: note }, { status: 201 });
   } catch (error) {

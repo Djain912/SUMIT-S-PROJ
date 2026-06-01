@@ -1,4 +1,5 @@
 import { createEmbedding, searchSimilarChunks, storeChunk, deleteChunksBySourceId } from './knowledge-store';
+export { deleteChunksBySourceId };
 
 const CHUNK_SIZE = 600;
 const CHUNK_OVERLAP = 80;

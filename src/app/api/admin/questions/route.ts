@@ -17,7 +17,10 @@ export async function GET(request: Request) {
     const chapterId = searchParams.get('chapterId') ?? undefined;
     const subtopicId = searchParams.get('subtopicId') ?? undefined;
     const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') ?? '50', 10)));
+    // Allow up to 500 when fetching for a specific subtopic (AI may generate 100+)
+    const hasSubtopicFilter = !!searchParams.get('subtopicId');
+    const maxLimit = hasSubtopicFilter ? 500 : 100;
+    const limit = Math.min(maxLimit, Math.max(1, parseInt(searchParams.get('limit') ?? (hasSubtopicFilter ? '500' : '50'), 10)));
     const skip = (page - 1) * limit;
 
     const where: Prisma.QuestionWhereInput = { isDeleted: false };

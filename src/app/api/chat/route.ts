@@ -3,6 +3,7 @@ import { AuthError, requireAuthenticatedUser } from '@/server/policies/auth';
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 import { openai, CHAT_MODEL } from '@/lib/ai/openai';
 import { buildContext } from '@/lib/ai/rag';
+import { prisma } from '@/lib/db/prisma';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,7 +13,7 @@ const LEVEL_LABELS: Record<string, string> = {
   LEVEL_3: 'Level III',
 };
 
-function buildSystemPrompt(level: string | null, context: string): string {
+function buildSystemPrompt(level: string | null, context: string, qaPairs: { question: string; answer: string }[] = []): string {
   const levelLabel = level ? LEVEL_LABELS[level] ?? level : 'all levels';
 
   const base = `You are Chartix AI — a friendly CMT exam tutor helping students prepare for CMT ${levelLabel}. Students may be from anywhere in the world and may be beginners.
@@ -50,8 +51,20 @@ RULES YOU MUST NEVER BREAK:
 
 IMPORTANT: Do NOT make up facts. If unsure, say so clearly.`;
 
+  let prompt = base;
+
+  // Inject admin corrections with highest priority
+  if (qaPairs.length > 0) {
+    prompt += `
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+MANDATORY CORRECTIONS — use these EXACT answers (highest priority, overrides everything):
+${qaPairs.map((p, i) => `${i + 1}. Q: ${p.question}\n   A: ${p.answer}`).join('\n\n')}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+  }
+
   if (context) {
-    return `${base}
+    return `${prompt}
 
 Here is relevant content from the student's study materials to inform your answer:
 
@@ -60,7 +73,7 @@ ${context}
 Use this context as your primary source. You may supplement with your general CMT knowledge, but always stay grounded in the curriculum.`;
   }
 
-  return base;
+  return prompt;
 }
 
 type ChatMessage = {
@@ -99,10 +112,18 @@ export async function POST(request: Request) {
       );
     }
 
-    // Build RAG context from study materials
-    const context = await buildContext(message, level);
+    // Build RAG context + load admin Q&A corrections in parallel
+    const [context, qaPairs] = await Promise.all([
+      buildContext(message, level),
+      prisma.botQAPair.findMany({
+        where: { botType: 'study' },
+        select: { question: true, answer: true },
+        orderBy: { createdAt: 'desc' },
+        take: 30,
+      }),
+    ]);
 
-    const systemPrompt = buildSystemPrompt(level, context);
+    const systemPrompt = buildSystemPrompt(level, context, qaPairs);
 
     const messages: ChatCompletionMessageParam[] = [
       { role: 'system', content: systemPrompt },

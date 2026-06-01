@@ -220,7 +220,7 @@ function SubtopicRow({ subtopic: st, forceExpanded }: SubtopicRowProps) {
             <FileText className="h-3 w-3" />
             Notes
           </Link>
-          <Link href={`/user/quiz?mode=SUBTOPIC&subtopic=${st.id}`} className="inline-flex items-center gap-1 rounded-md border border-zinc-900 bg-zinc-900 px-2.5 py-1 text-xs font-medium text-white transition hover:bg-zinc-700">
+          <Link href={`/user/quiz?mode=SUBTOPIC&subtopic=${st.id}`} className="inline-flex items-center gap-1 rounded-md border border-emerald-700 bg-emerald-700 px-2.5 py-1 text-xs font-medium text-white transition hover:bg-emerald-600">
             <Brain className="h-3 w-3" />
             Quiz
           </Link>
@@ -291,7 +291,7 @@ function ChapterRow({ chapter: ch, forceExpanded }: ChapterRowProps) {
             <FileText className="h-3.5 w-3.5" />
             Notes
           </Link>
-          <Link href={`/user/quiz?mode=CHAPTER&chapter=${ch.id}`} className="inline-flex items-center gap-1 rounded-md border border-zinc-900 bg-zinc-900 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-zinc-700">
+          <Link href={`/user/quiz?mode=CHAPTER&chapter=${ch.id}`} className="inline-flex items-center gap-1 rounded-md border border-emerald-700 bg-emerald-700 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-600">
             <Brain className="h-3.5 w-3.5" />
             Quiz
           </Link>
@@ -370,7 +370,7 @@ export function UserDashboardClient({ initialData }: { initialData?: DashboardDa
               onClick={() => { setSelectedLevel(level); setSearch(''); setForceExpanded(null); }}
               className={`flex-1 py-3 text-sm font-semibold transition-colors ${
                 selectedLevel === level
-                  ? 'bg-zinc-900 text-white'
+                  ? 'bg-emerald-700 text-white'
                   : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800'
               }`}
             >

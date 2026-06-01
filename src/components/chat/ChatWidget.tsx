@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { MessageSquare, X, Send, Loader2, Bot, ChevronDown } from 'lucide-react';
+import { MessageSquare, X, Send, Loader2, Bot, ChevronDown, Sparkles } from 'lucide-react';
+import { FeedbackButtons } from '@/components/chat/FeedbackButtons';
 
 // ── Inline renderer: handles **bold**, *italic*, `code` ──────────────────────
 function renderInline(text: string): React.ReactNode {
@@ -153,6 +154,7 @@ export function ChatWidget({ level }: Props) {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(true);
+  const [showCallout, setShowCallout] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -168,8 +170,15 @@ export function ChatWidget({ level }: Props) {
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 100);
+      setShowCallout(false);
     }
   }, [isOpen]);
+
+  // Auto-hide callout after 8 seconds
+  useEffect(() => {
+    const t = setTimeout(() => setShowCallout(false), 8000);
+    return () => clearTimeout(t);
+  }, []);
 
   const sendMessage = useCallback(
     async (text: string) => {
@@ -258,12 +267,12 @@ export function ChatWidget({ level }: Props) {
   const levelLabel = level ? LEVEL_LABELS[level] : null;
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2">
       {/* Chat panel */}
       {isOpen && (
-        <div className="flex h-[600px] w-[380px] flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl">
+        <div className="flex h-[680px] w-[460px] flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-zinc-100 bg-zinc-950 px-4 py-3">
+          <div className="flex items-center justify-between border-b border-zinc-100 bg-emerald-900 px-4 py-3">
             <div className="flex items-center gap-2.5">
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10">
                 <Bot className="h-4 w-4 text-white" />
@@ -310,33 +319,50 @@ export function ChatWidget({ level }: Props) {
                 )}
               </div>
             ) : (
-              messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
+              messages.map((msg, idx) => {
+                // Find the preceding user message to use as "question" for feedback
+                const prevUserMsg = idx > 0
+                  ? [...messages].slice(0, idx).reverse().find((m) => m.role === 'user')
+                  : null;
+
+                return (
                   <div
-                    className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
-                      msg.role === 'user'
-                        ? 'bg-zinc-900 text-white'
-                        : 'bg-zinc-100 text-zinc-900'
-                    }`}
+                    key={msg.id}
+                    className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
                   >
-                    {msg.role === 'user' ? (
-                      <span className="text-[13px]">{msg.content}</span>
-                    ) : msg.content ? (
-                      <>
-                        <MarkdownMessage content={msg.content} />
-                        {msg.isStreaming && (
-                          <span className="ml-0.5 inline-block h-3.5 w-0.5 animate-pulse bg-zinc-500 align-middle" />
-                        )}
-                      </>
-                    ) : msg.isStreaming ? (
-                      <ThinkingDots />
-                    ) : null}
+                    <div
+                      className={`max-w-[90%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                        msg.role === 'user'
+                          ? 'bg-emerald-900 text-white'
+                          : 'bg-zinc-100 text-zinc-900'
+                      }`}
+                    >
+                      {msg.role === 'user' ? (
+                        <span className="text-[13px]">{msg.content}</span>
+                      ) : msg.content ? (
+                        <>
+                          <MarkdownMessage content={msg.content} />
+                          {msg.isStreaming && (
+                            <span className="ml-0.5 inline-block h-3.5 w-0.5 animate-pulse bg-zinc-500 align-middle" />
+                          )}
+                        </>
+                      ) : msg.isStreaming ? (
+                        <ThinkingDots />
+                      ) : null}
+                    </div>
+                    {/* Feedback buttons — only on complete assistant messages */}
+                    {msg.role === 'assistant' && !msg.isStreaming && msg.content && prevUserMsg && (
+                      <div className="max-w-[88%] px-1">
+                        <FeedbackButtons
+                          botType="study"
+                          question={prevUserMsg.content}
+                          answer={msg.content}
+                        />
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
             <div ref={messagesEndRef} />
           </div>
@@ -357,7 +383,7 @@ export function ChatWidget({ level }: Props) {
               <button
                 onClick={() => sendMessage(input)}
                 disabled={!input.trim() || isLoading}
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-zinc-900 text-white transition hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-700 text-white transition hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -373,16 +399,44 @@ export function ChatWidget({ level }: Props) {
         </div>
       )}
 
-      {/* Toggle button */}
+      {/* Callout bubble — shows when chat is closed */}
+      {!isOpen && showCallout && (
+        <div className="flex items-center gap-2 mb-1">
+          <div className="relative rounded-2xl rounded-br-sm bg-emerald-900 px-4 py-2.5 shadow-xl">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-3.5 w-3.5 shrink-0 text-emerald-300" />
+              <p className="text-sm font-semibold text-white whitespace-nowrap">
+                Got a CMT doubt? Ask me!
+              </p>
+              <button
+                onClick={() => setShowCallout(false)}
+                className="ml-1 rounded-full p-0.5 text-emerald-400 hover:text-white transition"
+                aria-label="Dismiss"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+            {/* Triangle tail pointing down-right */}
+            <div className="absolute -bottom-2 right-5 h-0 w-0 border-l-[7px] border-r-[7px] border-t-[8px] border-l-transparent border-r-transparent border-t-emerald-900" />
+          </div>
+        </div>
+      )}
+
+      {/* Ping ring — only when closed */}
+      {!isOpen && (
+        <div className="absolute bottom-0 right-0 h-16 w-16 rounded-full bg-emerald-500 opacity-20 animate-ping pointer-events-none" />
+      )}
+
+      {/* Toggle button — bigger */}
       <button
         onClick={() => setIsOpen((v) => !v)}
-        className="flex h-14 w-14 items-center justify-center rounded-full bg-zinc-950 text-white shadow-lg transition hover:bg-zinc-800 hover:scale-105 active:scale-95"
+        className="relative flex h-16 w-16 items-center justify-center rounded-full bg-emerald-800 text-white shadow-xl transition hover:bg-emerald-700 hover:scale-105 active:scale-95"
         aria-label={isOpen ? 'Close AI chat' : 'Open AI chat'}
       >
         {isOpen ? (
-          <ChevronDown className="h-5 w-5" />
+          <ChevronDown className="h-6 w-6" />
         ) : (
-          <MessageSquare className="h-5 w-5" />
+          <MessageSquare className="h-7 w-7" />
         )}
       </button>
     </div>

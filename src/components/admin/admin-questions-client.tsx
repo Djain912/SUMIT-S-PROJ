@@ -155,7 +155,7 @@ async function fetchQuestions(subtopicId: string): Promise<Question[]> {
   if (existing) return existing;
 
   const request = (async () => {
-    const res = await fetch(`/api/admin/questions?subtopicId=${subtopicId}`);
+    const res = await fetch(`/api/admin/questions?subtopicId=${subtopicId}&limit=500`);
     const data = await res.json();
     return data.data || [];
   })();
@@ -176,6 +176,7 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
   const [isEditing, setIsEditing] = useState(false);
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [publishingAll, setPublishingAll] = useState(false);
 
   const [editPrompt, setEditPrompt] = useState('');
   const [editExplanation, setEditExplanation] = useState('');
@@ -375,23 +376,28 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
     if (unpublished.length === 0) { alert('All questions are already published.'); return; }
     if (!window.confirm(`Publish all ${unpublished.length} unpublished questions for this subtopic?`)) return;
 
-    for (const q of unpublished) {
-      await fetch(`/api/admin/questions/${q.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          level: q.level, chapterId: q.chapterId, subtopicId: q.subtopicId,
-          promptJson: q.promptJson, explanationJson: q.explanationJson,
-          questionType: q.questionType, difficulty: q.difficulty, isPublished: true,
-          options: q.options.map((o) => ({ contentJson: o.contentJson, isCorrect: o.isCorrect, orderIndex: o.orderIndex })),
-        }),
-      });
+    setPublishingAll(true);
+    try {
+      for (const q of unpublished) {
+        await fetch(`/api/admin/questions/${q.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            level: q.level, chapterId: q.chapterId, subtopicId: q.subtopicId,
+            promptJson: q.promptJson, explanationJson: q.explanationJson,
+            questionType: q.questionType, difficulty: q.difficulty, isPublished: true,
+            options: q.options.map((o) => ({ contentJson: o.contentJson, isCorrect: o.isCorrect, orderIndex: o.orderIndex })),
+          }),
+        });
+      }
+      questionsInFlight.delete(selectedSubtopic);
+      const fresh = await fetchQuestions(selectedSubtopic);
+      setQuestions(fresh);
+      setSelectedQuestion(null);
+      router.refresh();
+    } finally {
+      setPublishingAll(false);
     }
-    questionsInFlight.delete(selectedSubtopic);
-    const fresh = await fetchQuestions(selectedSubtopic);
-    setQuestions(fresh);
-    setSelectedQuestion(null);
-    router.refresh();
   }
 
   async function handleDeleteQuestion(questionId: string) {
@@ -504,9 +510,20 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
                 <button
                   type="button"
                   onClick={() => void handlePublishAll()}
-                  className="mt-2 w-full rounded-xl bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700"
+                  disabled={publishingAll}
+                  className="mt-2 w-full rounded-xl bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-80 disabled:cursor-not-allowed"
                 >
-                  ✓ Publish All ({subtopicQuestions.filter((q) => !q.isPublished).length} unpublished)
+                  {publishingAll ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                      </svg>
+                      Publishing… please wait
+                    </span>
+                  ) : (
+                    `✓ Publish All (${subtopicQuestions.filter((q) => !q.isPublished).length} unpublished)`
+                  )}
                 </button>
               )}
 
@@ -687,7 +704,7 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
 
               <div>
                 <label className="block text-sm font-medium text-zinc-700">Question</label>
-                <TinyMceEditor value={editPrompt} onChange={setEditPrompt} placeholder="Write the question..." />
+                <TinyMceEditor key={`prompt-${editingQuestionId ?? 'new'}`} initialValue={editPrompt} onChange={setEditPrompt} placeholder="Write the question..." />
               </div>
 
               <div>
@@ -748,7 +765,7 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
 
               <div>
                 <label className="block text-sm font-medium text-zinc-700">Explanation</label>
-                <TinyMceEditor value={editExplanation} onChange={setEditExplanation} placeholder="Explain the answer..." />
+                <TinyMceEditor key={`explanation-${editingQuestionId ?? 'new'}`} initialValue={editExplanation} onChange={setEditExplanation} placeholder="Explain the answer..." />
               </div>
 
               <label className="flex items-center gap-2 text-sm text-zinc-700">

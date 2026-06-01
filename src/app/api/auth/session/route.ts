@@ -1,26 +1,22 @@
+/**
+ * /api/auth/session
+ *
+ * This route MUST return the NextAuth session format so that
+ * SessionProvider (next-auth/react) works correctly across the app.
+ *
+ * Previously this returned a custom { success, data } shape which
+ * conflicted with NextAuth's own session endpoint → ClientFetchError.
+ *
+ * The custom user-role endpoint is now at /api/me
+ */
+import { auth } from '@/lib/auth/auth';
 import { NextResponse } from 'next/server';
-import { AuthError, requireAuthenticatedUser } from '@/server/policies/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  try {
-    const user = await requireAuthenticatedUser();
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        isPremium: user.isPremium,
-      },
-    });
-  } catch (error) {
-    if (error instanceof AuthError) {
-      return NextResponse.json({ success: false, error: { message: error.message } }, { status: error.statusCode });
-    }
-
-    return NextResponse.json({ success: false, error: { message: 'Unable to load session' } }, { status: 500 });
-  }
+  const session = await auth();
+  if (!session) return NextResponse.json(null);
+  // Return in NextAuth's expected format: { user, expires }
+  return NextResponse.json(session);
 }

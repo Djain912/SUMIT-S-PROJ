@@ -4,7 +4,7 @@ import { Editor } from '@tinymce/tinymce-react';
 import { useRef, useCallback } from 'react';
 
 interface RichTextEditorProps {
-  value: string;
+  initialValue?: string; // use initialValue (not value) to avoid TinyMCE controlled-mode resets
   onChange: (value: string) => void;
   placeholder?: string;
 }
@@ -13,14 +13,15 @@ const initPlugins = [
   'lists', 'link', 'image', 'table', 'wordcount', 'code', 'fullscreen',
 ];
 
-const toolbar = 'undo redo | blocks | bold italic underline | alignleft aligncenter alignright | bullist numlist | link image table | code fullscreen | removeformat';
+const toolbar =
+  'customformatpainter | undo redo | blocks fontsize | bold italic underline | forecolor backcolor | alignleft aligncenter alignright | bullist numlist | link image table | insertsectiondivider | removeformat';
 
 interface BlobInfo {
   blob: () => File;
   filename: () => string;
 }
 
-export function TinyMceEditor({ value, onChange, placeholder }: RichTextEditorProps) {
+export function TinyMceEditor({ initialValue = '', onChange, placeholder }: RichTextEditorProps) {
   const editorRef = useRef<unknown>(null);
 
   const imageUploadHandler = useCallback(async (blobInfo: BlobInfo): Promise<string> => {
@@ -71,29 +72,38 @@ export function TinyMceEditor({ value, onChange, placeholder }: RichTextEditorPr
         onInit={(_evt, editor) => {
           editorRef.current = editor;
         }}
-        value={value}
+        initialValue={initialValue}
         onEditorChange={(newValue) => onChange(newValue)}
         init={{
-          height: 500,
+          height: 560,
           menubar: false,
           plugins: initPlugins,
           toolbar,
-          placeholder: placeholder || 'Start typing...',
+          toolbar_sticky: true,
+          placeholder: placeholder || 'Start typing your notes here...',
           // Block format configuration
-          block_formats: 'Paragraph=p; Heading 1=h1; Heading 2=h2; Heading 3=h3; Heading 4=h4; Heading 5=h5; Heading 6=h6',
-          // Force block-level formatting to apply only to current block
+          block_formats: 'Normal=p; Heading 1=h1; Heading 2=h2; Heading 3=h3; Heading 4=h4',
+          font_size_formats: '10pt 11pt 12pt 14pt 16pt 18pt 20pt 24pt 28pt 32pt',
+          // Every Enter keystroke creates a new <p> — headings apply per paragraph
           forced_root_block: 'p',
           forced_root_block_attrs: {},
-          // Prevent format inheritance
+          // Prevent format bleeding to next paragraph
           keep_styles: false,
+          end_container_on_empty_block: true,
           content_style: `
-            body { 
-              font-family: system-ui, sans-serif; 
-              font-size: 14px; 
+            body {
+              font-family: system-ui, sans-serif;
+              font-size: 14px;
             }
-            img { 
-              max-width: 100%; 
-              height: auto; 
+            hr {
+              border: none;
+              border-top: 2px solid #d4d4d8;
+              margin: 1.5rem 0;
+              height: 0;
+            }
+            img {
+              max-width: 100%;
+              height: auto;
               display: block;
               margin: 1rem auto;
             }
@@ -150,27 +160,172 @@ export function TinyMceEditor({ value, onChange, placeholder }: RichTextEditorPr
           table_row_class_list: [
             { title: 'Default', value: '' }
           ],
-          // Setup callback to handle table creation
+          // Setup callback
           setup: (editor) => {
-            // Intercept table insertion
+
+            // ── Section Divider button with style picker ───────────────────
+            editor.ui.registry.addButton('insertsectiondivider', {
+              tooltip: 'Insert section divider',
+              text: '─ Divider',
+              onAction: () => {
+                editor.windowManager.open({
+                  title: 'Insert Section Divider',
+                  body: {
+                    type: 'panel',
+                    items: [
+                      {
+                        type: 'selectbox',
+                        name: 'style',
+                        label: 'Line Style',
+                        items: [
+                          { value: 'solid',  text: 'Solid  ───────' },
+                          { value: 'dashed', text: 'Dashed  – – – –' },
+                          { value: 'dotted', text: 'Dotted  · · · ·' },
+                          { value: 'double', text: 'Double  ═══════' },
+                        ],
+                      },
+                      {
+                        type: 'selectbox',
+                        name: 'thickness',
+                        label: 'Thickness',
+                        items: [
+                          { value: '1', text: 'Thin (1px)' },
+                          { value: '2', text: 'Medium (2px)' },
+                          { value: '4', text: 'Thick (4px)' },
+                          { value: '6', text: 'Extra Thick (6px)' },
+                        ],
+                      },
+                      {
+                        type: 'selectbox',
+                        name: 'color',
+                        label: 'Color',
+                        items: [
+                          { value: '#d4d4d8', text: 'Light Grey (default)' },
+                          { value: '#a1a1aa', text: 'Grey' },
+                          { value: '#52525b', text: 'Dark Grey' },
+                          { value: '#18181b', text: 'Black' },
+                          { value: '#3b82f6', text: 'Blue' },
+                          { value: '#8b5cf6', text: 'Purple' },
+                          { value: '#22c55e', text: 'Green' },
+                          { value: '#ef4444', text: 'Red' },
+                          { value: '#f59e0b', text: 'Amber / Gold' },
+                        ],
+                      },
+                    ],
+                  },
+                  initialData: { style: 'solid', thickness: '2', color: '#d4d4d8' },
+                  buttons: [
+                    { type: 'cancel', text: 'Cancel' },
+                    { type: 'submit', text: 'Insert Divider', primary: true },
+                  ],
+                  onSubmit: (api) => {
+                    const data = api.getData() as { style: string; thickness: string; color: string };
+                    // CSS "double" needs ≥3px to visibly show two lines
+                    const px = data.style === 'double'
+                      ? Math.max(3, parseInt(data.thickness) * 2)
+                      : parseInt(data.thickness);
+                    const html = `<hr style="border:none;border-top:${px}px ${data.style} ${data.color};margin:1.5rem 0;" />`;
+                    editor.insertContent(html);
+                    api.close();
+                  },
+                });
+              },
+            });
+
+            // ── Shift+Enter → new paragraph (not <br>) ─────────────────────
+            // This ensures every line is its own block so headings/formats
+            // only apply to the selected line, not everything below it.
+            editor.on('keydown', (e: KeyboardEvent) => {
+              if (e.key === 'Enter' && e.shiftKey) {
+                e.preventDefault();
+                e.stopPropagation();
+                editor.execCommand('InsertParagraph');
+              }
+            });
+
+            // ── Custom Format Painter ──────────────────────────────────────
+            let paintData: Record<string, unknown> | null = null;
+            let isPainting = false;
+
+            function captureFormats() {
+              return {
+                bold:          editor.formatter.match('bold'),
+                italic:        editor.formatter.match('italic'),
+                underline:     editor.formatter.match('underline'),
+                strikethrough: editor.formatter.match('strikethrough'),
+                h1:            editor.formatter.match('h1'),
+                h2:            editor.formatter.match('h2'),
+                h3:            editor.formatter.match('h3'),
+                h4:            editor.formatter.match('h4'),
+                forecolor:     editor.queryCommandValue('ForeColor'),
+                hilitecolor:   editor.queryCommandValue('HiliteColor'),
+                fontsize:      editor.queryCommandValue('FontSize'),
+              };
+            }
+
+            function applyFormats(fmt: Record<string, unknown>) {
+              const inlines = ['bold', 'italic', 'underline', 'strikethrough'] as const;
+              inlines.forEach((f) => {
+                if (fmt[f]) editor.formatter.apply(f);
+                else editor.formatter.remove(f);
+              });
+              const blocks = ['h1', 'h2', 'h3', 'h4'] as const;
+              blocks.forEach((f) => { if (fmt[f]) editor.formatter.apply(f); });
+              if (fmt.forecolor && typeof fmt.forecolor === 'string' && fmt.forecolor !== '' && fmt.forecolor !== 'rgb(0, 0, 0)') {
+                editor.execCommand('ForeColor', false, fmt.forecolor as string);
+              }
+              if (fmt.hilitecolor && typeof fmt.hilitecolor === 'string' && fmt.hilitecolor !== '' && fmt.hilitecolor !== 'rgb(255, 255, 255)') {
+                editor.execCommand('HiliteColor', false, fmt.hilitecolor as string);
+              }
+            }
+
+            editor.ui.registry.addToggleButton('customformatpainter', {
+              tooltip: 'Format Painter — select formatted text, click, then select target text',
+              icon:    'paste-text',
+              onAction(api) {
+                if (!isPainting) {
+                  paintData  = captureFormats();
+                  isPainting = true;
+                  api.setActive(true);
+                  editor.getBody().style.cursor = 'copy';
+                  editor.notificationManager.open({
+                    text:    '🖌️ Format Painter active — now select the text you want to format',
+                    type:    'info',
+                    timeout: 4000,
+                  });
+                } else {
+                  isPainting = false;
+                  paintData  = null;
+                  api.setActive(false);
+                  editor.getBody().style.cursor = '';
+                }
+              },
+            });
+
+            editor.on('MouseUp', () => {
+              if (isPainting && paintData && !editor.selection.isCollapsed()) {
+                applyFormats(paintData);
+                isPainting = false;
+                paintData  = null;
+                editor.getBody().style.cursor = '';
+              }
+            });
+            // ── End Format Painter ─────────────────────────────────────────
+
+            // Fix table styles on insertion
             editor.on('NewTable', () => {
               setTimeout(() => {
                 const tables = editor.getBody().querySelectorAll('table');
                 tables.forEach((table: Element) => {
                   const htmlTable = table as HTMLTableElement;
-                  
-                  // Set table styles
                   htmlTable.style.borderCollapse = 'collapse';
                   htmlTable.style.width = '100%';
                   htmlTable.style.border = '1px solid #d4d4d8';
-                  
-                  // Set cell styles
                   const cells = htmlTable.querySelectorAll('td, th');
                   cells.forEach((cell: Element) => {
                     const htmlCell = cell as HTMLTableCellElement;
                     htmlCell.style.border = '1px solid #d4d4d8';
                     htmlCell.style.padding = '0.75rem';
-                    
                     if (htmlCell.tagName === 'TH') {
                       htmlCell.style.backgroundColor = '#f4f4f5';
                       htmlCell.style.fontWeight = '600';

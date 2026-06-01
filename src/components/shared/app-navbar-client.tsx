@@ -16,10 +16,14 @@ export function AppNavbarClient({ isLoggedIn, role, userName }: Props) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
+  // Pages that have their own embedded navbar — suppress the global one
   if (
     pathname.startsWith('/admin') ||
     pathname.startsWith('/sign-in') ||
-    pathname.startsWith('/sign-up')
+    pathname.startsWith('/sign-up') ||
+    pathname === '/' ||
+    pathname.startsWith('/blog') ||
+    pathname === '/pricing'
   ) {
     return null;
   }
@@ -62,7 +66,7 @@ export function AppNavbarClient({ isLoggedIn, role, userName }: Props) {
           href={isLoggedIn && !isAdmin ? '/user' : '/'}
           className="flex shrink-0 items-center gap-2"
         >
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-900">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-700">
             <TrendingUp className="h-3.5 w-3.5 text-white" />
           </div>
           <span className="hidden text-sm font-bold tracking-tight text-zinc-950 sm:block font-heading">
@@ -80,7 +84,7 @@ export function AppNavbarClient({ isLoggedIn, role, userName }: Props) {
                 href={link.href}
                 className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors ${
                   isActive(link.href)
-                    ? 'bg-zinc-900 text-white'
+                    ? 'bg-emerald-700 text-white'
                     : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900'
                 }`}
               >
@@ -97,7 +101,7 @@ export function AppNavbarClient({ isLoggedIn, role, userName }: Props) {
             <>
               <div
                 title={userName ?? undefined}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-xs font-bold text-white"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-700 text-xs font-bold text-white"
               >
                 {initials}
               </div>
@@ -119,7 +123,7 @@ export function AppNavbarClient({ isLoggedIn, role, userName }: Props) {
               </Link>
               <Link
                 href="/sign-up"
-                className="rounded-full bg-zinc-900 px-4 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-700"
+                className="rounded-full bg-emerald-700 px-4 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600"
               >
                 Get started
               </Link>
@@ -151,7 +155,7 @@ export function AppNavbarClient({ isLoggedIn, role, userName }: Props) {
                   onClick={() => setOpen(false)}
                   className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
                     isActive(link.href)
-                      ? 'bg-zinc-900 text-white'
+                      ? 'bg-emerald-700 text-white'
                       : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'
                   }`}
                 >
@@ -166,7 +170,7 @@ export function AppNavbarClient({ isLoggedIn, role, userName }: Props) {
             {isLoggedIn ? (
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-xs font-bold text-white">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-700 text-xs font-bold text-white">
                     {initials}
                   </div>
                   <span className="text-sm font-medium text-zinc-700 truncate max-w-[160px]">{userName}</span>
@@ -191,7 +195,7 @@ export function AppNavbarClient({ isLoggedIn, role, userName }: Props) {
                 <Link
                   href="/sign-up"
                   onClick={() => setOpen(false)}
-                  className="rounded-full bg-zinc-900 py-2.5 text-center text-sm font-semibold text-white hover:bg-zinc-700"
+                  className="rounded-full bg-emerald-700 py-2.5 text-center text-sm font-semibold text-white hover:bg-emerald-600"
                 >
                   Get started free
                 </Link>
