@@ -110,7 +110,10 @@ button {
   vertical-align: top;
   /* Override inline widths */
   width: auto !important;
-  min-width: 100px;
+  min-width: 120px;
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: break-word;
 }
 
 .prose table th {
@@ -127,12 +130,11 @@ button {
   background-color: #f4f4f5;
 }
 
-/* Ensure long text in tables wraps */
+/* Ensure long text in tables wraps without breaking words mid-character */
 .prose table td {
-  word-wrap: break-word;
   overflow-wrap: break-word;
-  word-break: break-word;
-  max-width: 300px;
+  word-break: normal;
+  max-width: none;
 }
 
 /* Responsive table wrapper */
@@ -159,7 +161,7 @@ button {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Ensure paragraphs and headings wrap properly */
+/* Ensure paragraphs and headings wrap properly without mid-word breaks */
 .prose p,
 .prose h1,
 .prose h2,
@@ -169,8 +171,8 @@ button {
 .prose h6,
 .prose li {
   word-wrap: break-word;
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 .prose .note-content {
