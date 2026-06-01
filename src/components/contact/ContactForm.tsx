@@ -110,7 +110,7 @@ export function ContactForm() {
         <div>
           <h3 className="text-xl font-bold text-zinc-950">Message sent!</h3>
           <p className="mt-2 text-sm leading-6 text-zinc-500">
-            Thanks for reaching out. We'll get back to you within 1–2 business days. Check your inbox for a confirmation email.
+            Thanks for reaching out. We&apos;ll get back to you within 1–2 business days. Check your inbox for a confirmation email.
           </p>
         </div>
         <button
@@ -290,7 +290,7 @@ export function ContactForm() {
       </button>
 
       <p className="mt-3 text-center text-xs text-zinc-400">
-        We'll never share your information with third parties.
+        We&apos;ll never share your information with third parties.
       </p>
     </form>
   );

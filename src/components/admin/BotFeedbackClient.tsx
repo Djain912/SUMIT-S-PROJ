@@ -94,7 +94,7 @@ export function BotFeedbackClient({
   }
 
   // Pre-fill Q&A form from a disliked feedback item
-  function useAsCorrection(f: Feedback) {
+  function applyAsCorrection(f: Feedback) {
     setNewBotType(f.botType as 'public' | 'study');
     setNewQ(f.question);
     setNewA(f.userNote ?? '');
@@ -252,7 +252,7 @@ export function BotFeedbackClient({
                       </div>
                       {f.rating === 'dislike' && (
                         <button
-                          onClick={() => useAsCorrection(f)}
+                          onClick={() => applyAsCorrection(f)}
                           className="shrink-0 flex items-center gap-1.5 rounded-lg border border-zinc-200 px-2.5 py-1.5 text-[11px] font-medium text-zinc-600 transition hover:border-zinc-400 hover:bg-zinc-50"
                           title="Write a correction for this response"
                         >

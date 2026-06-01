@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { FileText, Globe, Trash2, Upload, Plus, CheckCircle, AlertCircle, Loader2, Link2 } from 'lucide-react';
 
 type Source = {

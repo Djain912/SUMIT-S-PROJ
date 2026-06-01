@@ -117,7 +117,7 @@ export async function getUserDashboardData(userId: string, level: string) {
   const sections: SectionData[] = [{
     id: 'section-chapters',
     title: 'Chapters',
-    chapters: chapters.map((ch, index) => {
+    chapters: chapters.map((ch) => {
       const stats = chapterStats.get(ch.id) ?? { correct: 0, total: 0 };
       const totalQs = ch.subtopics.reduce((sum, st) => sum + st._count.questions, 0);
       const progress = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
