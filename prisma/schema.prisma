@@ -345,17 +345,6 @@ model BotFeedback {
   @@index([createdAt])
 }
 
-// ── Admin-written Q&A corrections (injected as mandatory facts) ───────────
-model BotQAPair {
-  id        String   @id @default(cuid())
-  botType   String   // 'public' | 'study'
-  question  String
-  answer    String   @db.Text
-  createdAt DateTime @default(now())
-
-  @@index([botType])
-}
-
 // ── Blog posts ─────────────────────────────────────────────────────────────
 model BlogPost {
   id            String    @id @default(cuid())
