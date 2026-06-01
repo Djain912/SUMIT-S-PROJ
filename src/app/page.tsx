@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import {
   BookOpen, ListChecks, BarChart2, ArrowRight,
-  TrendingUp, ChevronRight, Bot, Brain,
+  TrendingUp, ChevronRight, Brain,
 } from 'lucide-react';
 import { auth } from '@/lib/auth/auth';
 import { siteConfig } from '@/lib/site';

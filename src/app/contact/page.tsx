@@ -67,7 +67,7 @@ export default function ContactPage() {
             Get in touch
           </h1>
           <p className="mt-4 max-w-xl text-base leading-7 text-zinc-500">
-            Questions about the platform, courses, or your subscription? We're here to help.
+            Questions about the platform, courses, or your subscription? We&apos;re here to help.
           </p>
         </div>
       </section>

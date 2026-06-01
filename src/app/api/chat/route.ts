@@ -83,7 +83,7 @@ type ChatMessage = {
 
 export async function POST(request: Request) {
   try {
-    const user = await requireAuthenticatedUser();
+    await requireAuthenticatedUser();
 
     // TODO: Uncomment this when payment system is live
     // if (!user.isPremium && user.role !== 'ADMIN') {
