@@ -1,51 +1,36 @@
 import { NextResponse } from 'next/server';
 import { openai } from '@/lib/ai/openai';
 import { prisma } from '@/lib/db/prisma';
-import { buildContext } from '@/lib/ai/rag';
+import { createEmbedding, searchPublicBotChunks } from '@/lib/ai/knowledge-store';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
-// ── System prompt ────────────────────────────────────────────────────────────
-const SYSTEM_BASE = `You are the Chartix CMT Exam Bot — a knowledgeable and friendly assistant for students and professionals exploring the CMT (Chartered Market Technician) designation.
+const SYSTEM_BASE = `You are the Chartix CMT Exam Bot — a knowledgeable and friendly assistant on Chartix.in, a CMT exam preparation platform.
 
-You have two knowledge sources available:
-1. OFFICIAL CMT INFORMATION — facts about the CMT programme, exam structure, fees, eligibility, careers
-2. CMT STUDY MATERIAL — actual curriculum content from Chartix notes (technical analysis concepts, chart patterns, indicators, etc.)
+Your knowledge comes exclusively from official CMT-related documents and materials uploaded by the Chartix team. Answer questions based only on what is in the provided context.
 
-WHAT YOU ANSWER (answer all of these confidently):
-• CMT exam structure — number of levels, what each covers, topic weightings
-• CMT curriculum chapters and subject areas per level
-• Exam format — question count, duration, passing scores, exam windows
-• Eligibility and experience requirements for the CMT charter
-• Registration process, exam fees, scheduling
-• Career paths and job roles for CMT charterholders
-• Differences between CMT and other designations (CFA, CFTe, CFTE, etc.)
-• CMT Association membership and benefits
-• Technical analysis concepts from the CMT curriculum (RSI, MACD, Dow Theory, Elliott Wave, Support & Resistance, Moving Averages, Chart Patterns, Volume Analysis, etc.)
-• How to prepare for the CMT exam — study strategies, resources, tips
-• What topics are important for each CMT level
+WHAT YOU ANSWER:
+• CMT exam structure, levels, topic weightings, curriculum
+• Exam format, question count, duration, passing scores, exam windows
+• Eligibility requirements, registration, fees, scheduling
+• Technical analysis concepts that appear in the CMT curriculum
+• Career paths for CMT charterholders
+• How to prepare for the CMT exam
+• Anything else covered in the provided context
 
-TONE & FORMAT:
-• Friendly, confident, and direct
-• Use bullet points for lists
-• Keep responses focused and under 300 words
-• If context material is available, use it as your primary source
-• If unsure, say so and recommend cmtassociation.org for official details
-
-IMPORTANT: Do NOT decline questions about technical analysis concepts — you are trained on the CMT curriculum and should answer them. Only decline completely off-topic questions (politics, cooking, sports, etc.).
-
-For off-topic questions use:
-"I'm the Chartix CMT Exam Bot — I specialise in CMT exam prep and technical analysis. For that topic, you'll need to look elsewhere! For CMT prep, visit chartix.in 🎓"`;
+RULES:
+• Only use information from the CONTEXT section below — do not invent facts
+• If the context does not cover the question, say: "I don't have that information right now. For official details, visit cmtassociation.org or sign up at chartix.in for our full study platform."
+• Be friendly, concise, and use bullet points for lists
+• Keep responses under 300 words`;
 
 function buildSystemPrompt(
-  ragContext: string,
-  manualSources: string,
+  context: string,
   qaPairs: { question: string; answer: string }[],
 ): string {
   let prompt = SYSTEM_BASE;
 
-  // Highest priority: admin-written mandatory Q&A corrections
   if (qaPairs.length > 0) {
     prompt += `
 
@@ -55,26 +40,18 @@ ${qaPairs.map((p, i) => `${i + 1}. Q: ${p.question}\n   A: ${p.answer}`).join('\
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
   }
 
-  // RAG context from CMT study notes (most relevant to user's question)
-  if (ragContext.trim()) {
+  if (context.trim()) {
     prompt += `
 
 ───────────────────────────────────────
-CMT STUDY MATERIAL (from Chartix notes — use as primary source for concept questions):
+CONTEXT (from uploaded CMT documents — use this as your sole knowledge source):
 
-${ragContext}
+${context}
 ───────────────────────────────────────`;
-  }
-
-  // Manual sources (CMT programme facts uploaded by admin)
-  if (manualSources.trim()) {
+  } else {
     prompt += `
 
-───────────────────────────────────────
-OFFICIAL CMT PROGRAMME INFORMATION:
-
-${manualSources.slice(0, 12000)}
-───────────────────────────────────────`;
+No specific context was found for this question. Answer only if you are certain from general CMT knowledge, otherwise direct the user to chartix.in or cmtassociation.org.`;
   }
 
   return prompt;
@@ -84,7 +61,6 @@ type ChatMessage = { role: 'user' | 'assistant'; content: string };
 
 export async function POST(request: Request) {
   try {
-    // Rate limit: 20 messages per IP per hour
     const rl = await enforceRateLimit({
       request,
       key: 'public-chat',
@@ -94,12 +70,7 @@ export async function POST(request: Request) {
 
     if (!rl.allowed) {
       return NextResponse.json(
-        {
-          success: false,
-          error: {
-            message: `You've reached the message limit. Please try again in ${Math.ceil(rl.retryAfterSeconds / 60)} minute(s).`,
-          },
-        },
+        { success: false, error: { message: `You've reached the message limit. Please try again in ${Math.ceil(rl.retryAfterSeconds / 60)} minute(s).` } },
         { status: 429 },
       );
     }
@@ -109,29 +80,16 @@ export async function POST(request: Request) {
     const history: ChatMessage[] = Array.isArray(body.history) ? body.history.slice(-6) : [];
 
     if (!message || message.length < 2) {
-      return NextResponse.json(
-        { success: false, error: { message: 'Message is required' } },
-        { status: 400 },
-      );
+      return NextResponse.json({ success: false, error: { message: 'Message is required' } }, { status: 400 });
     }
 
     if (message.length > 1000) {
-      return NextResponse.json(
-        { success: false, error: { message: 'Message too long (max 1000 characters)' } },
-        { status: 400 },
-      );
+      return NextResponse.json({ success: false, error: { message: 'Message too long (max 1000 characters)' } }, { status: 400 });
     }
 
-    // Load all three knowledge sources in parallel:
-    // 1. RAG vector search (finds most relevant CMT curriculum content)
-    // 2. Manual public bot sources (CMT programme facts)
-    // 3. Admin Q&A corrections (mandatory overrides)
-    const [ragContext, sources, qaPairs] = await Promise.all([
-      buildContext(message, null).catch(() => ''), // vector search across all CMT notes
-      prisma.publicBotSource.findMany({
-        select: { type: true, name: true, content: true },
-        orderBy: { createdAt: 'asc' },
-      }),
+    // Run vector search on uploaded PDFs + load admin Q&A in parallel
+    const [queryEmbedding, qaPairs] = await Promise.all([
+      createEmbedding(message),
       prisma.botQAPair.findMany({
         where: { botType: 'public' },
         select: { question: true, answer: true },
@@ -140,14 +98,17 @@ export async function POST(request: Request) {
       }),
     ]);
 
-    const manualSources = sources
-      .map((s) => `[${s.name}]\n${s.content}`)
+    // Search only public_bot chunks (from your uploaded PDFs)
+    const chunks = await searchPublicBotChunks(queryEmbedding, 8);
+
+    const context = chunks
+      .map((c) => c.content)
       .join('\n\n---\n\n');
 
-    const systemPrompt = buildSystemPrompt(ragContext, manualSources, qaPairs);
+    const systemPrompt = buildSystemPrompt(context, qaPairs);
 
     const stream = await openai.chat.completions.create({
-      model: 'gpt-4o',       // upgraded from gpt-4o-mini — better reasoning
+      model: 'gpt-4o',
       messages: [
         { role: 'system', content: systemPrompt },
         ...history.map((m) => ({ role: m.role, content: m.content })),
@@ -155,7 +116,7 @@ export async function POST(request: Request) {
       ],
       stream: true,
       temperature: 0.3,
-      max_tokens: 800,        // increased from 450
+      max_tokens: 800,
     });
 
     const encoder = new TextEncoder();

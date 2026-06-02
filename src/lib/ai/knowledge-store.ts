@@ -23,7 +23,7 @@ export async function storeChunk(chunk: {
   content: string;
   embedding: number[];
   level?: string | null;
-  sourceType: 'note' | 'pdf';
+  sourceType: 'note' | 'pdf' | 'public_bot';
   sourceId?: string;
   chapterTitle?: string;
   subtopicTitle?: string;
@@ -76,6 +76,25 @@ export async function searchSimilarChunks(
             (1 - (embedding <=> $1::vector))::float AS similarity
      FROM knowledge_chunks
      WHERE (1 - (embedding <=> $1::vector)) > 0.45
+     ORDER BY embedding <=> $1::vector
+     LIMIT $2`,
+    embeddingLiteral,
+    limit,
+  );
+}
+
+// Search ONLY chunks from PDFs uploaded to the homepage bot
+export async function searchPublicBotChunks(
+  queryEmbedding: number[],
+  limit = 8,
+): Promise<KnowledgeChunkResult[]> {
+  const embeddingLiteral = `[${queryEmbedding.join(',')}]`;
+  return prisma.$queryRawUnsafe<KnowledgeChunkResult[]>(
+    `SELECT id::text, content, level, source_type, chapter_title, subtopic_title,
+            (1 - (embedding <=> $1::vector))::float AS similarity
+     FROM knowledge_chunks
+     WHERE source_type = 'public_bot'
+       AND (1 - (embedding <=> $1::vector)) > 0.35
      ORDER BY embedding <=> $1::vector
      LIMIT $2`,
     embeddingLiteral,

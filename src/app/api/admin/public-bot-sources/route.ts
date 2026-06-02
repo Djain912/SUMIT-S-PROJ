@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createRequire } from 'node:module';
 import { AuthError, requireAdminUser } from '@/server/policies/auth';
 import { prisma } from '@/lib/db/prisma';
+import { createEmbedding, storeChunk, deleteChunksBySourceId } from '@/lib/ai/knowledge-store';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
@@ -11,6 +12,38 @@ type PdfParseFunc = (buffer: Buffer) => Promise<{ text: string }>;
 const pdfParse = _require('pdf-parse') as PdfParseFunc;
 
 const MAX_CHARS_PER_SOURCE = 60000;
+const CHUNK_SIZE = 500; // words per chunk
+const CHUNK_OVERLAP = 60;
+
+function chunkText(text: string): string[] {
+  const words = text.split(/\s+/);
+  const chunks: string[] = [];
+  let i = 0;
+  while (i < words.length) {
+    const chunk = words.slice(i, i + CHUNK_SIZE).join(' ');
+    if (chunk.trim().length > 80) chunks.push(chunk);
+    i += CHUNK_SIZE - CHUNK_OVERLAP;
+  }
+  return chunks;
+}
+
+async function embedSource(sourceId: string, name: string, text: string) {
+  // Remove old chunks first (re-upload scenario)
+  await deleteChunksBySourceId(sourceId);
+  const chunks = chunkText(text);
+  for (const chunk of chunks) {
+    try {
+      const embedding = await createEmbedding(`[${name}] ${chunk}`);
+      await storeChunk({
+        content: `[${name}] ${chunk}`,
+        embedding,
+        level: null,
+        sourceType: 'public_bot',
+        sourceId,
+      });
+    } catch { /* skip failed chunk */ }
+  }
+}
 
 function stripHtml(html: string): string {
   return html
@@ -87,6 +120,9 @@ export async function POST(request: Request) {
         data: { type: 'url', name: url, content: text, charCount: text.length },
       });
 
+      // Embed in background so response is instant
+      embedSource(source.id, url, text).catch((e) => console.error('[public-bot embed url]', e));
+
       return NextResponse.json({ success: true, data: { id: source.id, name: url, charCount: text.length } });
     }
 
@@ -112,9 +148,13 @@ export async function POST(request: Request) {
       const text = pdf.text.slice(0, MAX_CHARS_PER_SOURCE);
       if (!text.trim()) continue;
 
-      await prisma.publicBotSource.create({
+      const saved = await prisma.publicBotSource.create({
         data: { type: 'pdf', name: f.name, content: text, charCount: text.length },
       });
+
+      // Embed in background
+      embedSource(saved.id, f.name, text).catch((e) => console.error('[public-bot embed pdf]', e));
+
       results.push({ name: f.name, charCount: text.length });
     }
 
@@ -138,6 +178,8 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: false, error: { message: 'id is required' } }, { status: 400 });
     }
     await prisma.publicBotSource.delete({ where: { id } });
+    // Remove from vector store too
+    deleteChunksBySourceId(id).catch((e) => console.error('[public-bot delete chunks]', e));
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof AuthError) {
