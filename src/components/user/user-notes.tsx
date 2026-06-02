@@ -400,7 +400,7 @@ export function UserNotesClient() {
                   <div className="prose prose-zinc protected-content relative z-20 min-w-0 w-full max-w-none flex-1">
                     <h2 className="text-xl font-semibold text-zinc-900 break-words">{selectedNote.title}</h2>
                     <div
-                      className="note-content mt-4 max-w-full overflow-x-auto text-zinc-700 break-words"
+                      className="note-content mt-4 max-w-full overflow-x-auto text-zinc-700"
                       dangerouslySetInnerHTML={{
                         __html: selectedNoteHtml,
                       }}

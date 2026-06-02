@@ -53,9 +53,8 @@ button {
 
 /* Rich text content styling - responsive and properly formatted */
 .prose {
-  word-wrap: break-word;
   overflow-wrap: break-word;
-  word-break: break-word;
+  word-break: normal;
   max-width: 100%;
 }
 
@@ -108,12 +107,13 @@ button {
   text-align: left;
   display: table-cell !important;
   vertical-align: top;
-  /* Override inline widths */
+  /* Override inline widths — never let a cell go too narrow */
   width: auto !important;
-  min-width: 120px;
-  white-space: normal;
-  word-break: normal;
-  overflow-wrap: break-word;
+  min-width: 180px !important;
+  max-width: none !important;
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
 }
 
 .prose table th {
