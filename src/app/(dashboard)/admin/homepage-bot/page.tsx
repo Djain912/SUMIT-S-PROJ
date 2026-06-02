@@ -32,7 +32,7 @@ export default async function HomepageBotPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-950">Homepage Bot</h1>
           <p className="mt-1 text-sm text-zinc-500">
-            Manage the public CMT Exam Assistant that appears on the homepage. Feed it with CMT curriculum PDFs and official links — it answers exam-info questions only (no concept explanations).
+            Manage the public CMT Exam Bot that appears on the homepage. Upload PDFs here — the bot learns exclusively from these documents using RAG (semantic search). Uses GPT-4o for accurate, context-aware answers.
           </p>
         </div>
       </div>
@@ -53,8 +53,8 @@ export default async function HomepageBotPage() {
         </div>
         <div className="rounded-2xl border border-zinc-200 bg-white p-5">
           <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400">Model</p>
-          <p className="mt-2 text-xl font-bold text-zinc-950">GPT-4o mini</p>
-          <p className="mt-1 text-xs text-zinc-500">15 messages / IP / hour rate limit</p>
+          <p className="mt-2 text-xl font-bold text-zinc-950">GPT-4o</p>
+          <p className="mt-1 text-xs text-zinc-500">20 messages / IP / hour rate limit</p>
         </div>
       </div>
 
