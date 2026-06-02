@@ -1,68 +1,94 @@
 import { NextResponse } from 'next/server';
 import { openai } from '@/lib/ai/openai';
 import { prisma } from '@/lib/db/prisma';
+import { buildContext } from '@/lib/ai/rag';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
-// ── System prompt ──────────────────────────────────────────────────────────
-const SYSTEM_BASE = `You are the CMT Exam Info Assistant on Chartix.in — a friendly, concise guide for people curious about the CMT (Chartered Market Technician) designation and exam.
+// ── System prompt ────────────────────────────────────────────────────────────
+const SYSTEM_BASE = `You are the Chartix CMT Exam Bot — a knowledgeable and friendly assistant for students and professionals exploring the CMT (Chartered Market Technician) designation.
 
-WHAT YOU ANSWER:
-• CMT exam structure — how many levels, what each level covers, topic weightings
-• CMT curriculum chapters and key subject areas per level
+You have two knowledge sources available:
+1. OFFICIAL CMT INFORMATION — facts about the CMT programme, exam structure, fees, eligibility, careers
+2. CMT STUDY MATERIAL — actual curriculum content from Chartix notes (technical analysis concepts, chart patterns, indicators, etc.)
+
+WHAT YOU ANSWER (answer all of these confidently):
+• CMT exam structure — number of levels, what each covers, topic weightings
+• CMT curriculum chapters and subject areas per level
 • Exam format — question count, duration, passing scores, exam windows
 • Eligibility and experience requirements for the CMT charter
 • Registration process, exam fees, scheduling
 • Career paths and job roles for CMT charterholders
-• Differences between CMT and other designations (CFA, CFTe, etc.)
+• Differences between CMT and other designations (CFA, CFTe, CFTE, etc.)
 • CMT Association membership and benefits
+• Technical analysis concepts from the CMT curriculum (RSI, MACD, Dow Theory, Elliott Wave, Support & Resistance, Moving Averages, Chart Patterns, Volume Analysis, etc.)
+• How to prepare for the CMT exam — study strategies, resources, tips
+• What topics are important for each CMT level
 
-WHAT YOU DECLINE (with a helpful redirect):
-• Concept explanations like "What is RSI?", "Explain Dow Theory", "How does MACD work?"
-• Study help or question-solving
-• Anything unrelated to the CMT examination process
+TONE & FORMAT:
+• Friendly, confident, and direct
+• Use bullet points for lists
+• Keep responses focused and under 300 words
+• If context material is available, use it as your primary source
+• If unsure, say so and recommend cmtassociation.org for official details
 
-DECLINE TEMPLATE (use exactly this when declining):
-"I'm the CMT Exam Info Assistant — I can tell you about exam structure, fees, eligibility, and careers. For concept explanations and practice questions, sign up at chartix.in — we have full CMT study notes and 1000+ practice questions! 🎓"
+IMPORTANT: Do NOT decline questions about technical analysis concepts — you are trained on the CMT curriculum and should answer them. Only decline completely off-topic questions (politics, cooking, sports, etc.).
 
-TONE: Friendly, direct, and concise. Use bullet points for lists. Keep responses under 200 words. Do not make up facts — if you don't know something, say so and suggest checking the official CMT Association website (cmtassociation.org).`;
+For off-topic questions use:
+"I'm the Chartix CMT Exam Bot — I specialise in CMT exam prep and technical analysis. For that topic, you'll need to look elsewhere! For CMT prep, visit chartix.in 🎓"`;
 
-function buildSystemPrompt(context: string, qaPairs: { question: string; answer: string }[]): string {
+function buildSystemPrompt(
+  ragContext: string,
+  manualSources: string,
+  qaPairs: { question: string; answer: string }[],
+): string {
   let prompt = SYSTEM_BASE;
 
-  // Inject admin-written Q&A corrections (highest priority — always use these)
+  // Highest priority: admin-written mandatory Q&A corrections
   if (qaPairs.length > 0) {
     prompt += `
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-MANDATORY FACTS — use these EXACT answers for these questions (highest priority):
+MANDATORY FACTS — always use these exact answers:
 ${qaPairs.map((p, i) => `${i + 1}. Q: ${p.question}\n   A: ${p.answer}`).join('\n\n')}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
   }
 
-  if (!context.trim()) return prompt;
-
-  return `${prompt}
+  // RAG context from CMT study notes (most relevant to user's question)
+  if (ragContext.trim()) {
+    prompt += `
 
 ───────────────────────────────────────
-OFFICIAL CMT INFORMATION (use as your primary source):
+CMT STUDY MATERIAL (from Chartix notes — use as primary source for concept questions):
 
-${context.slice(0, 55000)}
+${ragContext}
+───────────────────────────────────────`;
+  }
+
+  // Manual sources (CMT programme facts uploaded by admin)
+  if (manualSources.trim()) {
+    prompt += `
+
 ───────────────────────────────────────
+OFFICIAL CMT PROGRAMME INFORMATION:
 
-Always ground your answers in the above material. You may supplement with general CMT knowledge but stay factual.`;
+${manualSources.slice(0, 12000)}
+───────────────────────────────────────`;
+  }
+
+  return prompt;
 }
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string };
 
 export async function POST(request: Request) {
   try {
-    // Rate limit: 15 messages per IP per hour
+    // Rate limit: 20 messages per IP per hour
     const rl = await enforceRateLimit({
       request,
       key: 'public-chat',
-      maxRequests: 15,
+      maxRequests: 20,
       windowMs: 60 * 60 * 1000,
     });
 
@@ -89,15 +115,19 @@ export async function POST(request: Request) {
       );
     }
 
-    if (message.length > 500) {
+    if (message.length > 1000) {
       return NextResponse.json(
-        { success: false, error: { message: 'Message too long (max 500 characters)' } },
+        { success: false, error: { message: 'Message too long (max 1000 characters)' } },
         { status: 400 },
       );
     }
 
-    // Load knowledge sources + admin Q&A corrections in parallel
-    const [sources, qaPairs] = await Promise.all([
+    // Load all three knowledge sources in parallel:
+    // 1. RAG vector search (finds most relevant CMT curriculum content)
+    // 2. Manual public bot sources (CMT programme facts)
+    // 3. Admin Q&A corrections (mandatory overrides)
+    const [ragContext, sources, qaPairs] = await Promise.all([
+      buildContext(message, null).catch(() => ''), // vector search across all CMT notes
       prisma.publicBotSource.findMany({
         select: { type: true, name: true, content: true },
         orderBy: { createdAt: 'asc' },
@@ -110,20 +140,22 @@ export async function POST(request: Request) {
       }),
     ]);
 
-    const context = sources
-      .map((s) => `[Source: ${s.name}]\n${s.content}`)
+    const manualSources = sources
+      .map((s) => `[${s.name}]\n${s.content}`)
       .join('\n\n---\n\n');
 
+    const systemPrompt = buildSystemPrompt(ragContext, manualSources, qaPairs);
+
     const stream = await openai.chat.completions.create({
-      model: 'gpt-4o-mini', // cheaper for public, no auth required
+      model: 'gpt-4o',       // upgraded from gpt-4o-mini — better reasoning
       messages: [
-        { role: 'system', content: buildSystemPrompt(context, qaPairs) },
+        { role: 'system', content: systemPrompt },
         ...history.map((m) => ({ role: m.role, content: m.content })),
         { role: 'user', content: message },
       ],
       stream: true,
       temperature: 0.3,
-      max_tokens: 450,
+      max_tokens: 800,        // increased from 450
     });
 
     const encoder = new TextEncoder();
