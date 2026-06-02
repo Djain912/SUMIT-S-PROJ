@@ -1,7 +1,50 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+
+function normalizeNoteHtml(html: string): string {
+  if (typeof window === 'undefined' || !html) return html;
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+
+  // Insert zero-width spaces in very long unbroken tokens (e.g. URLs)
+  const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
+  const textNodes: Text[] = [];
+  while (walker.nextNode()) textNodes.push(walker.currentNode as Text);
+  textNodes.forEach((node) => {
+    node.nodeValue = node.nodeValue?.replace(/(\S{28})(?=\S)/g, '$1​') ?? '';
+  });
+
+  // Fix table widths — remove all inline widths that cause narrow columns
+  doc.body.querySelectorAll('table').forEach((t) => {
+    const table = t as HTMLTableElement;
+    table.style.borderCollapse = 'collapse';
+    table.style.width = '100%';
+    table.style.tableLayout = 'auto';
+    table.removeAttribute('width');
+    table.removeAttribute('height');
+  });
+
+  doc.body.querySelectorAll('col, colgroup').forEach((el) => {
+    (el as HTMLElement).removeAttribute('width');
+    (el as HTMLElement).style.width = 'auto';
+  });
+
+  doc.body.querySelectorAll('th, td').forEach((cell) => {
+    const c = cell as HTMLTableCellElement;
+    c.style.border = '1px solid #d4d4d8';
+    c.style.padding = '0.75rem';
+    c.style.width = 'auto';
+    c.style.minWidth = '160px';
+    c.style.maxWidth = 'none';
+    c.style.wordBreak = 'normal';
+    c.style.overflowWrap = 'break-word';
+    c.style.whiteSpace = 'normal';
+    c.removeAttribute('width');
+  });
+
+  return doc.body.innerHTML;
+}
 import { AdminLevelTabs, type AdminLevel } from '@/components/admin/admin-level-tabs';
 import { TinyMceEditor } from '@/components/admin/tinymce-editor';
 import { DEFAULT_WATERMARK_CONFIG, sanitizeWatermarkConfig, type WatermarkConfig, type WatermarkPosition } from '@/lib/utils/watermark';
@@ -100,6 +143,16 @@ async function saveOrUpdateNote(id: string | null, data: Record<string, unknown>
     body: JSON.stringify(data),
   });
   return res.json();
+}
+
+function NotePreview({ html }: { html: string }) {
+  const clean = useMemo(() => normalizeNoteHtml(html), [html]);
+  return (
+    <div
+      className="prose prose-zinc w-full max-w-none"
+      dangerouslySetInnerHTML={{ __html: clean }}
+    />
+  );
 }
 
 export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: Level }) {
@@ -478,10 +531,7 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
                   </button>
                 </div>
               </div>
-              <div
-                className="prose prose-zinc w-full max-w-none break-words"
-                dangerouslySetInnerHTML={{ __html: selectedNote.contentHtml || '' }}
-              />
+              <NotePreview html={selectedNote.contentHtml || ''} />
             </div>
           ) : null}
         </div>
