@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo, type CSSProperties } from 'r
 import Link from 'next/link';
 import { Flag, AlertTriangle } from 'lucide-react';
 import { sanitizeWatermarkConfig } from '@/lib/utils/watermark';
+import { normalizeNoteHtml } from '@/lib/utils/note-html';
 
 type Note = {
   id: string;
@@ -62,56 +63,6 @@ function extractTextFromRichJson(input: unknown): string {
   return `${text} ${childText}`.trim();
 }
 
-function normalizeNoteHtml(html: string): string {
-  if (typeof window === 'undefined' || !html) return html;
-
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
-  const longToken = /(\S{28})(?=\S)/g;
-  const textNodes: Text[] = [];
-
-  while (walker.nextNode()) {
-    textNodes.push(walker.currentNode as Text);
-  }
-
-  textNodes.forEach((node) => {
-    node.nodeValue = node.nodeValue?.replace(longToken, '$1\u200B') ?? '';
-  });
-
-  doc.body.querySelectorAll('table').forEach((table) => {
-    const htmlTable = table as HTMLTableElement;
-    htmlTable.style.borderCollapse = 'collapse';
-    htmlTable.style.borderSpacing = '0';
-    htmlTable.style.border = '1px solid #d4d4d8';
-    htmlTable.style.width = '100%';
-    htmlTable.style.tableLayout = 'auto';
-    // Remove fixed width/height attributes that cause narrow columns
-    htmlTable.removeAttribute('width');
-    htmlTable.removeAttribute('height');
-  });
-
-  // Strip width from col/colgroup so browser calculates widths naturally
-  doc.body.querySelectorAll('col, colgroup').forEach((col) => {
-    (col as HTMLElement).removeAttribute('width');
-    (col as HTMLElement).style.width = 'auto';
-  });
-
-  doc.body.querySelectorAll('th, td').forEach((cell) => {
-    const htmlCell = cell as HTMLTableCellElement;
-    htmlCell.style.border = '1px solid #d4d4d8';
-    htmlCell.style.padding = '0.75rem';
-    // Remove any fixed width — this is the main cause of word-breaking
-    htmlCell.style.width = 'auto';
-    htmlCell.style.minWidth = '160px';
-    htmlCell.style.maxWidth = 'none';
-    htmlCell.style.wordBreak = 'normal';
-    htmlCell.style.overflowWrap = 'break-word';
-    htmlCell.style.whiteSpace = 'normal';
-    htmlCell.removeAttribute('width');
-  });
-
-  return doc.body.innerHTML;
-}
 
 async function apiJson<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, {
