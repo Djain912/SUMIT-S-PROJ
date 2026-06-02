@@ -80,15 +80,34 @@ function normalizeNoteHtml(html: string): string {
 
   doc.body.querySelectorAll('table').forEach((table) => {
     const htmlTable = table as HTMLTableElement;
-    htmlTable.style.borderCollapse = 'separate';
+    htmlTable.style.borderCollapse = 'collapse';
     htmlTable.style.borderSpacing = '0';
     htmlTable.style.border = '1px solid #d4d4d8';
+    htmlTable.style.width = '100%';
+    htmlTable.style.tableLayout = 'auto';
+    // Remove fixed width/height attributes that cause narrow columns
+    htmlTable.removeAttribute('width');
+    htmlTable.removeAttribute('height');
+  });
+
+  // Strip width from col/colgroup so browser calculates widths naturally
+  doc.body.querySelectorAll('col, colgroup').forEach((col) => {
+    (col as HTMLElement).removeAttribute('width');
+    (col as HTMLElement).style.width = 'auto';
   });
 
   doc.body.querySelectorAll('th, td').forEach((cell) => {
     const htmlCell = cell as HTMLTableCellElement;
     htmlCell.style.border = '1px solid #d4d4d8';
-    htmlCell.style.padding = htmlCell.style.padding || '0.75rem';
+    htmlCell.style.padding = '0.75rem';
+    // Remove any fixed width — this is the main cause of word-breaking
+    htmlCell.style.width = 'auto';
+    htmlCell.style.minWidth = '160px';
+    htmlCell.style.maxWidth = 'none';
+    htmlCell.style.wordBreak = 'normal';
+    htmlCell.style.overflowWrap = 'break-word';
+    htmlCell.style.whiteSpace = 'normal';
+    htmlCell.removeAttribute('width');
   });
 
   return doc.body.innerHTML;
