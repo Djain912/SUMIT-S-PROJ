@@ -156,25 +156,23 @@ export function HomepageBotClient({ initialSources, initialTotalChars }: {
     }
   };
 
-  const contextPercent = Math.min(100, Math.round((totalChars / 60000) * 100));
-
   return (
     <div className="space-y-6">
 
-      {/* Context meter */}
+      {/* Knowledge status */}
       <div className="rounded-2xl border border-zinc-200 bg-white p-5">
         <div className="flex items-end justify-between mb-2">
-          <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400">Context Size</p>
-          <p className="text-sm font-semibold text-zinc-700">{formatK(totalChars)} / 60k chars</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400">Knowledge Base</p>
+          <p className="text-sm font-semibold text-zinc-700">{formatK(totalChars)} chars stored</p>
         </div>
         <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-100">
           <div
             className="h-2 rounded-full bg-emerald-500 transition-all duration-500"
-            style={{ width: `${contextPercent}%` }}
+            style={{ width: sources.length > 0 ? '100%' : '0%' }}
           />
         </div>
         <p className="mt-2 text-xs text-zinc-400">
-          {sources.length} source{sources.length !== 1 ? 's' : ''} · Bot uses up to 60k characters of context per conversation
+          {sources.length} PDF{sources.length !== 1 ? 's' : ''} embedded · Bot uses RAG semantic search — only the most relevant sections are sent per question
         </p>
       </div>
 
