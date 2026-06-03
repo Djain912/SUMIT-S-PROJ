@@ -197,6 +197,10 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
   const [sortOrder, setSortOrder] = useState<SortOrder>('NEWEST');
   const [bulkDeleting, setBulkDeleting] = useState(false);
 
+  // ── Checkbox selection state ──────────────────────────────────────────────
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [checkboxDeleting, setCheckboxDeleting] = useState(false);
+
   // ── AI Generator state ────────────────────────────────────────────────────
   const [showAiPanel, setShowAiPanel] = useState(false);
   const [aiCount, setAiCount] = useState(30);
@@ -243,6 +247,7 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
   }, [level]);
 
   useEffect(() => {
+    setSelectedIds(new Set());
     if (selectedSubtopic) {
       fetchQuestions(selectedSubtopic).then(setQuestions);
     } else {
@@ -301,6 +306,29 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
     published: allSubtopicQuestions.filter(q => q.isPublished).length,
     unpublished: allSubtopicQuestions.filter(q => !q.isPublished).length,
   }), [allSubtopicQuestions]);
+
+  async function handleCheckboxDelete() {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(`Delete ${selectedIds.size} selected question${selectedIds.size > 1 ? 's' : ''}? This cannot be undone.`)) return;
+    setCheckboxDeleting(true);
+    try {
+      for (const id of selectedIds) {
+        await fetch(`/api/admin/questions/${id}`, { method: 'DELETE' });
+      }
+      setSelectedIds(new Set());
+      questionsInFlight.delete(selectedSubtopic);
+      const fresh = await fetchQuestions(selectedSubtopic);
+      setQuestions(fresh);
+      if (selectedQuestion && selectedIds.has(selectedQuestion.id)) {
+        setSelectedQuestion(null);
+        setIsEditing(false);
+        setEditingQuestionId(null);
+      }
+      router.refresh();
+    } finally {
+      setCheckboxDeleting(false);
+    }
+  }
 
   async function handleBulkDelete() {
     const toDelete = subtopicQuestions;
@@ -776,24 +804,85 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
                   )}
                 </div>
               )}
-              <div className="mt-2 space-y-2">
-                {subtopicQuestions.map((question) => (
+              {/* Select-all + delete toolbar */}
+              <div className="mt-2 mb-1 flex items-center justify-between gap-2">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    className="h-3.5 w-3.5 rounded border-zinc-300 accent-emerald-600"
+                    checked={subtopicQuestions.length > 0 && selectedIds.size === subtopicQuestions.length}
+                    ref={el => { if (el) el.indeterminate = selectedIds.size > 0 && selectedIds.size < subtopicQuestions.length; }}
+                    onChange={e => {
+                      if (e.target.checked) setSelectedIds(new Set(subtopicQuestions.map(q => q.id)));
+                      else setSelectedIds(new Set());
+                    }}
+                  />
+                  <span className="text-[11px] text-zinc-500">
+                    {selectedIds.size > 0 ? `${selectedIds.size} selected` : 'Select all'}
+                  </span>
+                </label>
+                {selectedIds.size > 0 && (
                   <button
-                    key={question.id}
                     type="button"
-                    onClick={() => loadQuestionIntoEditor(question)}
-                    className={`w-full rounded-xl border px-3 py-3 text-left text-sm transition ${
-                      selectedQuestion?.id === question.id ? 'border-blue-600 bg-blue-50' : 'border-zinc-200 hover:bg-zinc-50'
+                    onClick={() => void handleCheckboxDelete()}
+                    disabled={checkboxDeleting}
+                    className="flex items-center gap-1 rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                    {checkboxDeleting ? 'Deleting…' : `Delete ${selectedIds.size}`}
+                  </button>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                {subtopicQuestions.map((question) => (
+                  <div
+                    key={question.id}
+                    className={`flex items-start gap-2 w-full rounded-xl border px-2.5 py-2.5 text-left text-sm transition ${
+                      selectedIds.has(question.id)
+                        ? 'border-emerald-400 bg-emerald-50'
+                        : selectedQuestion?.id === question.id
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-zinc-200 hover:bg-zinc-50'
                     }`}
                   >
-                    <span className="block truncate font-medium text-zinc-950">
-                      {extractTextFromRichJson(question.promptJson).slice(0, 60) || 'Question'}
+                    {/* Checkbox */}
+                    <input
+                      type="checkbox"
+                      className="mt-1 h-3.5 w-3.5 shrink-0 rounded border-zinc-300 accent-emerald-600 cursor-pointer"
+                      checked={selectedIds.has(question.id)}
+                      onChange={e => {
+                        e.stopPropagation();
+                        setSelectedIds(prev => {
+                          const next = new Set(prev);
+                          if (e.target.checked) next.add(question.id);
+                          else next.delete(question.id);
+                          return next;
+                        });
+                      }}
+                    />
+                    {/* Question text — click to open */}
+                    <button
+                      type="button"
+                      className="flex-1 min-w-0 text-left"
+                      onClick={() => loadQuestionIntoEditor(question)}
+                    >
+                    <span className="block truncate font-medium text-zinc-950 text-xs">
+                      {extractTextFromRichJson(question.promptJson).slice(0, 55) || 'Question'}
                     </span>
-                    <span className="mt-1 block text-xs text-zinc-500">
-                      {question.questionType} · {question.difficulty}
-                      {question.isPublished && ' · Published'}
+                    <span className="mt-0.5 flex items-center gap-1.5 text-[10px] text-zinc-400">
+                      <span className={`rounded-full px-1.5 py-0 font-semibold ${
+                        question.difficulty === 'EASY' ? 'bg-blue-100 text-blue-700' :
+                        question.difficulty === 'MEDIUM' ? 'bg-orange-100 text-orange-700' :
+                        'bg-red-100 text-red-700'
+                      }`}>{question.difficulty}</span>
+                      {question.isPublished
+                        ? <span className="text-green-600">✓ Published</span>
+                        : <span className="text-amber-500">⏸ Draft</span>
+                      }
                     </span>
-                  </button>
+                    </button>
+                  </div>
                 ))}
               </div>
             </div>
