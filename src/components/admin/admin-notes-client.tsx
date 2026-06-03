@@ -139,6 +139,17 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Holds the note ID created during auto-save (for new notes not yet manually saved)
   const autoSavedNoteId = useRef<string | null>(null);
+  // Ref mirrors isEditing so auto-save timer can check without stale closure
+  const isEditingRef = useRef(false);
+  // Ref mirrors editingNoteId so auto-save timer can read latest value
+  const editingNoteIdRef = useRef<string | null>(null);
+  // Ref mirrors editTitle so auto-save reads the latest title without stale closures
+  const editTitleRef = useRef('');
+
+  // Keep refs in sync with state so the debounce timer always reads current values
+  useEffect(() => { isEditingRef.current = isEditing; }, [isEditing]);
+  useEffect(() => { editingNoteIdRef.current = editingNoteId; }, [editingNoteId]);
+  useEffect(() => { editTitleRef.current = editTitle; }, [editTitle]);
 
   useEffect(() => {
     fetchChapters(level).then(setChapters);
@@ -166,76 +177,105 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
 
   const selectedChapterData = chapters.find(c => c.id === selectedChapter);
 
-  // ── Auto-save function (always saves as draft/unpublished) ────────────────
-  const performAutoSave = useCallback(async () => {
-    if (!selectedSubtopic || !editTitle.trim()) return;
-    const currentHtml = editorContentRef.current;
-
-    setAutoSaveStatus('saving');
-    try {
-      const noteId = editingNoteId ?? autoSavedNoteId.current;
-
-      if (noteId) {
-        // Update existing note
-        const res = await fetch(`/api/admin/notes/${noteId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title: editTitle.trim(),
-            contentHtml: currentHtml,
-            isPublished: false, // always draft on auto-save
-            watermarkConfig: editWatermark,
-          }),
-        });
-        const result = await res.json();
-        if (result.data) {
-          const saved: Note = result.data;
-          setNotes(prev => prev.map(n => n.id === noteId ? saved : n));
-          if (!editingNoteId) setSelectedNote(saved);
-        }
-      } else {
-        // Create new note for the first time
-        const res = await fetch('/api/admin/notes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            subtopicId: selectedSubtopic,
-            title: editTitle.trim(),
-            contentHtml: currentHtml,
-            orderIndex: notes.length,
-            isPublished: false,
-            watermarkConfig: editWatermark,
-          }),
-        });
-        const result = await res.json();
-        if (result.data) {
-          const saved: Note = result.data;
-          autoSavedNoteId.current = saved.id;
-          setNotes(prev => {
-            const exists = prev.find(n => n.id === saved.id);
-            return exists ? prev.map(n => n.id === saved.id ? saved : n) : [...prev, saved];
+  // ── Core draft save (explicit args — never reads mutable refs at fire time) ─
+  // `adopt` = true: this is the active note, update editor state to track it.
+  // `adopt` = false: we're flushing an outgoing note before switching — persist
+  //                  it but DON'T touch the current editor state.
+  const saveDraftExplicit = useCallback(
+    async (noteId: string | null, title: string, html: string, watermark: WatermarkConfig, adopt: boolean) => {
+      if (!selectedSubtopic || !title.trim()) return;
+      if (adopt) setAutoSaveStatus('saving');
+      try {
+        if (noteId) {
+          const res = await fetch(`/api/admin/notes/${noteId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: title.trim(), contentHtml: html, isPublished: false, watermarkConfig: watermark }),
           });
-          setSelectedNote(saved);
+          const result = await res.json();
+          if (result.data) {
+            const saved: Note = result.data;
+            setNotes(prev => prev.map(n => (n.id === noteId ? saved : n)));
+            if (adopt) setSelectedNote(prev => (prev && prev.id === noteId ? saved : prev));
+          }
+        } else {
+          const res = await fetch('/api/admin/notes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              subtopicId: selectedSubtopic,
+              title: title.trim(),
+              contentHtml: html,
+              orderIndex: notes.length,
+              isPublished: false,
+              watermarkConfig: watermark,
+            }),
+          });
+          const result = await res.json();
+          if (result.data) {
+            const saved: Note = result.data;
+            setNotes(prev => {
+              const exists = prev.find(n => n.id === saved.id);
+              return exists ? prev.map(n => (n.id === saved.id ? saved : n)) : [...prev, saved];
+            });
+            if (adopt) {
+              autoSavedNoteId.current = saved.id;
+              editingNoteIdRef.current = saved.id;
+              setEditingNoteId(saved.id);
+              setSelectedNote(saved);
+            }
+          }
         }
+        if (adopt) {
+          setAutoSaveStatus('saved');
+          setAutoSavedAt(new Date());
+        }
+        notesInFlight.delete(selectedSubtopic);
+      } catch {
+        if (adopt) setAutoSaveStatus('error');
       }
+    },
+    [selectedSubtopic, notes.length],
+  );
 
-      setAutoSaveStatus('saved');
-      setAutoSavedAt(new Date());
-      notesInFlight.delete(selectedSubtopic);
-    } catch {
-      setAutoSaveStatus('error');
-    }
-  }, [selectedSubtopic, editTitle, editingNoteId, editWatermark, notes.length]);
+  // Auto-save the note currently in the editor (reads live refs — safe because
+  // we cancel/flush this timer on every note switch)
+  const performAutoSave = useCallback(() => {
+    return saveDraftExplicit(
+      editingNoteIdRef.current ?? autoSavedNoteId.current,
+      editTitleRef.current,
+      editorContentRef.current,
+      editWatermark,
+      true,
+    );
+  }, [saveDraftExplicit, editWatermark]);
 
   // Trigger debounced auto-save when title or content changes
   const scheduleAutoSave = useCallback(() => {
-    if (!isEditing) return;
+    if (!isEditingRef.current) return;
     setAutoSaveStatus('dirty');
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
     autoSaveTimer.current = setTimeout(() => {
       void performAutoSave();
     }, 3000); // 3 seconds after last change
-  }, [isEditing, performAutoSave]);
+  }, [performAutoSave]);
+
+  // Flush any pending changes of the OUTGOING note BEFORE switching away.
+  // Captures values synchronously so the later async save can't be corrupted
+  // by the editor being loaded with a different note's content.
+  const flushPendingAutoSave = useCallback(() => {
+    if (autoSaveTimer.current) {
+      clearTimeout(autoSaveTimer.current);
+      autoSaveTimer.current = null;
+    }
+    // Only flush if there were genuinely unsaved changes
+    if (autoSaveStatus !== 'dirty') return;
+    const noteId = editingNoteIdRef.current ?? autoSavedNoteId.current;
+    const title = editTitleRef.current;
+    const html = editorContentRef.current;
+    if (!title.trim()) return;
+    void saveDraftExplicit(noteId, title, html, editWatermark, false);
+  }, [autoSaveStatus, saveDraftExplicit, editWatermark]);
 
   // Warn user if they try to close tab with unsaved changes
   useEffect(() => {
@@ -320,11 +360,15 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
         <AdminLevelTabs
           selectedLevel={level}
           onLevelChange={(nextLevel) => {
+            flushPendingAutoSave();
+            resetAutoSave();
             setLevel(nextLevel);
             setSelectedChapter('');
             setSelectedSubtopic('');
             setNotes([]);
             setSelectedNote(null);
+            setIsEditing(false);
+            setEditingNoteId(null);
           }}
         />
       </div>
@@ -336,10 +380,14 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
             <select
               value={selectedChapter}
               onChange={(e) => {
+                flushPendingAutoSave();
+                resetAutoSave();
                 setSelectedChapter(e.target.value);
                 setSelectedSubtopic('');
                 setNotes([]);
                 setSelectedNote(null);
+                setIsEditing(false);
+                setEditingNoteId(null);
               }}
               className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
             >
@@ -356,7 +404,14 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
             <label className="block text-sm font-medium text-zinc-700">Subtopic</label>
             <select
               value={selectedSubtopic}
-              onChange={(e) => setSelectedSubtopic(e.target.value)}
+              onChange={(e) => {
+                flushPendingAutoSave();
+                resetAutoSave();
+                setSelectedSubtopic(e.target.value);
+                setSelectedNote(null);
+                setIsEditing(false);
+                setEditingNoteId(null);
+              }}
               className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
             >
               <option value="">Select subtopic</option>
@@ -376,13 +431,17 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
                 </label>
                 <button
                   onClick={() => {
+                    flushPendingAutoSave();
+                    resetAutoSave();
                     setSelectedNote(null);
                     setEditTitle('');
+                    editTitleRef.current = '';
                     loadContent('');
                     setEditPublished(false);
                     setEditWatermark(DEFAULT_WATERMARK_CONFIG);
                     setIsEditing(true);
                     setEditingNoteId(null);
+                    editingNoteIdRef.current = null;
                   }}
                   className="rounded-md bg-zinc-950 px-2.5 py-1 text-xs font-semibold text-white hover:bg-zinc-700"
                 >
@@ -395,13 +454,19 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
                     <button
                       key={note.id}
                       onClick={() => {
+                        // Save any unsaved edits to the OUTGOING note first (captures
+                        // its content synchronously before we overwrite the editor)
+                        flushPendingAutoSave();
+                        resetAutoSave();
                         setSelectedNote(note);
                         setEditTitle(note.title);
+                        editTitleRef.current = note.title;
                         loadContent(note.contentHtml || '');
                         setEditPublished(note.isPublished);
                         setEditWatermark(sanitizeWatermarkConfig(note.watermarkConfig));
                         setIsEditing(false);
                         setEditingNoteId(null);
+                        editingNoteIdRef.current = null;
                       }}
                       className={`w-full rounded-lg border px-3 py-2 text-left text-sm ${
                         selectedNote?.id === note.id
@@ -606,12 +671,16 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
                 <div className="flex gap-2">
                   <button
                     onClick={() => {
+                      resetAutoSave();
                       setEditTitle(selectedNote.title);
+                      editTitleRef.current = selectedNote.title;
                       loadContent(selectedNote.contentHtml || '');
                       setEditPublished(selectedNote.isPublished);
                       setEditWatermark(sanitizeWatermarkConfig(selectedNote.watermarkConfig));
                       setIsEditing(true);
+                      isEditingRef.current = true;
                       setEditingNoteId(selectedNote.id);
+                      editingNoteIdRef.current = selectedNote.id;
                     }}
                     className="text-sm font-medium text-zinc-600 hover:text-zinc-950"
                   >
