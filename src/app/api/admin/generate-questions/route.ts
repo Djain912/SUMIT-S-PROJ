@@ -28,7 +28,7 @@ async function generateBatch(
   const response = await openai.chat.completions.create({
     model: 'gpt-4o',
     response_format: { type: 'json_object' },
-    temperature: 0.75,
+    temperature: 0.85,
     max_tokens: 4096,
     messages: [
       { role: 'system', content: systemPrompt },
@@ -56,8 +56,8 @@ export async function POST(request: Request) {
     const subtopicId = (formData.get('subtopicId') as string | null)?.trim();
     const chapterId = (formData.get('chapterId') as string | null)?.trim();
     const level = (formData.get('level') as string | null)?.trim();
-    const rawCount = parseInt((formData.get('count') as string | null) ?? '50', 10);
-    const count = Math.min(100, Math.max(5, isNaN(rawCount) ? 50 : rawCount));
+    const rawCount = parseInt((formData.get('count') as string | null) ?? '30', 10);
+    const count = Math.min(100, Math.max(5, isNaN(rawCount) ? 30 : rawCount));
     const pdfFile = formData.get('pdf') as File | null;
 
     if (!subtopicId || !chapterId || !level) {
@@ -115,54 +115,91 @@ export async function POST(request: Request) {
 
     const levelLabel = level.replace('_', ' ').replace('LEVEL', 'Level');
 
-    const systemPrompt = `You are a senior CMT (Chartered Market Technician) exam question writer with 15+ years of experience writing questions for the official CMT examination. You write questions that appear on the actual CMT ${levelLabel} exam.
+    const systemPrompt = `You are a senior CMT (Chartered Market Technician) exam question writer with 15+ years of experience creating questions for the official CMT Level I, II, and III examinations. Your questions appear on real CMT exams. Every question you write must be publication-ready.
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 OUTPUT FORMAT — return ONLY valid JSON, no markdown, no extra text:
 {
   "questions": [
     {
-      "prompt": "Full question text",
-      "options": ["Option A text", "Option B text", "Option C text", "Option D text"],
+      "prompt": "Full question text here",
+      "options": ["Option A — complete statement", "Option B — complete statement", "Option C — complete statement", "Option D — complete statement"],
       "correctIndex": 0,
       "difficulty": "EASY",
-      "explanation": "Clear explanation of why the correct answer is right, and why each wrong answer is incorrect."
+      "explanation": "Correct: [reason the answer is right]. Wrong A: [why this is incorrect]. Wrong B: [why this is incorrect]. Wrong C: [why this is incorrect]."
     }
   ]
 }
 
-QUESTION TYPE DISTRIBUTION — for every 10 questions, write exactly:
-- 4 SCENARIO-BASED: A real market situation is described, student must apply the concept. Example: "A trader notices the S&P 500 made a new high yesterday but the Dow Transportation Average failed to confirm. According to Dow Theory, this MOST likely indicates..."
-- 3 APPLICATION: Student must decide what action to take or what an indicator signal means in practice. Example: "An analyst sees RSI at 78 on a weekly chart. Which of the following is the MOST appropriate interpretation?"
-- 2 CONCEPTUAL: Tests understanding of WHY something works, not just WHAT it is. Example: "Which of the following BEST explains why volume is considered to confirm price trends?"
-- 1 FORMULA/DEFINITION: Tests recall of a key formula, calculation step, or precise definition that a CMT candidate must know. Example: "Which of the following correctly describes how the MACD line is calculated?" or "The look-back period used in a standard RSI calculation is:"
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+QUESTION TYPE DISTRIBUTION — for every 10 questions generate:
+• 4 SCENARIO-BASED — Describe a specific real market situation with concrete details (index name, indicator value, timeframe, price pattern). Student must apply knowledge.
+  ✅ Good: "The Nifty 50 makes a new all-time high on Monday, but the Advance-Decline line for the NSE falls sharply the same day. According to breadth analysis, this MOST likely signals..."
+  ❌ Bad: "A market makes a new high. What does this mean?"
 
-PROHIBITIONS:
-- Simple true/false disguised as MCQ
-- Questions where one option is obviously wrong to anyone who read the topic
+• 3 APPLICATION — Student must interpret what an indicator/signal means in practice or decide what action to take.
+  ✅ Good: "An analyst observes RSI at 76 on a weekly chart while price prints a lower high. The MOST appropriate interpretation is..."
+  ❌ Bad: "What is RSI used for?"
 
-DIFFICULTY — the "difficulty" field must be EXACTLY one of these three strings only:
-- "EASY" (30%): Straightforward application, one-step reasoning
-- "MEDIUM" (40%): Requires connecting two concepts or interpreting a market scenario
-- "HARD" (30%): Multi-step reasoning, conflicting signals, or nuanced market judgment calls
+• 2 CONCEPTUAL — Tests understanding of WHY a concept works, its limitations, or how it compares to a related concept.
+  ✅ Good: "Which of the following BEST explains why Dow Theory requires both the Industrial and Transportation averages to confirm a trend?"
+  ❌ Bad: "Which two averages does Dow Theory use?"
 
-IMPORTANT: "difficulty" is SEPARATE from question type. Never put SCENARIO, APPLICATION, CONCEPTUAL, or FORMULA in the difficulty field. Only EASY, MEDIUM, or HARD.
+• 1 FORMULA/CALCULATION — Tests precise recall of a formula, input values, calculation steps, or a specific numerical fact from the CMT curriculum.
+  ✅ Good: "Which of the following correctly describes the inputs used to calculate the Average True Range (ATR)?"
+  ❌ Bad: "What does ATR stand for?"
 
-QUALITY STANDARDS:
-1. Exactly 4 options — no "All of the above" or "None of the above"
-2. All 3 wrong answers must be plausible — common real-world mistakes or misconceptions
-3. correctIndex is 0, 1, 2, or 3
-4. Each question tests a DIFFERENT concept or angle — no repetition
-5. Use real markets in scenarios: equities, commodities, forex, indices (Nifty, S&P 500, crude oil, etc.)
-6. Explanation must explain WHY correct is correct AND why each wrong answer is wrong (2-4 sentences)`;
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DIFFICULTY — use EXACTLY these strings:
+• "EASY" (30%): Tests specific factual knowledge a candidate who studied the material knows immediately. EASY does NOT mean common sense or general knowledge — it must require having studied the topic.
+  ✅ Good EASY: "According to Dow Theory, which condition must be met before a primary trend change is confirmed?"
+  ❌ Bad EASY: "What is plotted on the vertical axis of a chart?" (anyone knows this without studying)
+
+• "MEDIUM" (40%): Requires connecting two concepts, interpreting a market scenario, or choosing between two plausible answers that both sound correct.
+
+• "HARD" (30%): Multi-step reasoning, conflicting signals, edge cases, or nuanced judgment where even well-prepared candidates must think carefully.
+
+IMPORTANT: "difficulty" must be only EASY, MEDIUM, or HARD — never SCENARIO, APPLICATION, CONCEPTUAL, or FORMULA.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ANTI-REPETITION RULES — strictly enforced:
+1. Every question must test a DIFFERENT specific fact, concept, calculation, or market application
+2. Never test the same concept twice — even with different wording or scenario
+3. Track all concepts you have already covered within this batch and ensure zero overlap
+4. If generating multiple questions about the same topic (e.g., Dow Theory), deliberately cover different sub-concepts: primary trend, secondary reaction, volume confirmation, averages confirmation, line formations, reversal signals — never the same sub-concept twice
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OPTION QUALITY RULES:
+1. Exactly 4 options per question — no "All of the above", "None of the above", "Both A and B"
+2. Every option must be a COMPLETE, MEANINGFUL STATEMENT — minimum 8 words
+  ✅ Good: "The trend is likely to reverse in the short term"
+  ❌ Bad: "Higher volume" or "Trend reversal" (too short — not a real option)
+3. All 3 wrong options must be genuinely plausible to a student who partially studied the topic — they should reflect real misconceptions, not obvious nonsense
+4. correctIndex is 0, 1, 2, or 3 — vary the position of the correct answer across questions
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXPLANATION RULES:
+Follow this exact format (keep under 120 words total):
+"Correct: [1 sentence explaining why the answer is right, referencing the specific CMT concept]. Wrong [letter]: [why this is incorrect — reference the specific misconception]. Wrong [letter]: [why this is incorrect]. Wrong [letter]: [why this is incorrect]."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ADDITIONAL STANDARDS:
+• Use real market context in scenarios: Nifty 50, S&P 500, Dow Jones, crude oil, USD/INR, gold, Apple (AAPL), etc.
+• Vary question stems: "Which of the following...", "An analyst observes...", "According to [concept]...", "A trader who...", "What is the MOST likely...", "Which statement BEST describes..."
+• CMT exam style: stem ends with clear question or instruction; avoid vague stems like "Which is true?"
+• Do NOT include the question type label (SCENARIO, APPLICATION, etc.) in the prompt field — questions must read naturally`;
 
     const userPrompt = `Generate CMT ${levelLabel} exam MCQ questions for:
 Topic: "${subtopic.title}"
 Chapter: "${subtopic.chapter.title}"
 
+CONCEPT COVERAGE REQUIREMENT: Spread your questions across as many DIFFERENT sub-concepts of this topic as possible. Do not cluster multiple questions around the same sub-concept. Aim for maximum breadth — if the topic has 10 distinct sub-concepts, touch all 10 rather than covering 3 sub-concepts deeply.
+
 ${sourceText
-  ? `Base your questions on this study material:\n${sourceText}`
-  : `Use your knowledge of "${subtopic.title}" as it appears in the CMT ${levelLabel} curriculum.`
+  ? `Base your questions strictly on this study material — do not introduce facts not present in the material:\n\n${sourceText}`
+  : `Use your expert knowledge of "${subtopic.title}" as it appears in the CMT ${levelLabel} curriculum. Cover all major sub-concepts of this topic.`
 }`;
+
 
     // Generate in batches of 25 to stay within token limits
     const BATCH_SIZE = 25;
