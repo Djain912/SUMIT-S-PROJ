@@ -87,6 +87,26 @@ export async function POST(request: Request) {
       );
     }
 
+    // Fetch existing questions for this subtopic so the AI can avoid duplicating them
+    const existingQuestions = await prisma.question.findMany({
+      where: { subtopicId, isDeleted: false },
+      select: { promptJson: true },
+      orderBy: { createdAt: 'desc' },
+      take: 200, // cap to keep prompt size reasonable
+    });
+
+    function promptToText(json: unknown): string {
+      if (!json) return '';
+      if (typeof json === 'string') return json.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+      const obj = json as { html?: string; text?: string };
+      const html = obj.html ?? obj.text ?? '';
+      return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+
+    const existingPrompts = existingQuestions
+      .map((q) => promptToText(q.promptJson))
+      .filter(Boolean);
+
     // Build source text from existing notes
     let sourceText = '';
     for (const note of subtopic.notes) {
@@ -189,7 +209,17 @@ ADDITIONAL STANDARDS:
 • CMT exam style: stem ends with clear question or instruction; avoid vague stems like "Which is true?"
 • Do NOT include the question type label (SCENARIO, APPLICATION, etc.) in the prompt field — questions must read naturally`;
 
-    const userPrompt = `Generate CMT ${levelLabel} exam MCQ questions for:
+    // Build the "avoid these existing questions" block (cap text length)
+    const avoidBlock = existingPrompts.length > 0
+      ? `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ALREADY-EXISTING QUESTIONS — you MUST NOT duplicate or paraphrase any of these. Generate questions that test DIFFERENT concepts, angles, or sub-topics than the ones listed below:
+
+${existingPrompts.map((p, i) => `${i + 1}. ${p}`).join('\n').slice(0, 14000)}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+If most obvious concepts are already covered above, dig deeper into nuanced sub-concepts, edge cases, calculations, comparisons, and advanced applications that are NOT yet tested.`
+      : '';
+
+    const baseUserPrompt = `Generate CMT ${levelLabel} exam MCQ questions for:
 Topic: "${subtopic.title}"
 Chapter: "${subtopic.chapter.title}"
 
@@ -198,7 +228,10 @@ CONCEPT COVERAGE REQUIREMENT: Spread your questions across as many DIFFERENT sub
 ${sourceText
   ? `Base your questions strictly on this study material — do not introduce facts not present in the material:\n\n${sourceText}`
   : `Use your expert knowledge of "${subtopic.title}" as it appears in the CMT ${levelLabel} curriculum. Cover all major sub-concepts of this topic.`
-}`;
+}${avoidBlock}`;
+
+    // Track prompts generated within THIS run so later batches avoid earlier ones too
+    const generatedThisRun: string[] = [];
 
 
     const VALID_DIFFICULTIES = new Set(['EASY', 'MEDIUM', 'HARD']);
@@ -250,9 +283,20 @@ ${sourceText
 
     while (remaining > 0) {
       const batchCount = Math.min(BATCH_SIZE, remaining);
-      const batch = await generateBatch(systemPrompt, userPrompt, batchCount);
+
+      // Append questions generated earlier in THIS run so the next batch
+      // avoids repeating them too (each API call is otherwise stateless)
+      const runAvoid = generatedThisRun.length > 0
+        ? `\n\nALSO AVOID these questions just generated in this session:\n${generatedThisRun.map((p, i) => `${i + 1}. ${p}`).join('\n').slice(0, 8000)}`
+        : '';
+
+      const batch = await generateBatch(systemPrompt, baseUserPrompt + runAvoid, batchCount);
       if (batch.length === 0) break; // generation failed for this batch — stop
       created += await saveBatch(batch);
+      // Record this batch's prompts for the next batch to avoid
+      for (const q of batch) {
+        if (q.prompt?.trim()) generatedThisRun.push(q.prompt.trim());
+      }
       remaining -= batchCount;
     }
 
