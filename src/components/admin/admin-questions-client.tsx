@@ -4,6 +4,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AdminLevelTabs, type AdminLevel } from '@/components/admin/admin-level-tabs';
 import { TinyMceEditor } from '@/components/admin/tinymce-editor';
+import { Search, SlidersHorizontal, Trash2 } from 'lucide-react';
+
+type FilterDifficulty = 'ALL' | 'EASY' | 'MEDIUM' | 'HARD';
+type FilterStatus = 'ALL' | 'PUBLISHED' | 'UNPUBLISHED';
+type SortOrder = 'NEWEST' | 'OLDEST' | 'EASY_FIRST' | 'HARD_FIRST';
 
 type Level = AdminLevel;
 type QuestionType = 'SINGLE_CHOICE' | 'MULTI_CHOICE';
@@ -185,9 +190,16 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
   const [editPublished, setEditPublished] = useState(false);
   const [editOptions, setEditOptions] = useState(createEmptyOptions());
 
+  // ── Filter / Search / Sort state ─────────────────────────────────────────
+  const [searchQ, setSearchQ] = useState('');
+  const [filterDiff, setFilterDiff] = useState<FilterDifficulty>('ALL');
+  const [filterStatus, setFilterStatus] = useState<FilterStatus>('ALL');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('NEWEST');
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
   // ── AI Generator state ────────────────────────────────────────────────────
   const [showAiPanel, setShowAiPanel] = useState(false);
-  const [aiCount, setAiCount] = useState(50);
+  const [aiCount, setAiCount] = useState(30);
   const [aiPdfs, setAiPdfs] = useState<File[]>([]);
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiResult, setAiResult] = useState<{ created: number } | null>(null);
@@ -254,10 +266,61 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
     [chapters, selectedChapter],
   );
 
-  const subtopicQuestions = useMemo(
-    () => questions.filter((question) => question.subtopicId === selectedSubtopic),
+  const allSubtopicQuestions = useMemo(
+    () => questions.filter((q) => q.subtopicId === selectedSubtopic),
     [questions, selectedSubtopic],
   );
+
+  const subtopicQuestions = useMemo(() => {
+    let list = [...allSubtopicQuestions];
+    // Filter by difficulty
+    if (filterDiff !== 'ALL') list = list.filter(q => q.difficulty === filterDiff);
+    // Filter by status
+    if (filterStatus === 'PUBLISHED') list = list.filter(q => q.isPublished);
+    if (filterStatus === 'UNPUBLISHED') list = list.filter(q => !q.isPublished);
+    // Search
+    if (searchQ.trim()) {
+      const q = searchQ.toLowerCase();
+      list = list.filter(qs => extractTextFromRichJson(qs.promptJson).toLowerCase().includes(q));
+    }
+    // Sort
+    const diffOrder = { EASY: 0, MEDIUM: 1, HARD: 2 };
+    if (sortOrder === 'EASY_FIRST') list.sort((a, b) => (diffOrder[a.difficulty ?? 'MEDIUM'] ?? 1) - (diffOrder[b.difficulty ?? 'MEDIUM'] ?? 1));
+    if (sortOrder === 'HARD_FIRST') list.sort((a, b) => (diffOrder[b.difficulty ?? 'MEDIUM'] ?? 1) - (diffOrder[a.difficulty ?? 'MEDIUM'] ?? 1));
+    // NEWEST / OLDEST: questions come from DB in insertion order — reverse for oldest
+    if (sortOrder === 'OLDEST') list.reverse();
+    return list;
+  }, [allSubtopicQuestions, filterDiff, filterStatus, searchQ, sortOrder]);
+
+  // Stats for current subtopic (unfiltered)
+  const stats = useMemo(() => ({
+    total: allSubtopicQuestions.length,
+    easy: allSubtopicQuestions.filter(q => q.difficulty === 'EASY').length,
+    medium: allSubtopicQuestions.filter(q => q.difficulty === 'MEDIUM').length,
+    hard: allSubtopicQuestions.filter(q => q.difficulty === 'HARD').length,
+    published: allSubtopicQuestions.filter(q => q.isPublished).length,
+    unpublished: allSubtopicQuestions.filter(q => !q.isPublished).length,
+  }), [allSubtopicQuestions]);
+
+  async function handleBulkDelete() {
+    const toDelete = subtopicQuestions;
+    if (toDelete.length === 0) return;
+    const label = filterDiff !== 'ALL' ? `all ${filterDiff} ` : filterStatus !== 'ALL' ? `all ${filterStatus.toLowerCase()} ` : 'all ';
+    if (!window.confirm(`Delete ${label}${toDelete.length} questions? This cannot be undone.`)) return;
+    setBulkDeleting(true);
+    try {
+      for (const q of toDelete) {
+        await fetch(`/api/admin/questions/${q.id}`, { method: 'DELETE' });
+      }
+      questionsInFlight.delete(selectedSubtopic);
+      const fresh = await fetchQuestions(selectedSubtopic);
+      setQuestions(fresh);
+      setSelectedQuestion(null);
+      router.refresh();
+    } finally {
+      setBulkDeleting(false);
+    }
+  }
 
   function startNewQuestion() {
     setEditingQuestionId(null);
@@ -495,18 +558,101 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
 
           {selectedSubtopic ? (
             <div>
-              <div className="flex items-center justify-between gap-3">
-                <label className="block text-sm font-medium text-zinc-700">Questions ({subtopicQuestions.length})</label>
+              {/* Header row */}
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <label className="block text-sm font-medium text-zinc-700">
+                  Questions ({allSubtopicQuestions.length})
+                </label>
                 <button
                   type="button"
                   onClick={startNewQuestion}
                   className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
                 >
-                  Add another question
+                  + Add
                 </button>
               </div>
+
+              {/* Stats bar */}
+              <div className="mb-2 rounded-xl bg-zinc-50 border border-zinc-100 px-3 py-2 text-[11px] text-zinc-500 flex flex-wrap gap-x-3 gap-y-0.5">
+                <span className="text-zinc-700 font-semibold">{stats.total} total</span>
+                <span className="text-green-600">✓ {stats.published} pub</span>
+                <span className="text-amber-600">⏸ {stats.unpublished} draft</span>
+                <span className="text-blue-600">E:{stats.easy}</span>
+                <span className="text-orange-600">M:{stats.medium}</span>
+                <span className="text-red-600">H:{stats.hard}</span>
+              </div>
+
+              {/* Search */}
+              <div className="relative mb-2">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400" />
+                <input
+                  type="search"
+                  placeholder="Search questions…"
+                  value={searchQ}
+                  onChange={e => setSearchQ(e.target.value)}
+                  className="w-full rounded-lg border border-zinc-200 bg-white py-1.5 pl-8 pr-3 text-xs text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:border-emerald-400"
+                />
+              </div>
+
+              {/* Difficulty filter pills */}
+              <div className="flex gap-1 flex-wrap mb-2">
+                {(['ALL', 'EASY', 'MEDIUM', 'HARD'] as FilterDifficulty[]).map(d => (
+                  <button key={d} type="button" onClick={() => setFilterDiff(d)}
+                    className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold transition ${
+                      filterDiff === d
+                        ? d === 'EASY' ? 'bg-blue-600 text-white' : d === 'MEDIUM' ? 'bg-orange-500 text-white' : d === 'HARD' ? 'bg-red-600 text-white' : 'bg-zinc-800 text-white'
+                        : 'border border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50'
+                    }`}
+                  >
+                    {d === 'ALL' ? 'All' : d}
+                  </button>
+                ))}
+              </div>
+
+              {/* Status + Sort row */}
+              <div className="flex gap-1.5 mb-2">
+                <select
+                  value={filterStatus}
+                  onChange={e => setFilterStatus(e.target.value as FilterStatus)}
+                  className="flex-1 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-[11px] text-zinc-700 focus:outline-none"
+                >
+                  <option value="ALL">All status</option>
+                  <option value="PUBLISHED">Published</option>
+                  <option value="UNPUBLISHED">Unpublished</option>
+                </select>
+                <select
+                  value={sortOrder}
+                  onChange={e => setSortOrder(e.target.value as SortOrder)}
+                  className="flex-1 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-[11px] text-zinc-700 focus:outline-none"
+                >
+                  <option value="NEWEST">Newest first</option>
+                  <option value="OLDEST">Oldest first</option>
+                  <option value="EASY_FIRST">Easy → Hard</option>
+                  <option value="HARD_FIRST">Hard → Easy</option>
+                </select>
+              </div>
+
+              {/* Filtered count + bulk delete */}
+              {(filterDiff !== 'ALL' || filterStatus !== 'ALL' || searchQ) && (
+                <div className="flex items-center justify-between mb-2 rounded-lg bg-amber-50 border border-amber-200 px-2.5 py-1.5">
+                  <span className="text-[11px] text-amber-700 font-medium">
+                    <SlidersHorizontal className="inline h-3 w-3 mr-1" />
+                    {subtopicQuestions.length} matching
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => void handleBulkDelete()}
+                    disabled={bulkDeleting || subtopicQuestions.length === 0}
+                    className="flex items-center gap-1 rounded-md border border-red-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-red-600 hover:bg-red-50 disabled:opacity-40"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                    {bulkDeleting ? 'Deleting…' : 'Delete filtered'}
+                  </button>
+                </div>
+              )}
+
               {/* Publish All button — shown when there are unpublished questions */}
-              {subtopicQuestions.some((q) => !q.isPublished) && (
+              {allSubtopicQuestions.some((q) => !q.isPublished) && (
                 <button
                   type="button"
                   onClick={() => void handlePublishAll()}
@@ -522,7 +668,7 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
                       Publishing… please wait
                     </span>
                   ) : (
-                    `✓ Publish All (${subtopicQuestions.filter((q) => !q.isPublished).length} unpublished)`
+                    `✓ Publish All (${allSubtopicQuestions.filter((q) => !q.isPublished).length} unpublished)`
                   )}
                 </button>
               )}
@@ -600,10 +746,10 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
                       onChange={(e) => setAiCount(Number(e.target.value))}
                       className="w-full rounded-lg border border-zinc-200 px-3 py-1.5 text-xs"
                     >
-                      <option value={25}>25 questions (~1 min)</option>
-                      <option value={50}>50 questions (~2 min)</option>
-                      <option value={75}>75 questions (~3 min)</option>
-                      <option value={100}>100 questions (~4 min)</option>
+                      <option value={20}>20 questions (~1 min)</option>
+                      <option value={30}>30 questions (~1.5 min) ✦ Recommended</option>
+                      <option value={50}>50 questions (~2.5 min)</option>
+                      <option value={75}>75 questions (~4 min)</option>
                     </select>
                   </div>
 
