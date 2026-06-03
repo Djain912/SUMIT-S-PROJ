@@ -1,11 +1,14 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { normalizeNoteHtml } from '@/lib/utils/note-html';
 import { AdminLevelTabs, type AdminLevel } from '@/components/admin/admin-level-tabs';
 import { TinyMceEditor } from '@/components/admin/tinymce-editor';
 import { DEFAULT_WATERMARK_CONFIG, sanitizeWatermarkConfig, type WatermarkConfig, type WatermarkPosition } from '@/lib/utils/watermark';
+import { CheckCircle, Clock, AlertCircle, Loader2 } from 'lucide-react';
+
+type AutoSaveStatus = 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
 
 type Level = AdminLevel;
 
@@ -130,6 +133,13 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
   const [editWatermark, setEditWatermark] = useState<WatermarkConfig>(DEFAULT_WATERMARK_CONFIG);
   const [saving, setSaving] = useState(false);
 
+  // ── Auto-save ─────────────────────────────────────────────────────────────
+  const [autoSaveStatus, setAutoSaveStatus] = useState<AutoSaveStatus>('idle');
+  const [autoSavedAt, setAutoSavedAt] = useState<Date | null>(null);
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Holds the note ID created during auto-save (for new notes not yet manually saved)
+  const autoSavedNoteId = useRef<string | null>(null);
+
   useEffect(() => {
     fetchChapters(level).then(setChapters);
   }, [level]);
@@ -156,22 +166,123 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
 
   const selectedChapterData = chapters.find(c => c.id === selectedChapter);
 
+  // ── Auto-save function (always saves as draft/unpublished) ────────────────
+  const performAutoSave = useCallback(async () => {
+    if (!selectedSubtopic || !editTitle.trim()) return;
+    const currentHtml = editorContentRef.current;
+
+    setAutoSaveStatus('saving');
+    try {
+      const noteId = editingNoteId ?? autoSavedNoteId.current;
+
+      if (noteId) {
+        // Update existing note
+        const res = await fetch(`/api/admin/notes/${noteId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: editTitle.trim(),
+            contentHtml: currentHtml,
+            isPublished: false, // always draft on auto-save
+            watermarkConfig: editWatermark,
+          }),
+        });
+        const result = await res.json();
+        if (result.data) {
+          const saved: Note = result.data;
+          setNotes(prev => prev.map(n => n.id === noteId ? saved : n));
+          if (!editingNoteId) setSelectedNote(saved);
+        }
+      } else {
+        // Create new note for the first time
+        const res = await fetch('/api/admin/notes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subtopicId: selectedSubtopic,
+            title: editTitle.trim(),
+            contentHtml: currentHtml,
+            orderIndex: notes.length,
+            isPublished: false,
+            watermarkConfig: editWatermark,
+          }),
+        });
+        const result = await res.json();
+        if (result.data) {
+          const saved: Note = result.data;
+          autoSavedNoteId.current = saved.id;
+          setNotes(prev => {
+            const exists = prev.find(n => n.id === saved.id);
+            return exists ? prev.map(n => n.id === saved.id ? saved : n) : [...prev, saved];
+          });
+          setSelectedNote(saved);
+        }
+      }
+
+      setAutoSaveStatus('saved');
+      setAutoSavedAt(new Date());
+      notesInFlight.delete(selectedSubtopic);
+    } catch {
+      setAutoSaveStatus('error');
+    }
+  }, [selectedSubtopic, editTitle, editingNoteId, editWatermark, notes.length]);
+
+  // Trigger debounced auto-save when title or content changes
+  const scheduleAutoSave = useCallback(() => {
+    if (!isEditing) return;
+    setAutoSaveStatus('dirty');
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => {
+      void performAutoSave();
+    }, 3000); // 3 seconds after last change
+  }, [isEditing, performAutoSave]);
+
+  // Warn user if they try to close tab with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (autoSaveStatus === 'dirty' || autoSaveStatus === 'saving') {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [autoSaveStatus]);
+
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    };
+  }, []);
+
+  // Reset auto-save state when switching notes or closing editor
+  const resetAutoSave = () => {
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    setAutoSaveStatus('idle');
+    setAutoSavedAt(null);
+    autoSavedNoteId.current = null;
+  };
+
   const handleSave = async () => {
     if (!selectedSubtopic || !editTitle) return;
     setSaving(true);
+    // Cancel any pending auto-save
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
     try {
-      // Read from ref — this has the latest typed content without causing re-renders
       const currentHtml = editorContentRef.current;
+      // Use auto-saved note ID if available (note was created by auto-save)
+      const noteId = editingNoteId ?? autoSavedNoteId.current;
 
-      if (editingNoteId) {
-        const result = await updateNote(editingNoteId, {
+      if (noteId) {
+        const result = await updateNote(noteId, {
           title: editTitle,
           contentHtml: currentHtml,
           isPublished: editPublished,
           watermarkConfig: editWatermark,
         });
         const saved: Note = result.data;
-        setNotes(prev => prev.map(n => (n.id === editingNoteId ? saved : n)));
+        setNotes(prev => prev.map(n => (n.id === noteId ? saved : n)));
         setSelectedNote(saved);
       } else {
         const result = await saveOrUpdateNote(null, {
@@ -187,6 +298,7 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
         setSelectedNote(saved);
       }
       notesInFlight.delete(selectedSubtopic);
+      resetAutoSave();
       setIsEditing(false);
       setEditingNoteId(null);
       router.refresh();
@@ -330,11 +442,41 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
             </p>
           ) : isEditing ? (
             <div className="space-y-4">
+
+              {/* Auto-save status bar */}
+              <div className="flex items-center justify-between rounded-xl border border-zinc-100 bg-zinc-50 px-4 py-2.5">
+                <div className="flex items-center gap-2 text-xs">
+                  {autoSaveStatus === 'idle' && (
+                    <span className="text-zinc-400">Auto-save active — changes save automatically as draft</span>
+                  )}
+                  {autoSaveStatus === 'dirty' && (
+                    <><Clock className="h-3.5 w-3.5 text-amber-500" /><span className="text-amber-600 font-medium">Unsaved changes…</span></>
+                  )}
+                  {autoSaveStatus === 'saving' && (
+                    <><Loader2 className="h-3.5 w-3.5 text-blue-500 animate-spin" /><span className="text-blue-600 font-medium">Auto-saving…</span></>
+                  )}
+                  {autoSaveStatus === 'saved' && (
+                    <><CheckCircle className="h-3.5 w-3.5 text-emerald-500" /><span className="text-emerald-600 font-medium">Draft auto-saved{autoSavedAt ? ` at ${autoSavedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}` : ''}</span></>
+                  )}
+                  {autoSaveStatus === 'error' && (
+                    <><AlertCircle className="h-3.5 w-3.5 text-red-500" /><span className="text-red-600 font-medium">Auto-save failed — please save manually</span></>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void performAutoSave()}
+                  disabled={autoSaveStatus === 'saving' || !editTitle.trim()}
+                  className="text-[11px] text-zinc-400 hover:text-zinc-700 transition disabled:opacity-40"
+                >
+                  Save now
+                </button>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-zinc-700">Title</label>
                 <input
                   value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
+                  onChange={(e) => { setEditTitle(e.target.value); scheduleAutoSave(); }}
                   className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
                   placeholder="Note title"
                 />
@@ -345,7 +487,7 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
                 <TinyMceEditor
                   key={editingNoteId ?? 'new-note'}
                   initialValue={editContent}
-                  onChange={(val) => { editorContentRef.current = val; }}
+                  onChange={(val) => { editorContentRef.current = val; scheduleAutoSave(); }}
                   placeholder="Write your note content..."
                 />
               </div>
@@ -442,6 +584,7 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
                     loadContent('');
                     setEditPublished(false);
                     setEditWatermark(DEFAULT_WATERMARK_CONFIG);
+                    resetAutoSave();
                   }}
                   className="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700"
                 >
