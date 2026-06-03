@@ -295,6 +295,7 @@ export default function PricingPage() {
           <Link href="/privacy-policy" className="hover:text-emerald-700 transition">Privacy Policy</Link>
           <Link href="/terms" className="hover:text-emerald-700 transition">Terms &amp; Conditions</Link>
           <Link href="/refund-policy" className="hover:text-emerald-700 transition">Refund Policy</Link>
+          <Link href="/disclaimer" className="hover:text-emerald-700 transition">Disclaimer</Link>
           <Link href="/contact" className="hover:text-emerald-700 transition">Contact</Link>
         </div>
         <p className="mt-3">© {new Date().getFullYear()} Chartix. All rights reserved. Not affiliated with the CMT Association.</p>

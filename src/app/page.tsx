@@ -445,6 +445,7 @@ export default async function HomePage() {
                     { label: 'Privacy Policy', href: '/privacy-policy' },
                     { label: 'Terms & Conditions', href: '/terms' },
                     { label: 'Refund Policy', href: '/refund-policy' },
+                    { label: 'Disclaimer', href: '/disclaimer' },
                   ].map((l) => (
                     <li key={l.href}><Link href={l.href} className="text-sm text-zinc-400 hover:text-emerald-700 transition">{l.label}</Link></li>
                   ))}
