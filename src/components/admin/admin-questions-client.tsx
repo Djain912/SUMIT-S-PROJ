@@ -222,14 +222,35 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
       form.append('chapterId', selectedChapter);
       form.append('level', level);
       form.append('count', String(aiCount));
+
+      // Guard: Vercel rejects request bodies over ~4.5 MB. Block oversized PDFs early.
+      const totalPdfBytes = aiPdfs.reduce((sum, f) => sum + f.size, 0);
+      if (totalPdfBytes > 4 * 1024 * 1024) {
+        throw new Error('PDFs are too large (max ~4 MB total). Tip: your published notes are already used automatically — you can generate without uploading PDFs.');
+      }
       aiPdfs.forEach((pdf, i) => form.append(`pdf_${i}`, pdf));
 
       const res = await fetch('/api/admin/generate-questions', { method: 'POST', body: form });
-      const data = await res.json();
+
+      // Read as text first so we can handle non-JSON error pages gracefully
+      const raw = await res.text();
+      let data: { success?: boolean; data?: { created: number }; error?: { message?: string } };
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        // Server returned a non-JSON error (timeout / body too large / gateway error)
+        if (res.status === 413 || /too large|entity/i.test(raw)) {
+          throw new Error('Upload too large for the server. Remove PDFs (notes are used automatically) or use smaller files.');
+        }
+        if (res.status === 504 || res.status === 502) {
+          throw new Error('Generation timed out. Try generating fewer questions (e.g. 30) at a time.');
+        }
+        throw new Error(`Server error (${res.status}). Try fewer questions or remove large PDFs.`);
+      }
 
       if (!data.success) throw new Error(data.error?.message ?? 'Generation failed');
 
-      setAiResult(data.data);
+      setAiResult(data.data!);
       // Reload questions list
       questionsInFlight.delete(selectedSubtopic);
       const fresh = await fetchQuestions(selectedSubtopic);
@@ -716,7 +737,7 @@ export function AdminQuestionsClient({ initialLevel = 'LEVEL_1' }: { initialLeve
               {showAiPanel && (
                 <div className="mt-2 rounded-xl border border-zinc-200 bg-white p-3 shadow-sm space-y-3">
                   <p className="text-[11px] text-zinc-500 leading-relaxed">
-                    Upload a PDF (optional) + choose how many questions. AI reads your notes + PDF and generates CMT-level MCQs with explanations. All questions are saved as <strong>unpublished</strong> — review before publishing.
+                    Your <strong>published notes are used automatically</strong> — you usually don&apos;t need to upload anything. PDFs are optional and must total under ~4 MB. All questions save as <strong>unpublished</strong> for review.
                   </p>
 
                   {/* PDF Upload — up to 10 files */}

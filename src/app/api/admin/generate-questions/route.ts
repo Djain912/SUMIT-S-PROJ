@@ -201,62 +201,59 @@ ${sourceText
 }`;
 
 
-    // Generate in batches of 25 to stay within token limits
-    const BATCH_SIZE = 25;
-    const allRaw: RawQuestion[] = [];
-    const batches = Math.ceil(count / BATCH_SIZE);
+    const VALID_DIFFICULTIES = new Set(['EASY', 'MEDIUM', 'HARD']);
 
-    for (let i = 0; i < batches; i++) {
-      const batchCount = Math.min(BATCH_SIZE, count - allRaw.length);
-      if (batchCount <= 0) break;
-      const batch = await generateBatch(systemPrompt, userPrompt, batchCount);
-      allRaw.push(...batch);
-    }
-
-    // Save all valid questions to DB (unpublished — admin reviews first)
-    let created = 0;
-    const validQuestions = allRaw
-      .slice(0, count)
-      .filter(
+    // Save one batch's worth of questions to the DB immediately
+    async function saveBatch(batch: RawQuestion[]): Promise<number> {
+      const valid = batch.filter(
         (q) =>
           q.prompt?.trim() &&
           Array.isArray(q.options) &&
           q.options.length >= 2 &&
           typeof q.correctIndex === 'number',
       );
-
-    const VALID_DIFFICULTIES = new Set(['EASY', 'MEDIUM', 'HARD']);
-
-    for (const q of validQuestions) {
-      const correctIdx = Math.max(0, Math.min(q.options.length - 1, q.correctIndex));
-      // GPT sometimes returns question-type labels (CONCEPTUAL, SCENARIO, etc.) instead of
-      // difficulty labels — sanitise to only allow EASY / MEDIUM / HARD.
-      const difficulty = VALID_DIFFICULTIES.has(q.difficulty) ? q.difficulty : 'MEDIUM';
-
-      await prisma.question.create({
-        data: {
-          level: level as 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3',
-          chapterId,
-          subtopicId,
-          promptJson: { html: `<p>${q.prompt.trim()}</p>` },
-          explanationJson: q.explanation?.trim()
-            ? { html: `<p>${q.explanation.trim()}</p>` }
-            : undefined,
-          questionType: 'SINGLE_CHOICE',
-          difficulty: difficulty as 'EASY' | 'MEDIUM' | 'HARD',
-          isPublished: false, // admin must review and publish manually
-          createdById: user.id,
-          updatedById: user.id,
-          options: {
-            create: q.options.map((optText: string, idx: number) => ({
-              contentJson: { html: String(optText).trim() },
-              isCorrect: idx === correctIdx,
-              orderIndex: idx,
-            })),
+      let saved = 0;
+      for (const q of valid) {
+        const correctIdx = Math.max(0, Math.min(q.options.length - 1, q.correctIndex));
+        const difficulty = VALID_DIFFICULTIES.has(q.difficulty) ? q.difficulty : 'MEDIUM';
+        await prisma.question.create({
+          data: {
+            level: level as 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3',
+            chapterId,
+            subtopicId,
+            promptJson: { html: `<p>${q.prompt.trim()}</p>` },
+            explanationJson: q.explanation?.trim() ? { html: `<p>${q.explanation.trim()}</p>` } : undefined,
+            questionType: 'SINGLE_CHOICE',
+            difficulty: difficulty as 'EASY' | 'MEDIUM' | 'HARD',
+            isPublished: false,
+            createdById: user.id,
+            updatedById: user.id,
+            options: {
+              create: q.options.map((optText: string, idx: number) => ({
+                contentJson: { html: String(optText).trim() },
+                isCorrect: idx === correctIdx,
+                orderIndex: idx,
+              })),
+            },
           },
-        },
-      });
-      created++;
+        });
+        saved++;
+      }
+      return saved;
+    }
+
+    // Generate AND save in batches — each batch persists immediately so a
+    // timeout on a later batch still keeps everything generated so far.
+    const BATCH_SIZE = 20;
+    let created = 0;
+    let remaining = count;
+
+    while (remaining > 0) {
+      const batchCount = Math.min(BATCH_SIZE, remaining);
+      const batch = await generateBatch(systemPrompt, userPrompt, batchCount);
+      if (batch.length === 0) break; // generation failed for this batch — stop
+      created += await saveBatch(batch);
+      remaining -= batchCount;
     }
 
     return NextResponse.json({ success: true, data: { created, requested: count } });
