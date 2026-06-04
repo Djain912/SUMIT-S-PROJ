@@ -66,5 +66,38 @@ export function normalizeNoteHtml(html: string): string {
     c.removeAttribute('width');
   });
 
+  // 4. Upgrade Cloudinary images to highest quality / modern format / retina.
+  //    Cloudinary applies these transformations on the fly — no re-upload needed.
+  doc.body.querySelectorAll('img').forEach((img) => {
+    const el = img as HTMLImageElement;
+    const src = el.getAttribute('src') ?? '';
+    el.setAttribute('src', enhanceCloudinaryUrl(src));
+    // Crisp rendering + responsive sizing
+    el.style.maxWidth = '100%';
+    el.style.height = 'auto';
+    el.setAttribute('loading', 'lazy');
+  });
+
   return doc.body.innerHTML;
+}
+
+/**
+ * Inserts quality/format/enhancement transformations into a Cloudinary URL.
+ *   q_auto:best  → highest automatic quality (minimal compression)
+ *   f_auto       → best modern format (AVIF/WebP) for the browser
+ *   dpr_auto     → serve 2x/3x pixels on retina screens (much sharper)
+ *   e_improve    → auto colour/contrast enhancement
+ * Leaves non-Cloudinary URLs and already-transformed URLs untouched.
+ */
+function enhanceCloudinaryUrl(src: string): string {
+  if (!src.includes('res.cloudinary.com')) return src;
+  const marker = '/upload/';
+  const idx = src.indexOf(marker);
+  if (idx === -1) return src;
+
+  const after = src.slice(idx + marker.length);
+  // If our transformation is already present, don't double-apply
+  if (after.startsWith('q_auto')) return src;
+  const params = 'q_auto:best,f_auto,dpr_auto,e_improve';
+  return `${src.slice(0, idx + marker.length)}${params}/${after}`;
 }
