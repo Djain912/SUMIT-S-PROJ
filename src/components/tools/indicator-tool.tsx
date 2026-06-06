@@ -383,7 +383,7 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
       </div>
 
       <p className="text-center text-xs text-zinc-400">
-        Sample data: {N} AAPL daily bars, for learning the calculation. <Link href="/user/notes" className="text-emerald-700 underline">Back to notes</Link>
+        Sample data: {N} AAPL daily bars, for learning the calculation. <Link href="/tools" className="text-emerald-700 underline">Back to all tools</Link>
       </p>
     </div>
   );

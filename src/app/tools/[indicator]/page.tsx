@@ -61,10 +61,10 @@ export default async function PublicIndicatorPage({ params }: { params: Promise<
         <div className="mt-10 rounded-2xl bg-emerald-900 px-6 py-8 text-center">
           <p className="text-xs font-semibold uppercase tracking-widest text-emerald-400">CMT Exam Prep</p>
           <h2 className="mt-2 text-xl font-bold text-white sm:text-2xl">
-            Want notes, quizzes & AI tutoring too?
+            Want notes, quizzes & the Chartix Chatbot too?
           </h2>
           <p className="mt-2 text-sm text-emerald-300">
-            Chartix has chapter-wise CMT notes, 2000+ practice MCQs, mock tests and a CMT-trained AI tutor — all in one place.
+            Chartix has chapter-wise CMT notes, 2000+ practice MCQs, mock tests and the Chartix Technical Analysis Chatbot — all in one place.
           </p>
           <Link href="/sign-up" className="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-7 py-3 text-sm font-bold text-emerald-900 hover:bg-emerald-50 transition">
             Start free — no card needed <ArrowRight className="h-4 w-4" />

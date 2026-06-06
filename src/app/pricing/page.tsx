@@ -243,7 +243,7 @@ export default function PricingPage() {
               { title: 'Unlimited Mock Tests', desc: 'Simulate the real exam experience as many times as you want.' },
               { title: 'Customised MCQ Tests', desc: 'Filter by chapter, topic, or difficulty. Build your own test sets.' },
               { title: 'Performance Analytics', desc: 'See exactly where you are strong and where you need more work.' },
-              { title: 'Chartix AI Chatbot', desc: 'CMT-trained AI that answers your study questions and explains concepts.' },
+              { title: 'Chartix Technical Analysis Chatbot', desc: 'Chartix-powered chatbot built on the CMT curriculum — answers your study questions and explains concepts.' },
               { title: 'Progress Tracking', desc: 'Chapter-by-chapter completion tracking with streaks to keep you consistent.' },
               { title: '6 Months Access', desc: 'Your access is valid for 6 months — enough time for any exam window.' },
             ].map((item) => (

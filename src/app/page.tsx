@@ -38,8 +38,8 @@ const pillars = [
   },
   {
     icon: Brain,
-    title: 'CMT AI Tutor',
-    description: 'Chartix-trained AI that explains concepts, answers questions, and keeps you on track.',
+    title: 'Chartix Technical Analysis Chatbot',
+    description: 'Chartix-powered chatbot built on the CMT curriculum — explains concepts, answers questions, and keeps you on track.',
   },
 ];
 
@@ -153,7 +153,7 @@ export default async function HomePage() {
                     </h1>
 
                     <p className="mt-4 text-base leading-7 text-zinc-500 max-w-md">
-                      Chapter-by-chapter notes, 2000+ practice MCQs, unlimited mock tests, and a CMT-trained AI tutor — everything you need for Level I, II, and III.
+                      Chapter-by-chapter notes, 2000+ practice MCQs, unlimited mock tests, and the Chartix Technical Analysis Chatbot — everything you need for Level I, II, and III.
                     </p>
 
                     <div className="mt-8 flex flex-wrap items-center gap-4">
