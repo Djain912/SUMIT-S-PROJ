@@ -83,15 +83,23 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
   const [fast, setFast] = useState(12);
   const [slow, setSlow] = useState(26);
   const [signal, setSignal] = useState(9);
-  const [fromI, setFromI] = useState(Math.max(0, N - 60));
-  const [toI, setToI] = useState(N - 1);
+  const firstDate = bars[0].date;
+  const lastDate = bars[N - 1].date;
+  const [fromDate, setFromDate] = useState(bars[Math.max(0, N - 120)].date);
+  const [toDate, setToDate] = useState(lastDate);
+  const fromI = useMemo(() => { const i = bars.findIndex((b) => b.date >= fromDate); return i < 0 ? 0 : i; }, [bars, fromDate]);
+  const toI = useMemo(() => { for (let i = N - 1; i >= 0; i--) if (bars[i].date <= toDate) return i; return N - 1; }, [bars, toDate, N]);
+  const lo = Math.min(fromI, toI);
+  const hi = Math.max(fromI, toI);
+  const setPreset = (count: number) => { setFromDate(bars[Math.max(0, N - count)].date); setToDate(lastDate); };
+  const PRESETS: [string, number][] = [['1M', 21], ['3M', 63], ['6M', 126], ['1Y', 252], ['5Y', N]];
 
   // compute on the FULL series, then show only the selected window
   const roc = useMemo(() => computeRoc(bars, period), [bars, period]);
   const rsi = useMemo(() => computeRsi(bars, period), [bars, period]);
   const macd = useMemo(() => computeMacd(bars, fast, slow, signal), [bars, fast, slow, signal]);
 
-  const sl = <T,>(arr: T[]) => arr.slice(fromI, toI + 1);
+  const sl = <T,>(arr: T[]) => arr.slice(lo, hi + 1);
   const dates = sl(bars.map((b) => b.date.slice(5)));
   const priceSeries = { label: 'Close', color: '#18181b', values: sl(bars.map((b) => b.close)) };
 
@@ -134,22 +142,28 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
         )}
 
         {/* Date range */}
-        <div className="flex flex-wrap items-center gap-4 border-t border-zinc-100 pt-3">
-          <label className="flex items-center gap-2 text-sm text-zinc-700">
-            <span className="font-medium">From</span>
-            <select value={fromI} onChange={(e) => { const v = Number(e.target.value); setFromI(v); if (v > toI) setToI(v); }}
-              className="rounded-lg border border-zinc-300 px-2 py-1 text-sm">
-              {bars.map((b, i) => <option key={b.date} value={i}>{b.date}</option>)}
-            </select>
-          </label>
-          <label className="flex items-center gap-2 text-sm text-zinc-700">
-            <span className="font-medium">To</span>
-            <select value={toI} onChange={(e) => { const v = Number(e.target.value); setToI(v); if (v < fromI) setFromI(v); }}
-              className="rounded-lg border border-zinc-300 px-2 py-1 text-sm">
-              {bars.map((b, i) => <option key={b.date} value={i}>{b.date}</option>)}
-            </select>
-          </label>
-          <span className="text-xs text-zinc-400">Showing {toI - fromI + 1} of {N} bars. Calculations always use the full history, so values are correct from the first day shown.</span>
+        <div className="space-y-2 border-t border-zinc-100 pt-3">
+          <div className="flex flex-wrap items-center gap-4">
+            <label className="flex items-center gap-2 text-sm text-zinc-700">
+              <span className="font-medium">From</span>
+              <input type="date" min={firstDate} max={lastDate} value={fromDate} onChange={(e) => e.target.value && setFromDate(e.target.value)}
+                className="rounded-lg border border-zinc-300 px-2 py-1 text-sm" />
+            </label>
+            <label className="flex items-center gap-2 text-sm text-zinc-700">
+              <span className="font-medium">To</span>
+              <input type="date" min={firstDate} max={lastDate} value={toDate} onChange={(e) => e.target.value && setToDate(e.target.value)}
+                className="rounded-lg border border-zinc-300 px-2 py-1 text-sm" />
+            </label>
+            <div className="flex items-center gap-1">
+              {PRESETS.map(([lbl, cnt]) => (
+                <button key={lbl} type="button" onClick={() => setPreset(cnt)}
+                  className="rounded-md border border-zinc-200 px-2 py-1 text-xs font-medium text-zinc-600 hover:border-emerald-400 hover:text-emerald-700">
+                  {lbl}
+                </button>
+              ))}
+            </div>
+          </div>
+          <p className="text-xs text-zinc-400">Showing {hi - lo + 1} of {N} bars ({bars[lo].date} → {bars[hi].date}). Calculations use the full 5-year history, so values are correct from the first day shown.</p>
         </div>
       </div>
 
