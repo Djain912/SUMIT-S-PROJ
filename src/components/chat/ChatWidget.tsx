@@ -238,6 +238,8 @@ export function ChatWidget({ level }: Props) {
         { id: assistantId, role: 'assistant', content: '', isStreaming: true },
       ]);
       setInput('');
+      // Reset the textarea back to a single row after sending
+      if (inputRef.current) inputRef.current.style.height = 'auto';
       setIsLoading(true);
 
       const history = messages.slice(-8).map((m) => ({ role: m.role, content: m.content }));
@@ -307,36 +309,45 @@ export function ChatWidget({ level }: Props) {
     }
   };
 
+  // Grow the textarea with the content (up to a max), so multi-line questions show in full
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    const el = e.target;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
+  };
+
   const levelLabel = level ? LEVEL_LABELS[level] : null;
 
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2">
       {/* Chat panel */}
       {isOpen && (
-        <div className="flex h-[680px] w-[460px] flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl">
+        <div className="flex h-[680px] w-[460px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl ring-1 ring-black/5">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-zinc-100 bg-emerald-900 px-4 py-3">
+          <div className="flex items-center justify-between bg-gradient-to-r from-emerald-900 to-emerald-800 px-4 py-3.5">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/15">
                 <Bot className="h-4 w-4 text-white" />
               </div>
               <div>
                 <p className="text-sm font-semibold text-white">Chartix AI</p>
-                {levelLabel && (
-                  <p className="text-[10px] text-zinc-400">{levelLabel} tutor</p>
-                )}
+                <p className="flex items-center gap-1.5 text-[10px] text-emerald-200/80">
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  {levelLabel ? `${levelLabel} tutor` : 'Online'}
+                </p>
               </div>
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className="rounded-lg p-1.5 text-zinc-400 transition hover:bg-white/10 hover:text-white"
+              className="rounded-lg p-1.5 text-emerald-200/70 transition hover:bg-white/10 hover:text-white"
             >
               <X className="h-4 w-4" />
             </button>
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+          <div className="flex-1 overflow-y-auto bg-zinc-50/40 px-4 py-5 space-y-5">
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center pb-4">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-100">
@@ -374,10 +385,10 @@ export function ChatWidget({ level }: Props) {
                     className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
                   >
                     <div
-                      className={`max-w-[90%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                      className={`max-w-[92%] px-4 py-3 text-sm leading-relaxed shadow-sm ${
                         msg.role === 'user'
-                          ? 'bg-emerald-900 text-white'
-                          : 'bg-zinc-100 text-zinc-900'
+                          ? 'rounded-2xl rounded-br-md bg-emerald-700 text-white'
+                          : 'rounded-2xl rounded-bl-md border border-zinc-200 bg-white text-zinc-900'
                       }`}
                     >
                       {msg.role === 'user' ? (
@@ -411,31 +422,30 @@ export function ChatWidget({ level }: Props) {
           </div>
 
           {/* Input */}
-          <div className="border-t border-zinc-100 px-3 py-3">
-            <div className="flex items-end gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 focus-within:border-zinc-400 focus-within:bg-white transition">
+          <div className="border-t border-zinc-100 bg-white px-3 py-3">
+            <div className="flex items-end gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 shadow-sm transition focus-within:border-emerald-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-emerald-500/15">
               <textarea
                 ref={inputRef}
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
                 placeholder="Ask about CMT concepts..."
                 rows={1}
-                className="flex-1 resize-none bg-transparent text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none"
-                style={{ maxHeight: '100px' }}
+                className="flex-1 resize-none self-center max-h-[140px] overflow-y-auto bg-transparent text-[13px] leading-relaxed text-zinc-900 placeholder:text-zinc-400 focus:outline-none"
               />
               <button
                 onClick={() => sendMessage(input)}
                 disabled={!input.trim() || isLoading}
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-700 text-white transition hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-700 text-white shadow-sm transition hover:bg-emerald-600 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
               >
                 {isLoading ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <Send className="h-3.5 w-3.5" />
+                  <Send className="h-4 w-4" />
                 )}
               </button>
             </div>
-            <p className="mt-1.5 text-center text-[10px] text-zinc-400">
+            <p className="mt-2 text-center text-[10px] text-zinc-400">
               AI can make mistakes — verify important facts
             </p>
           </div>
