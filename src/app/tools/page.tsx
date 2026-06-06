@@ -90,7 +90,7 @@ export default function ToolsIndexPage() {
           <div className="mx-auto max-w-2xl px-4 text-center">
             <h2 className="text-2xl font-bold text-white sm:text-3xl">Ready to go beyond the calculator?</h2>
             <p className="mt-3 text-sm text-emerald-300">
-              Chartix has full CMT notes, 2000+ exam-level MCQs, mock tests and the Chartix Technical Analysis Chatbot — for all three levels.
+              Chartix has full CMT notes, 2000+ exam-level MCQs, mock tests and the Chartix Scholar — for all three levels.
             </p>
             <Link href="/sign-up" className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-8 py-3.5 text-sm font-bold text-emerald-900 hover:bg-emerald-50 transition">
               Start free — no card needed <ArrowRight className="h-4 w-4" />

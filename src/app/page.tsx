@@ -38,8 +38,8 @@ const pillars = [
   },
   {
     icon: Brain,
-    title: 'Chartix Technical Analysis Chatbot',
-    description: 'Chartix-powered chatbot built on the CMT curriculum — explains concepts, answers questions, and keeps you on track.',
+    title: 'Chartix Scholar',
+    description: 'Ask Chartix Scholar anything — it is trained on the CMT curriculum and explains concepts, answers exam questions, and keeps you on track.',
   },
 ];
 
@@ -153,7 +153,7 @@ export default async function HomePage() {
                     </h1>
 
                     <p className="mt-4 text-base leading-7 text-zinc-500 max-w-md">
-                      Chapter-by-chapter notes, 2000+ practice MCQs, unlimited mock tests, and the Chartix Technical Analysis Chatbot — everything you need for Level I, II, and III.
+                      Chapter-by-chapter notes, 2000+ practice MCQs, unlimited mock tests, and the Chartix Scholar — everything you need for Level I, II, and III.
                     </p>
 
                     <div className="mt-8 flex flex-wrap items-center gap-4">
@@ -200,7 +200,7 @@ export default async function HomePage() {
                             </div>
                             <span className="text-[10px] font-bold text-emerald-900">Chartix</span>
                           </div>
-                          {['Dashboard', 'Notes', 'Quizzes', 'Analytics', 'AI Chat'].map((item, i) => (
+                          {['Dashboard', 'Notes', 'Quizzes', 'Analytics', 'Scholar'].map((item, i) => (
                             <div key={item} className={`mb-1 rounded-lg px-2 py-1.5 text-[9px] font-medium ${i === 0 ? 'bg-emerald-600 text-white' : 'text-zinc-400'}`}>
                               {item}
                             </div>

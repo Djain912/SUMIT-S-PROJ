@@ -65,14 +65,14 @@ export default function TermsPage() {
             <li>Use the platform for any illegal or harmful purpose.</li>
             <li>Attempt to gain unauthorised access to any part of the platform.</li>
             <li>Upload malicious code or interfere with platform operations.</li>
-            <li>Use the AI chatbot to generate content for redistribution or to circumvent CMT exam rules.</li>
+            <li>Use Chartix Scholar to generate content for redistribution or to circumvent CMT exam rules.</li>
           </ul>
 
           <h2>7. Content Accuracy</h2>
           <p>While we make every effort to ensure the accuracy of our CMT study content, Chartix does not guarantee that all content is error-free or up-to-date with the latest CMT curriculum. Always verify critical exam information with the official CMT Association website (cmtassociation.org).</p>
 
           <h2>8. AI Features</h2>
-          <p>Our AI chatbot and question generator are powered by OpenAI&apos;s GPT models. AI-generated content may occasionally contain inaccuracies. Do not rely solely on AI responses for exam preparation.</p>
+          <p>Chartix Scholar and our question generator are powered by OpenAI&apos;s GPT models. AI-generated content may occasionally contain inaccuracies. Do not rely solely on Chartix Scholar responses for exam preparation.</p>
 
           <h2>9. Limitation of Liability</h2>
           <p>Chartix is provided &ldquo;as is&rdquo; without warranties of any kind. We are not liable for:</p>

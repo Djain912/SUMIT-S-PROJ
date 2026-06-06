@@ -331,10 +331,10 @@ export function ChatWidget({ level }: Props) {
                 <Bot className="h-4 w-4 text-white" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-white">Chartix AI</p>
+                <p className="text-sm font-semibold text-white">Chartix Scholar</p>
                 <p className="flex items-center gap-1.5 text-[10px] text-emerald-200/80">
                   <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                  {levelLabel ? `${levelLabel} tutor` : 'Online'}
+                  {levelLabel ? `${levelLabel} · Online` : 'Online'}
                 </p>
               </div>
             </div>

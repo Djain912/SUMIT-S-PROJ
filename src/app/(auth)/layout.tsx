@@ -12,7 +12,7 @@ const features = [
   '2,000+ practice MCQs at real exam difficulty',
   'Unlimited mock tests & customised MCQ sets',
   'Analytics to identify and fix weak areas',
-  'Chartix AI chatbot trained on CMT material',
+  'Chartix Scholar — CMT-trained study chatbot',
 ];
 
 export default function AuthLayout({ children }: { children: ReactNode }) {

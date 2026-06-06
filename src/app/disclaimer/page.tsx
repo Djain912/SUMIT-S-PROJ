@@ -65,7 +65,7 @@ export default function DisclaimerPage() {
 
           <h2>5. AI-Generated Content</h2>
           <p>
-            Chartix uses AI-powered tools (including chatbots and study assistants) to help candidates prepare. AI responses may occasionally contain errors, outdated information, or interpretations that differ from official CMT Association guidance. Always cross-reference AI responses with official sources before relying on them for exam preparation.
+            Chartix Scholar is an AI-powered study assistant built on the CMT curriculum. Responses may occasionally contain errors, outdated information, or interpretations that differ from official CMT Association guidance. Always cross-reference Chartix Scholar responses with official sources before relying on them for exam preparation.
           </p>
 
           <h2>6. Not Financial or Investment Advice</h2>

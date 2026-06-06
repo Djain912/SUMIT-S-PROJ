@@ -22,7 +22,7 @@ const navItems = [
   { label: 'Question Reports', href: '/admin/question-reports', icon: Flag },
   { label: 'Note Reports', href: '/admin/note-reports', icon: ShieldCheck },
   { label: 'Contact Messages', href: '/admin/contacts', icon: MessageSquare },
-  { label: 'Chatbot Training', href: '/admin/chatbot', icon: Bot },
+  { label: 'Scholar Training', href: '/admin/chatbot', icon: Bot },
   { label: 'Homepage Bot', href: '/admin/homepage-bot', icon: Globe },
   { label: 'Bot Feedback', href: '/admin/bot-feedback', icon: ThumbsUp },
   { label: 'Blog', href: '/admin/blog', icon: Newspaper },
