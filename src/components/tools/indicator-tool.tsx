@@ -3,10 +3,10 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { AAPL_SAMPLE } from '@/lib/tools/sample-data';
-import { computeRoc, computeMacd, computeRsi, computeStochastics, computeAdl, computeMfi, computePpo, computeDmi, computeObv } from '@/lib/tools/indicators';
+import { computeRoc, computeMacd, computeRsi, computeStochastics, computeAdl, computeMfi, computePpo, computeDmi, computeObv, computeCmf } from '@/lib/tools/indicators';
 import { PanelChart } from '@/components/tools/panel-chart';
 
-export type IndicatorKey = 'roc' | 'macd' | 'rsi' | 'stochastics' | 'adl' | 'mfi' | 'ppo' | 'dmi' | 'obv';
+export type IndicatorKey = 'roc' | 'macd' | 'rsi' | 'stochastics' | 'adl' | 'mfi' | 'ppo' | 'dmi' | 'obv' | 'cmf';
 
 const EMERALD = '#047857';
 const BLUE = '#2563eb';
@@ -154,6 +154,24 @@ const META: Record<IndicatorKey, Meta> = {
       'A falling ADX = the trend is weakening.',
     ],
   },
+  cmf: {
+    name: 'Chaikin Money Flow (CMF)',
+    blurb: 'CMF measures buying and selling pressure over a period by summing volume weighted by where the close falls in the high-low range.',
+    formula: 'Multiplier = ((Close−Low) − (High−Close)) ÷ (High−Low)   ·   MFV = Multiplier × Volume   ·   CMF = Sum(MFV, n) ÷ Sum(Volume, n)',
+    measures: 'CMF measures net buying vs selling pressure as a ratio, oscillating between −1 and +1 (typically ±0.5 in practice).',
+    construction: [
+      'Step 1 — Money Flow Multiplier: ((Close−Low) − (High−Close)) ÷ (High−Low). Ranges from −1 (close at the low) to +1 (close at the high).',
+      'Step 2 — Money Flow Volume (MFV): Multiplier × Volume for that bar.',
+      'Step 3 — Over the lookback period n, sum all MFV values and sum all Volume values.',
+      'Step 4 — CMF = Sum of MFV ÷ Sum of Volume. This normalizes by volume so big-volume days count more.',
+    ],
+    reading: [
+      'Above 0 = net buying pressure (accumulation); below 0 = net selling pressure (distribution).',
+      'A reading above +0.25 signals strong buying; below −0.25 signals strong selling.',
+      'CMF crossing above 0 from below = a shift from distribution to accumulation.',
+      'Note: ADL uses the same multiplier but as a running total; CMF is a windowed ratio — so it is bounded and mean-reverting.',
+    ],
+  },
   obv: {
     name: 'On Balance Volume (OBV)',
     blurb: 'OBV is a running volume total that adds volume on up days and subtracts it on down days.',
@@ -184,9 +202,9 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
   const N = bars.length;
 
   const usesEma = indicator === 'macd' || indicator === 'ppo';
-  const usesPeriod = ['roc', 'rsi', 'stochastics', 'mfi', 'dmi'].includes(indicator);
+  const usesPeriod = ['roc', 'rsi', 'stochastics', 'mfi', 'dmi', 'cmf'].includes(indicator);
   const noControls = indicator === 'adl' || indicator === 'obv';
-  const [period, setPeriod] = useState(indicator === 'roc' ? 10 : 14);
+  const [period, setPeriod] = useState(indicator === 'roc' ? 10 : indicator === 'cmf' ? 20 : 14);
   const [fast, setFast] = useState(12);
   const [slow, setSlow] = useState(26);
   const [signal, setSignal] = useState(9);
@@ -208,6 +226,7 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
   const stoch = useMemo(() => computeStochastics(bars, period), [bars, period]);
   const adl = useMemo(() => computeAdl(bars), [bars]);
   const obv = useMemo(() => computeObv(bars), [bars]);
+  const cmf = useMemo(() => computeCmf(bars, period), [bars, period]);
   const mfi = useMemo(() => computeMfi(bars, period), [bars, period]);
   const ppo = useMemo(() => computePpo(bars, fast, slow, signal), [bars, fast, slow, signal]);
   const dmi = useMemo(() => computeDmi(bars, period), [bars, period]);
@@ -235,6 +254,10 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
     if (indicator === 'obv')
       return <PanelChart categories={dates} price={priceSeries} indicatorLabel="On Balance Volume (OBV)"
         indicators={[{ label: 'OBV', color: BLUE, values: sl(obv.line) }]} />;
+    if (indicator === 'cmf')
+      return <PanelChart categories={dates} price={priceSeries} indicatorLabel={`Chaikin Money Flow (${period})`}
+        indicators={[{ label: `CMF (${period})`, color: PURPLE, values: sl(cmf.line) }]}
+        refLines={[{ value: 0, label: '0', color: '#9ca3af' }, { value: 0.25, label: '+0.25 strong buy' }, { value: -0.25, label: '−0.25 strong sell' }]} />;
     if (indicator === 'mfi')
       return <PanelChart categories={dates} price={priceSeries} indicatorLabel={`MFI (${period})`} indMin={0} indMax={100}
         indicators={[{ label: `MFI (${period})`, color: EMERALD, values: sl(mfi.line) }]} refLines={[{ value: 70, label: '70 overbought' }, { value: 30, label: '30 oversold' }]} />;
@@ -312,7 +335,7 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
         <p className="border-b border-zinc-100 px-4 py-3 text-sm font-semibold text-zinc-800">Step-by-step calculation (selected dates)</p>
         <div className="max-h-[420px] overflow-auto">
           <CalcTable indicator={indicator} roc={sl(roc.rows)} rsi={sl(rsi.rows)} macd={sl(macd.rows)}
-            stoch={sl(stoch.rows)} adl={sl(adl.rows)} mfi={sl(mfi.rows)} ppo={sl(ppo.rows)} dmi={sl(dmi.rows)} obv={sl(obv.rows)} />
+            stoch={sl(stoch.rows)} adl={sl(adl.rows)} mfi={sl(mfi.rows)} ppo={sl(ppo.rows)} dmi={sl(dmi.rows)} obv={sl(obv.rows)} cmf={sl(cmf.rows)} />
         </div>
       </div>
 
@@ -347,7 +370,7 @@ function th(label: string) { return <th className="whitespace-nowrap px-3 py-2 t
 function td(v: ReactNode, first = false) { return <td className={`whitespace-nowrap px-3 py-1.5 ${first ? 'text-left text-zinc-500' : 'text-right tabular-nums text-zinc-800'}`}>{v}</td>; }
 function fmtInt(v: number | null) { return v === null || !Number.isFinite(v) ? '—' : Math.round(v).toLocaleString('en-US'); }
 
-function CalcTable({ indicator, roc, rsi, macd, stoch, adl, mfi, ppo, dmi, obv }: {
+function CalcTable({ indicator, roc, rsi, macd, stoch, adl, mfi, ppo, dmi, obv, cmf }: {
   indicator: IndicatorKey;
   roc: ReturnType<typeof computeRoc>['rows'];
   rsi: ReturnType<typeof computeRsi>['rows'];
@@ -358,6 +381,7 @@ function CalcTable({ indicator, roc, rsi, macd, stoch, adl, mfi, ppo, dmi, obv }
   ppo: ReturnType<typeof computePpo>['rows'];
   dmi: ReturnType<typeof computeDmi>['rows'];
   obv: ReturnType<typeof computeObv>['rows'];
+  cmf: ReturnType<typeof computeCmf>['rows'];
 }) {
   if (indicator === 'roc') {
     return (
@@ -420,6 +444,14 @@ function CalcTable({ indicator, roc, rsi, macd, stoch, adl, mfi, ppo, dmi, obv }
       <table className="w-full text-[13px]">
         <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('Volume')}{th('Direction')}{th('OBV')}</tr></thead>
         <tbody>{obv.map((r) => <tr key={r.date} className="border-t border-zinc-50">{td(r.date, true)}{td(fmt(r.close))}{td(fmtInt(r.volume))}{td(<span className={r.direction === '+' ? 'text-emerald-600 font-semibold' : r.direction === '−' ? 'text-red-500 font-semibold' : 'text-zinc-400'}>{r.direction}</span>)}{td(fmtInt(r.obv))}</tr>)}</tbody>
+      </table>
+    );
+  }
+  if (indicator === 'cmf') {
+    return (
+      <table className="w-full text-[13px]">
+        <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('Volume')}{th('Multiplier')}{th('MFV')}{th('Sum MFV')}{th('Sum Vol')}{th('CMF')}</tr></thead>
+        <tbody>{cmf.map((r) => <tr key={r.date} className="border-t border-zinc-50">{td(r.date, true)}{td(fmt(r.close))}{td(fmtInt(r.volume))}{td(fmt(r.multiplier))}{td(fmtInt(r.mfv))}{td(r.sumMfv === null ? '—' : fmtInt(r.sumMfv))}{td(r.sumVol === null ? '—' : fmtInt(r.sumVol))}{td(fmt(r.cmf, 4))}</tr>)}</tbody>
       </table>
     );
   }

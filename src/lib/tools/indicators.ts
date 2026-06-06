@@ -164,6 +164,28 @@ export function computePpo(bars: Bar[], fast: number, slow: number, signal: numb
   return { rows, ppoLine: ppo as Series, signalLine: sig as Series };
 }
 
+// ---- Chaikin Money Flow (CMF) ----
+export type CmfRow = {
+  date: string; high: number; low: number; close: number; volume: number;
+  multiplier: number; mfv: number; sumMfv: number | null; sumVol: number | null; cmf: number | null;
+};
+export function computeCmf(bars: Bar[], period: number) {
+  const n = bars.length;
+  const mult = bars.map((b) => b.high === b.low ? 0 : ((b.close - b.low) - (b.high - b.close)) / (b.high - b.low));
+  const mfv = bars.map((b, i) => mult[i] * b.volume);
+  const sumMfv: (number | null)[] = Array(n).fill(null);
+  const sumVol: (number | null)[] = Array(n).fill(null);
+  const cmf: (number | null)[] = Array(n).fill(null);
+  for (let i = period - 1; i < n; i++) {
+    let sm = 0, sv = 0;
+    for (let j = i - period + 1; j <= i; j++) { sm += mfv[j]; sv += bars[j].volume; }
+    sumMfv[i] = sm; sumVol[i] = sv;
+    cmf[i] = sv === 0 ? 0 : sm / sv;
+  }
+  const rows: CmfRow[] = bars.map((b, i) => ({ date: b.date, high: b.high, low: b.low, close: b.close, volume: b.volume, multiplier: mult[i], mfv: mfv[i], sumMfv: sumMfv[i], sumVol: sumVol[i], cmf: cmf[i] }));
+  return { rows, line: cmf as Series };
+}
+
 // ---- On Balance Volume (OBV) ----
 export type ObvRow = {
   date: string; close: number; volume: number; direction: string; obv: number;
