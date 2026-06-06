@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { AuthError, requireAuthenticatedUser } from '@/server/policies/auth';
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 import { openai, CHAT_MODEL } from '@/lib/ai/openai';
-import { buildContext } from '@/lib/ai/rag';
+import { buildContext, type RagImage } from '@/lib/ai/rag';
+import { getUserMemory, updateUserMemory } from '@/lib/ai/memory';
 import { prisma } from '@/lib/db/prisma';
 
 export const dynamic = 'force-dynamic';
@@ -13,7 +14,13 @@ const LEVEL_LABELS: Record<string, string> = {
   LEVEL_3: 'Level III',
 };
 
-function buildSystemPrompt(level: string | null, context: string, qaPairs: { question: string; answer: string }[] = []): string {
+function buildSystemPrompt(
+  level: string | null,
+  context: string,
+  qaPairs: { question: string; answer: string }[] = [],
+  images: RagImage[] = [],
+  memory: string | null = null,
+): string {
   const levelLabel = level ? LEVEL_LABELS[level] ?? level : 'all levels';
 
   const base = `You are Chartix AI — a friendly CMT exam tutor helping students prepare for CMT ${levelLabel}. Students may be from anywhere in the world and may be beginners.
@@ -51,6 +58,33 @@ RULES YOU MUST NEVER BREAK:
 
 IMPORTANT: Do NOT make up facts. If unsure, say so clearly.`;
 
+  // Diagrams pulled from the student's own notes — let the model embed the
+  // relevant one(s) inline using markdown image syntax, which the UI renders.
+  const imagesSection =
+    images.length > 0
+      ? `
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DIAGRAMS AVAILABLE FROM THE STUDENT'S NOTES:
+${images.map((img, i) => `${i + 1}. ${img.label} — ${img.url}`).join('\n')}
+
+If one of these diagrams genuinely illustrates the concept being asked about, embed it in your answer on its own line using EXACTLY this markdown format: ![short caption](url)
+- Place it right after the "What is" line or inside the Real-World Example, then briefly explain what the diagram shows.
+- Use ONLY the exact URLs listed above. NEVER invent, guess, or modify an image URL.
+- Include at most 1–2 images, and only if clearly relevant. If none fit, do not add any image.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
+      : '';
+
+  // Personalisation profile built up from this student's past chats.
+  const memorySection = memory
+    ? `
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WHAT YOU KNOW ABOUT THIS STUDENT (adapt your depth, tone and format to match — do NOT mention that you have a profile):
+${memory}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
+    : '';
+
   let prompt = base;
 
   // Inject admin corrections with highest priority
@@ -64,7 +98,7 @@ ${qaPairs.map((p, i) => `${i + 1}. Q: ${p.question}\n   A: ${p.answer}`).join('\
   }
 
   if (context) {
-    return `${prompt}
+    prompt += `
 
 Here is relevant content from the student's study materials to inform your answer:
 
@@ -73,7 +107,7 @@ ${context}
 Use this context as your primary source. You may supplement with your general CMT knowledge, but always stay grounded in the curriculum.`;
   }
 
-  return prompt;
+  return prompt + imagesSection + memorySection;
 }
 
 type ChatMessage = {
@@ -83,7 +117,7 @@ type ChatMessage = {
 
 export async function POST(request: Request) {
   try {
-    await requireAuthenticatedUser();
+    const user = await requireAuthenticatedUser();
 
     // TODO: Uncomment this when payment system is live
     // if (!user.isPremium && user.role !== 'ADMIN') {
@@ -112,8 +146,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Build RAG context + load admin Q&A corrections in parallel
-    const [context, qaPairs] = await Promise.all([
+    // Build RAG context + load admin Q&A corrections + student memory in parallel
+    const [context, qaPairs, memory] = await Promise.all([
       buildContext(message, level),
       prisma.botQAPair.findMany({
         where: { botType: 'study' },
@@ -121,9 +155,10 @@ export async function POST(request: Request) {
         orderBy: { createdAt: 'desc' },
         take: 30,
       }),
+      getUserMemory(user.id),
     ]);
 
-    const systemPrompt = buildSystemPrompt(level, context, qaPairs);
+    const systemPrompt = buildSystemPrompt(level, context.text, qaPairs, context.images, memory);
 
     const messages: ChatCompletionMessageParam[] = [
       { role: 'system', content: systemPrompt },
@@ -143,15 +178,22 @@ export async function POST(request: Request) {
 
     const readableStream = new ReadableStream({
       async start(controller) {
+        let fullAnswer = '';
         try {
           for await (const chunk of stream) {
             const delta = chunk.choices[0]?.delta?.content;
             if (delta) {
+              fullAnswer += delta;
               controller.enqueue(encoder.encode(delta));
             }
           }
         } finally {
           controller.close();
+          // Update the student's learning profile after responding, without
+          // blocking the stream. Runs on the cheap memory model.
+          if (fullAnswer.trim().length > 0) {
+            after(updateUserMemory(user.id, message, fullAnswer));
+          }
         }
       },
     });

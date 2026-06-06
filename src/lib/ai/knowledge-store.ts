@@ -8,6 +8,7 @@ export type KnowledgeChunkResult = {
   source_type: string;
   chapter_title: string | null;
   subtopic_title: string | null;
+  image_urls: string[];
   similarity: number;
 };
 
@@ -27,11 +28,12 @@ export async function storeChunk(chunk: {
   sourceId?: string;
   chapterTitle?: string;
   subtopicTitle?: string;
+  imageUrls?: string[];
 }) {
   const embeddingLiteral = `[${chunk.embedding.join(',')}]`;
   await prisma.$executeRawUnsafe(
-    `INSERT INTO knowledge_chunks (content, embedding, level, source_type, source_id, chapter_title, subtopic_title)
-     VALUES ($1, $2::vector, $3, $4, $5, $6, $7)`,
+    `INSERT INTO knowledge_chunks (content, embedding, level, source_type, source_id, chapter_title, subtopic_title, image_urls)
+     VALUES ($1, $2::vector, $3, $4, $5, $6, $7, $8)`,
     chunk.content,
     embeddingLiteral,
     chunk.level ?? null,
@@ -39,6 +41,7 @@ export async function storeChunk(chunk: {
     chunk.sourceId ?? null,
     chunk.chapterTitle ?? null,
     chunk.subtopicTitle ?? null,
+    chunk.imageUrls ?? [],
   );
 }
 
@@ -59,6 +62,7 @@ export async function searchSimilarChunks(
   if (level) {
     return prisma.$queryRawUnsafe<KnowledgeChunkResult[]>(
       `SELECT id::text, content, level, source_type, chapter_title, subtopic_title,
+              COALESCE(image_urls, '{}') AS image_urls,
               (1 - (embedding <=> $1::vector))::float AS similarity
        FROM knowledge_chunks
        WHERE (level = $2 OR level IS NULL)
@@ -73,6 +77,7 @@ export async function searchSimilarChunks(
 
   return prisma.$queryRawUnsafe<KnowledgeChunkResult[]>(
     `SELECT id::text, content, level, source_type, chapter_title, subtopic_title,
+            COALESCE(image_urls, '{}') AS image_urls,
             (1 - (embedding <=> $1::vector))::float AS similarity
      FROM knowledge_chunks
      WHERE (1 - (embedding <=> $1::vector)) > 0.45
@@ -91,6 +96,7 @@ export async function searchPublicBotChunks(
   const embeddingLiteral = `[${queryEmbedding.join(',')}]`;
   return prisma.$queryRawUnsafe<KnowledgeChunkResult[]>(
     `SELECT id::text, content, level, source_type, chapter_title, subtopic_title,
+            COALESCE(image_urls, '{}') AS image_urls,
             (1 - (embedding <=> $1::vector))::float AS similarity
      FROM knowledge_chunks
      WHERE source_type = 'public_bot'

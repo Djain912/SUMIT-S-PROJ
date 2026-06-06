@@ -22,6 +22,9 @@ function renderInline(text: string): React.ReactNode {
   );
 }
 
+// Matches a markdown image: ![caption](https://...)
+const IMAGE_RE = /!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g;
+
 // ── Block renderer: headings, bullet lists, numbered lists, paragraphs ───────
 function MarkdownMessage({ content }: { content: string }) {
   const lines = content.split('\n');
@@ -33,6 +36,46 @@ function MarkdownMessage({ content }: { content: string }) {
     const line = lines[i];
 
     if (line.trim() === '') { i++; continue; }
+
+    // Image line — render any ![caption](url) found, plus surrounding text
+    IMAGE_RE.lastIndex = 0;
+    if (IMAGE_RE.test(line)) {
+      IMAGE_RE.lastIndex = 0;
+      let lastIndex = 0;
+      let m: RegExpExecArray | null;
+      while ((m = IMAGE_RE.exec(line)) !== null) {
+        const before = line.slice(lastIndex, m.index).trim();
+        if (before) {
+          elements.push(
+            <p key={key++} className="text-[13px] leading-relaxed">{renderInline(before)}</p>,
+          );
+        }
+        const caption = m[1];
+        const url = m[2];
+        elements.push(
+          <figure key={key++} className="my-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={url}
+              alt={caption || 'Diagram from notes'}
+              loading="lazy"
+              className="w-full rounded-lg border border-zinc-200"
+            />
+            {caption && (
+              <figcaption className="mt-1 text-center text-[11px] text-zinc-500">{caption}</figcaption>
+            )}
+          </figure>,
+        );
+        lastIndex = m.index + m[0].length;
+      }
+      const after = line.slice(lastIndex).trim();
+      if (after) {
+        elements.push(
+          <p key={key++} className="text-[13px] leading-relaxed">{renderInline(after)}</p>,
+        );
+      }
+      i++; continue;
+    }
 
     // Headings
     if (line.startsWith('### ')) {

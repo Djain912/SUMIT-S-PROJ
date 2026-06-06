@@ -6,7 +6,7 @@ import { normalizeNoteHtml } from '@/lib/utils/note-html';
 import { AdminLevelTabs, type AdminLevel } from '@/components/admin/admin-level-tabs';
 import { TinyMceEditor } from '@/components/admin/tinymce-editor';
 import { DEFAULT_WATERMARK_CONFIG, sanitizeWatermarkConfig, type WatermarkConfig, type WatermarkPosition } from '@/lib/utils/watermark';
-import { CheckCircle, Clock, AlertCircle, Loader2 } from 'lucide-react';
+import { CheckCircle, Clock, AlertCircle, Loader2, Image as ImageIcon } from 'lucide-react';
 
 type AutoSaveStatus = 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
 
@@ -113,6 +113,82 @@ function NotePreview({ html }: { html: string }) {
       className="prose prose-zinc w-full max-w-none"
       dangerouslySetInnerHTML={{ __html: clean }}
     />
+  );
+}
+
+// Shows which images are indexed for the chatbot for a given note — i.e. the
+// images the AI tutor can actually surface in answers about this note.
+function NoteChatbotImages({ noteId, isPublished }: { noteId: string; isPublished: boolean }) {
+  const [images, setImages] = useState<string[] | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setImages(null);
+    fetch(`/api/admin/notes/${noteId}/images`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled) setImages(data?.data?.images ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setImages([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [noteId]);
+
+  return (
+    <div className="mt-6 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+      <div className="flex items-center gap-2">
+        <ImageIcon className="h-4 w-4 text-zinc-500" />
+        <p className="text-sm font-medium text-zinc-800">
+          Images available to the chatbot
+          {images && images.length > 0 ? ` (${images.length})` : ''}
+        </p>
+      </div>
+
+      {loading ? (
+        <div className="mt-3 flex items-center gap-2 text-xs text-zinc-400">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Checking indexed images…
+        </div>
+      ) : images && images.length > 0 ? (
+        <>
+          <p className="mt-1 text-xs text-zinc-500">
+            The AI tutor can show these images when answering questions about this note.
+          </p>
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {images.map((url) => (
+              <a
+                key={url}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group block overflow-hidden rounded-lg border border-zinc-200 bg-white"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={url}
+                  alt="Indexed for chatbot"
+                  loading="lazy"
+                  className="aspect-video w-full object-cover transition group-hover:opacity-90"
+                />
+              </a>
+            ))}
+          </div>
+        </>
+      ) : (
+        <p className="mt-2 text-xs text-zinc-500">
+          {isPublished
+            ? 'No images indexed yet. If this note has images, click “Sync Study Notes” on the Chatbot page to index them.'
+            : 'No images indexed. Publish this note, then run “Sync Study Notes” on the Chatbot page so its images become available to the AI tutor.'}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -702,6 +778,7 @@ export function AdminNotesClient({ initialLevel = 'LEVEL_1' }: { initialLevel?: 
                 </div>
               </div>
               <NotePreview html={selectedNote.contentHtml || ''} />
+              <NoteChatbotImages noteId={selectedNote.id} isPublished={selectedNote.isPublished} />
             </div>
           ) : null}
         </div>

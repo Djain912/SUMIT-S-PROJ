@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS knowledge_chunks (
   source_id    TEXT,                    -- noteId or PDF filename
   chapter_title    TEXT,
   subtopic_title   TEXT,
+  image_urls   TEXT[]      DEFAULT '{}', -- image URLs found in the source chunk
   created_at   TIMESTAMPTZ DEFAULT NOW()
 );
 

@@ -5,5 +5,7 @@ export const openai = new OpenAI({
 });
 
 export const CHAT_MODEL = 'gpt-4o';
+// Cheap model used only for background tasks (e.g. updating per-student memory)
+export const MEMORY_MODEL = 'gpt-4o-mini';
 export const EMBEDDING_MODEL = 'text-embedding-3-small';
 export const EMBEDDING_DIMENSIONS = 1536;
