@@ -1,4 +1,5 @@
 import { createEmbedding, searchSimilarChunks, storeChunk, deleteChunksBySourceId } from './knowledge-store';
+import { getImageCaptions } from './image-captions';
 export { deleteChunksBySourceId };
 
 const CHUNK_SIZE = 600;
@@ -160,7 +161,9 @@ export async function buildContext(
   }
 
   const contextParts: string[] = [];
-  const images: RagImage[] = [];
+
+  // First pass: build text context and gather candidate images (url + alt caption)
+  const candidates: { url: string; altCaption: string }[] = [];
   const seenUrls = new Set<string>();
 
   for (const c of chunks) {
@@ -172,15 +175,24 @@ export async function buildContext(
           : '[Study Material]';
     contextParts.push(`${source}\n${c.content}`);
 
-    // Collect images from the most relevant chunks, labelled by their own
-    // caption (alt text) so the AI can pick the one that matches the question
     for (const entry of c.image_urls ?? []) {
       const { url, caption } = parseStoredImage(entry);
       if (!url || seenUrls.has(url)) continue;
       seenUrls.add(url);
-      const label = caption || c.subtopic_title || c.chapter_title || 'Study material diagram';
-      images.push({ url, label });
+      candidates.push({ url, altCaption: caption });
     }
+  }
+
+  // Admin-defined captions take priority over the note's alt text
+  const adminCaptions = await getImageCaptions(candidates.map((c) => c.url));
+
+  // Only offer images that have a real description — an unlabelled image cannot
+  // be matched to a question reliably, and a wrong image is worse than none.
+  const images: RagImage[] = [];
+  for (const cand of candidates) {
+    const label = (adminCaptions.get(cand.url) || cand.altCaption || '').trim();
+    if (!label) continue;
+    images.push({ url: cand.url, label });
   }
 
   return { text: contextParts.join('\n\n---\n\n'), images };

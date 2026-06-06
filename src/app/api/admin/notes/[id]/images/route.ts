@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { AuthError, requireAdminUser } from '@/server/policies/auth';
 import { parseStoredImage } from '@/lib/ai/rag';
+import { getImageCaptions } from '@/lib/ai/image-captions';
 import { prisma } from '@/lib/db/prisma';
 
 export const dynamic = 'force-dynamic';
@@ -22,14 +23,25 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     );
 
     const seen = new Set<string>();
-    const images: { url: string; caption: string }[] = [];
+    const parsed: { url: string; altCaption: string }[] = [];
     for (const r of rows) {
       if (!r.entry) continue;
       const { url, caption } = parseStoredImage(r.entry);
       if (!url || seen.has(url)) continue;
       seen.add(url);
-      images.push({ url, caption });
+      parsed.push({ url, altCaption: caption });
     }
+
+    // Merge admin-defined captions (these take priority over alt text)
+    const adminCaptions = await getImageCaptions(parsed.map((p) => p.url));
+    const images = parsed.map((p) => {
+      const adminCaption = adminCaptions.get(p.url) ?? '';
+      return {
+        url: p.url,
+        caption: adminCaption || p.altCaption,
+        source: adminCaption ? 'admin' : p.altCaption ? 'alt' : 'none',
+      };
+    });
 
     return NextResponse.json({ success: true, data: { images } });
   } catch (error) {

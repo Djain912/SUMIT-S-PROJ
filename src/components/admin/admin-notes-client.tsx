@@ -116,9 +116,77 @@ function NotePreview({ html }: { html: string }) {
   );
 }
 
-// Shows which images are indexed for the chatbot for a given note — i.e. the
-// images the AI tutor can actually surface in answers about this note.
-type ChatbotImage = { url: string; caption: string };
+// Shows which images are indexed for the chatbot for a given note, and lets the
+// admin label each one so the AI tutor picks the right diagram for a question.
+type ChatbotImage = { url: string; caption: string; source?: 'admin' | 'alt' | 'none' };
+
+// One image with an inline, auto-saving caption editor.
+function ImageCaptionCard({ img }: { img: ChatbotImage }) {
+  const [caption, setCaption] = useState(img.caption);
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const saved = useRef(img.caption);
+
+  const save = useCallback(async () => {
+    if (caption.trim() === saved.current.trim()) return;
+    setStatus('saving');
+    try {
+      const res = await fetch('/api/admin/image-captions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: img.url, caption }),
+      });
+      if (!res.ok) throw new Error('save failed');
+      saved.current = caption;
+      setStatus('saved');
+      setTimeout(() => setStatus('idle'), 1500);
+    } catch {
+      setStatus('error');
+    }
+  }, [caption, img.url]);
+
+  const hasCaption = caption.trim().length > 0;
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
+      <a href={img.url} target="_blank" rel="noopener noreferrer" className="block">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={img.url}
+          alt={caption || 'Note image'}
+          loading="lazy"
+          className="aspect-video w-full object-cover transition hover:opacity-90"
+        />
+      </a>
+      <div className="p-2">
+        <input
+          value={caption}
+          onChange={(e) => setCaption(e.target.value)}
+          onBlur={save}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              (e.target as HTMLInputElement).blur();
+            }
+          }}
+          placeholder="Describe this image, e.g. Bearish Engulfing Pattern"
+          className={`w-full rounded border px-2 py-1 text-[11px] focus:outline-none focus:ring-1 ${
+            hasCaption
+              ? 'border-zinc-200 focus:ring-emerald-500/40'
+              : 'border-amber-300 bg-amber-50 focus:ring-amber-400/50'
+          }`}
+        />
+        <div className="mt-1 flex items-center justify-between text-[10px]">
+          <span className={hasCaption ? 'text-zinc-400' : 'text-amber-600'}>
+            {hasCaption ? 'Used to match questions' : 'No description — won’t be shown'}
+          </span>
+          {status === 'saving' && <span className="text-blue-500">Saving…</span>}
+          {status === 'saved' && <span className="text-emerald-600">Saved ✓</span>}
+          {status === 'error' && <span className="text-red-500">Failed — retry</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function NoteChatbotImages({ noteId, isPublished }: { noteId: string; isPublished: boolean }) {
   const [images, setImages] = useState<ChatbotImage[] | null>(null);
@@ -144,14 +212,21 @@ function NoteChatbotImages({ noteId, isPublished }: { noteId: string; isPublishe
     };
   }, [noteId]);
 
+  const missing = images?.filter((i) => !i.caption.trim()).length ?? 0;
+
   return (
     <div className="mt-6 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
       <div className="flex items-center gap-2">
         <ImageIcon className="h-4 w-4 text-zinc-500" />
         <p className="text-sm font-medium text-zinc-800">
-          Images available to the chatbot
+          Chatbot images
           {images && images.length > 0 ? ` (${images.length})` : ''}
         </p>
+        {missing > 0 && (
+          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+            {missing} need a description
+          </span>
+        )}
       </div>
 
       {loading ? (
@@ -161,29 +236,13 @@ function NoteChatbotImages({ noteId, isPublished }: { noteId: string; isPublishe
       ) : images && images.length > 0 ? (
         <>
           <p className="mt-1 text-xs text-zinc-500">
-            The AI tutor matches a question to the image <span className="font-medium">caption</span> below. Images marked
-            <span className="font-medium text-amber-600"> “No caption”</span> may be picked incorrectly — add alt text to that image in the note for accurate matching.
+            Type a short description under each image (e.g. “Bearish Engulfing Pattern”). The chatbot uses it to show the
+            right diagram. It saves automatically. Images left blank will <span className="font-medium">not</span> be shown,
+            so a wrong image is never displayed.
           </p>
           <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
             {images.map((img) => (
-              <a
-                key={img.url}
-                href={img.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group block overflow-hidden rounded-lg border border-zinc-200 bg-white"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={img.url}
-                  alt={img.caption || 'Indexed for chatbot'}
-                  loading="lazy"
-                  className="aspect-video w-full object-cover transition group-hover:opacity-90"
-                />
-                <p className={`px-2 py-1.5 text-[11px] leading-snug ${img.caption ? 'text-zinc-600' : 'text-amber-600'}`}>
-                  {img.caption || 'No caption'}
-                </p>
-              </a>
+              <ImageCaptionCard key={img.url} img={img} />
             ))}
           </div>
         </>
