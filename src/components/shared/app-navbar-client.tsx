@@ -23,6 +23,7 @@ export function AppNavbarClient({ isLoggedIn, role, userName }: Props) {
     pathname.startsWith('/sign-up') ||
     pathname === '/' ||
     pathname.startsWith('/blog') ||
+    pathname.startsWith('/tools') ||
     pathname === '/pricing' ||
     pathname === '/disclaimer' ||
     pathname === '/privacy-policy' ||
