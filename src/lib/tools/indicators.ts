@@ -4,6 +4,76 @@ import type { Bar } from './sample-data';
 
 export type Series = (number | null)[];
 
+// ---- Simple Moving Average (SMA) ----
+export type SmaRow = { date: string; close: number; sma: number | null };
+export function computeSma(bars: Bar[], period: number) {
+  const n = bars.length;
+  const sma: (number | null)[] = Array(n).fill(null);
+  for (let i = period - 1; i < n; i++) {
+    let sum = 0;
+    for (let j = i - period + 1; j <= i; j++) sum += bars[j].close;
+    sma[i] = sum / period;
+  }
+  const rows: SmaRow[] = bars.map((b, i) => ({ date: b.date, close: b.close, sma: sma[i] }));
+  return { rows, line: sma as Series };
+}
+
+// ---- Exponential Moving Average (EMA) — standalone (seeds from first value) ----
+export type EmaRow = { date: string; close: number; ema: number };
+export function computeEma(bars: Bar[], period: number) {
+  const k = 2 / (period + 1);
+  const emaVals: number[] = [];
+  bars.forEach((b, i) => {
+    emaVals.push(i === 0 ? b.close : b.close * k + emaVals[i - 1] * (1 - k));
+  });
+  const rows: EmaRow[] = bars.map((b, i) => ({ date: b.date, close: b.close, ema: emaVals[i] }));
+  return { rows, line: emaVals as Series, k };
+}
+
+// ---- Linearly Weighted Moving Average (LWMA / WMA) ----
+export type LwmaRow = { date: string; close: number; lwma: number | null };
+export function computeLwma(bars: Bar[], period: number) {
+  const n = bars.length;
+  const weightSum = (period * (period + 1)) / 2; // 1+2+...+n
+  const lwma: (number | null)[] = Array(n).fill(null);
+  for (let i = period - 1; i < n; i++) {
+    let wsum = 0;
+    for (let j = 0; j < period; j++) wsum += bars[i - period + 1 + j].close * (j + 1);
+    lwma[i] = wsum / weightSum;
+  }
+  const rows: LwmaRow[] = bars.map((b, i) => ({ date: b.date, close: b.close, lwma: lwma[i] }));
+  return { rows, line: lwma as Series, weightSum };
+}
+
+// ---- Wilder Moving Average (WSMA / RMA) ----
+export type WilderMaRow = { date: string; close: number; wma: number | null };
+export function computeWilderMa(bars: Bar[], period: number) {
+  const n = bars.length;
+  const wma: (number | null)[] = Array(n).fill(null);
+  if (n >= period) {
+    let seed = 0;
+    for (let i = 0; i < period; i++) seed += bars[i].close;
+    wma[period - 1] = seed / period; // first value = SMA seed
+    for (let i = period; i < n; i++) {
+      wma[i] = ((wma[i - 1] as number) * (period - 1) + bars[i].close) / period;
+    }
+  }
+  const rows: WilderMaRow[] = bars.map((b, i) => ({ date: b.date, close: b.close, wma: wma[i] }));
+  return { rows, line: wma as Series };
+}
+
+// ---- Distance from MA (%) — uses SMA ----
+export type DistMaRow = { date: string; close: number; sma: number | null; dist: number | null };
+export function computeDistMa(bars: Bar[], period: number) {
+  const { line: smaLine } = computeSma(bars, period);
+  const rows: DistMaRow[] = bars.map((b, i) => {
+    const s = smaLine[i];
+    const dist = s === null ? null : ((b.close - s) / s) * 100;
+    return { date: b.date, close: b.close, sma: s, dist };
+  });
+  return { rows, smaLine: smaLine as Series, distLine: rows.map((r) => r.dist) as Series };
+}
+
 // ---- Rate of Change (ROC) ----
 export type RocRow = { date: string; close: number; roc: number | null };
 export function computeRoc(bars: Bar[], period: number) {

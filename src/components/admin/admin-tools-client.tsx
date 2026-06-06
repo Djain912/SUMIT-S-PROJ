@@ -15,7 +15,12 @@ const TOOLS = [
   { key: 'dmi', name: 'DMI / ADX', desc: 'Trend direction (+DI/−DI) and strength (ADX).' },
   { key: 'obv', name: 'On Balance Volume (OBV)', desc: 'Cumulative volume: adds on up days, subtracts on down days.' },
   { key: 'cmf', name: 'Chaikin Money Flow (CMF)', desc: 'Windowed ratio of money flow volume to total volume. Oscillates −1 to +1.' },
-  { key: 'rvol', name: 'Relative Volume (RVOL)', desc: 'Today\'s volume divided by its n-period average. 1.0 = average; 2.0 = twice normal.' },
+  { key: 'rvol',     name: 'Relative Volume (RVOL)',              desc: 'Today\'s volume ÷ n-period average. 1.0 = average; 2.0 = twice normal.' },
+  { key: 'sma',     name: 'Simple Moving Average (SMA)',         desc: 'Plain average of last n closes. Equal weight to all bars.' },
+  { key: 'ema',     name: 'Exponential Moving Average (EMA)',    desc: 'Recent closes weighted more via k = 2/(n+1). Reacts faster than SMA.' },
+  { key: 'lwma',    name: 'Linearly Weighted MA (LWMA)',         desc: 'Linear weights 1…n; newest bar gets weight n. Between SMA and EMA.' },
+  { key: 'wilderma',name: 'Wilder Moving Average (WSMA)',        desc: 'k = 1/n smoothing. Slower than EMA. Used inside RSI, ADX, ATR.' },
+  { key: 'distma',  name: 'Distance from MA (%)',                desc: '(Close − SMA) ÷ SMA × 100. Shows how stretched price is from its trend.' },
 ];
 
 function snippet(key: string, name: string) {

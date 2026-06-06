@@ -344,7 +344,7 @@ export default async function HomePage() {
                   {/* View all card */}
                   <Link href="/tools"
                     className="group flex flex-col items-center justify-center rounded-xl border border-emerald-200 bg-emerald-600 p-4 transition hover:bg-emerald-700 text-center">
-                    <p className="text-sm font-bold text-white">View All 11 Tools</p>
+                    <p className="text-sm font-bold text-white">View All 16 Tools</p>
                     <p className="mt-1 text-xs text-emerald-200">+ filter by category</p>
                     <ArrowRight className="mt-2 h-4 w-4 text-white" />
                   </Link>

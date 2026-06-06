@@ -5,11 +5,13 @@ import { IndicatorTool, type IndicatorKey } from '@/components/tools/indicator-t
 
 export const dynamic = 'force-dynamic';
 
-const VALID: IndicatorKey[] = ['roc', 'macd', 'rsi', 'stochastics', 'adl', 'mfi', 'ppo', 'dmi', 'obv', 'cmf', 'rvol'];
+const VALID: IndicatorKey[] = ['roc', 'macd', 'rsi', 'stochastics', 'adl', 'mfi', 'ppo', 'dmi', 'obv', 'cmf', 'rvol', 'sma', 'ema', 'lwma', 'wilderma', 'distma'];
 const NAMES: Record<IndicatorKey, string> = {
   roc: 'Rate of Change (ROC)', macd: 'MACD', rsi: 'RSI', stochastics: 'Stochastics',
   adl: 'Accumulation / Distribution', mfi: 'Money Flow Index', ppo: 'PPO', dmi: 'DMI / ADX',
   obv: 'On Balance Volume', cmf: 'Chaikin Money Flow', rvol: 'Relative Volume',
+  sma: 'Simple Moving Average', ema: 'Exponential Moving Average',
+  lwma: 'Linearly Weighted Moving Average', wilderma: 'Wilder Moving Average', distma: 'Distance from MA (%)',
 };
 
 export async function generateMetadata({ params }: { params: Promise<{ indicator: string }> }) {

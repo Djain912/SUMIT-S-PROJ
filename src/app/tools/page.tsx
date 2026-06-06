@@ -19,12 +19,18 @@ const TOOLS = [
   { key: 'cmf',         name: 'Chaikin Money Flow (CMF)',    desc: 'Windowed ratio of money flow volume to total volume.',               tag: 'Volume'     },
   { key: 'rvol',        name: 'Relative Volume (RVOL)',      desc: 'Today\'s volume ÷ average volume. Confirms breakouts and climaxes.',  tag: 'Volume'     },
   { key: 'dmi',         name: 'DMI / ADX',                  desc: 'Trend direction (+DI/−DI) and trend strength (ADX) — Wilder.',       tag: 'Trend'      },
+  { key: 'sma',         name: 'Simple MA (SMA)',             desc: 'Plain average of last n closes. The foundation of all MAs.',           tag: 'Moving Avg' },
+  { key: 'ema',         name: 'Exponential MA (EMA)',        desc: 'Weights recent closes more. k = 2/(n+1). Reacts faster than SMA.',     tag: 'Moving Avg' },
+  { key: 'lwma',        name: 'Linearly Weighted MA (LWMA)', desc: 'Linear weights 1…n. More responsive than SMA, less than EMA.',        tag: 'Moving Avg' },
+  { key: 'wilderma',    name: 'Wilder MA (WSMA)',            desc: 'k = 1/n. Slower EMA. Used inside RSI, ADX and ATR.',                  tag: 'Moving Avg' },
+  { key: 'distma',      name: 'Distance from MA (%)',        desc: '(Close − SMA) / SMA × 100. Shows how far price is from its trend.',   tag: 'Moving Avg' },
 ];
 
 const TAG_COLORS: Record<string, string> = {
-  Momentum: 'bg-blue-50 text-blue-700 border-blue-200',
-  Volume:   'bg-purple-50 text-purple-700 border-purple-200',
-  Trend:    'bg-amber-50 text-amber-700 border-amber-200',
+  Momentum:   'bg-blue-50 text-blue-700 border-blue-200',
+  Volume:     'bg-purple-50 text-purple-700 border-purple-200',
+  Trend:      'bg-amber-50 text-amber-700 border-amber-200',
+  'Moving Avg': 'bg-emerald-50 text-emerald-700 border-emerald-200',
 };
 
 export default function ToolsIndexPage() {

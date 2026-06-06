@@ -3,10 +3,12 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { AAPL_SAMPLE } from '@/lib/tools/sample-data';
-import { computeRoc, computeMacd, computeRsi, computeStochastics, computeAdl, computeMfi, computePpo, computeDmi, computeObv, computeCmf, computeRvol } from '@/lib/tools/indicators';
+import { computeRoc, computeMacd, computeRsi, computeStochastics, computeAdl, computeMfi, computePpo, computeDmi, computeObv, computeCmf, computeRvol, computeSma, computeEma, computeLwma, computeWilderMa, computeDistMa } from '@/lib/tools/indicators';
 import { PanelChart } from '@/components/tools/panel-chart';
+import { OverlayChart } from '@/components/tools/overlay-chart';
 
-export type IndicatorKey = 'roc' | 'macd' | 'rsi' | 'stochastics' | 'adl' | 'mfi' | 'ppo' | 'dmi' | 'obv' | 'cmf' | 'rvol';
+export type IndicatorKey = 'roc' | 'macd' | 'rsi' | 'stochastics' | 'adl' | 'mfi' | 'ppo' | 'dmi' | 'obv' | 'cmf' | 'rvol' | 'sma' | 'ema' | 'lwma' | 'wilderma' | 'distma';
+export const MA_KEYS: IndicatorKey[] = ['sma', 'ema', 'lwma', 'wilderma', 'distma'];
 
 const EMERALD = '#047857';
 const BLUE = '#2563eb';
@@ -172,6 +174,96 @@ const META: Record<IndicatorKey, Meta> = {
       'RVOL is most powerful as a confirming indicator: a breakout on high RVOL is far more credible than one on low volume.',
     ],
   },
+  sma: {
+    name: 'Simple Moving Average (SMA)',
+    blurb: 'The SMA is the plain average of the closing price over n bars — the foundation of all moving averages.',
+    formula: 'SMA = (C1 + C2 + ... + Cn) ÷ n',
+    measures: 'The SMA smooths price data by equally averaging the last n closes. It removes short-term noise to reveal the underlying trend.',
+    construction: [
+      'Choose a period n (e.g. 20 bars).',
+      'Add the closing prices of the last n bars together.',
+      'Divide by n to get the average.',
+      'Each day, drop the oldest close and add the newest — the average "slides" forward.',
+    ],
+    reading: [
+      'Price above SMA = uptrend; price below SMA = downtrend.',
+      'A shorter SMA (e.g. 10) reacts faster; a longer SMA (e.g. 200) is smoother and slower.',
+      'SMA crossovers (e.g. 10 crossing 50) are classic trend-change signals.',
+      'All n bars have equal weight — that is both its strength (simplicity) and weakness (lags on fast moves).',
+    ],
+  },
+  ema: {
+    name: 'Exponential Moving Average (EMA)',
+    blurb: 'EMA weights recent closes more heavily than older ones using a smoothing multiplier, so it reacts faster than the SMA.',
+    formula: 'k = 2 ÷ (n + 1)   ·   EMA = (Close × k) + (Previous EMA × (1 − k))',
+    measures: 'EMA measures the trend with more emphasis on recent price action, making it more responsive than SMA to new data.',
+    construction: [
+      'Calculate the smoothing multiplier k = 2 ÷ (period + 1).',
+      'Seed the first EMA value as the first closing price.',
+      'Each subsequent EMA = (Current Close × k) + (Previous EMA × (1 − k)).',
+      'Because k is always < 1, older data decays geometrically — never reaching zero but becoming negligible.',
+    ],
+    reading: [
+      'EMA reacts faster than SMA of the same period — it turns earlier on reversals.',
+      'Widely used in MACD (difference between two EMAs) and Bollinger Bands.',
+      'Shorter period = higher k = more weight on today\'s close = faster reaction.',
+      'Crossovers of a short EMA above/below a long EMA signal trend changes.',
+    ],
+  },
+  lwma: {
+    name: 'Linearly Weighted Moving Average (LWMA)',
+    blurb: 'LWMA assigns linearly increasing weights — the most recent close gets weight n, the oldest gets weight 1.',
+    formula: 'LWMA = (C1×1 + C2×2 + ... + Cn×n) ÷ (1 + 2 + ... + n)   where Cn is the most recent close',
+    measures: 'LWMA smooths price with a linear (not exponential) taper — more responsive than SMA but less extreme than EMA.',
+    construction: [
+      'Assign weight 1 to the oldest close in the window, weight 2 to the next, up to weight n for today\'s close.',
+      'Multiply each close by its weight and sum the products.',
+      'Divide by the sum of all weights: n × (n+1) ÷ 2.',
+      'This gives the most recent data more influence without the exponential decay of EMA.',
+    ],
+    reading: [
+      'Responds faster than SMA but slower than EMA to price changes.',
+      'Less commonly used than SMA/EMA but tested in the CMT curriculum.',
+      'Like all MAs, price above LWMA = uptrend; below = downtrend.',
+      'The key differentiator: weights increase linearly, not exponentially.',
+    ],
+  },
+  wilderma: {
+    name: 'Wilder Moving Average (WSMA)',
+    blurb: 'Wilder\'s smoothing uses k = 1/n (vs EMA\'s 2/(n+1)), making it slower and smoother. Used inside RSI, ADX, and ATR.',
+    formula: 'WSMA = (Previous WSMA × (n−1) + Current Close) ÷ n   ·   Seed = SMA of first n bars',
+    measures: 'Wilder MA is a slower, smoother version of EMA. Because k = 1/n is smaller than EMA\'s k = 2/(n+1), it lags more but is very stable.',
+    construction: [
+      'Seed: calculate the SMA of the first n bars as the starting value.',
+      'Smoothing factor k = 1 ÷ n (compare: EMA uses k = 2 ÷ (n+1)).',
+      'WSMA = Previous WSMA × (n−1)/n + Current Close × (1/n).',
+      'Equivalent to an EMA with period (2n−1) — so Wilder 14 ≈ EMA 27.',
+    ],
+    reading: [
+      'Wilder 14 is used internally in RSI, ADX/DMI, and ATR — it is the standard smoothing for those indicators.',
+      'Slower to turn than EMA — signals trend changes later but with fewer false signals.',
+      'A Wilder MA of period n is equivalent to an EMA of period (2n − 1).',
+      'Seed value matters — the SMA seed means early bars are approximate.',
+    ],
+  },
+  distma: {
+    name: 'Distance from MA (%)',
+    blurb: 'Shows how far price is from its Simple Moving Average, expressed as a percentage. Identifies overbought/oversold stretches.',
+    formula: 'Distance (%) = (Close − SMA) ÷ SMA × 100',
+    measures: 'Distance from MA measures how stretched or compressed price is relative to its moving average trend — useful for mean-reversion setups.',
+    construction: [
+      'Calculate the SMA of the closing price over n bars.',
+      'Subtract the SMA from the current close.',
+      'Divide by the SMA and multiply by 100 to express as a percentage.',
+      'Positive = price above MA (extended upward); Negative = price below MA (extended downward).',
+    ],
+    reading: [
+      'Large positive readings: price is far above the MA — potential mean-reversion short or overbought condition.',
+      'Large negative readings: price is far below the MA — potential mean-reversion long or oversold condition.',
+      'What counts as "large" depends on the asset — compare to historical extremes.',
+      'Crossing zero = price has crossed its MA (trend change signal).',
+    ],
+  },
   cmf: {
     name: 'Chaikin Money Flow (CMF)',
     blurb: 'CMF measures buying and selling pressure over a period by summing volume weighted by where the close falls in the high-low range.',
@@ -219,10 +311,23 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
   const bars = AAPL_SAMPLE;
   const N = bars.length;
 
+  const isMa = MA_KEYS.includes(indicator);
   const usesEma = indicator === 'macd' || indicator === 'ppo';
   const usesPeriod = ['roc', 'rsi', 'stochastics', 'mfi', 'dmi', 'cmf', 'rvol'].includes(indicator);
   const noControls = indicator === 'adl' || indicator === 'obv';
-  const [period, setPeriod] = useState(indicator === 'roc' ? 10 : indicator === 'cmf' ? 20 : indicator === 'rvol' ? 20 : 14);
+  const [period, setPeriod] = useState(
+    indicator === 'roc' ? 10 : ['cmf', 'rvol', 'sma', 'ema', 'lwma', 'wilderma', 'distma'].includes(indicator) ? 20 : 14
+  );
+  const MA_COLORS_LIST = [
+    { label: 'Blue',   value: '#2563eb' },
+    { label: 'Orange', value: '#d97706' },
+    { label: 'Red',    value: '#dc2626' },
+    { label: 'Purple', value: '#7c3aed' },
+    { label: 'Green',  value: '#047857' },
+    { label: 'Pink',   value: '#db2777' },
+  ];
+  const [maColor, setMaColor] = useState('#2563eb');
+  const MA_PRESETS = [5, 10, 20, 50, 100, 200];
   const [fast, setFast] = useState(12);
   const [slow, setSlow] = useState(26);
   const [signal, setSignal] = useState(9);
@@ -246,6 +351,11 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
   const obv = useMemo(() => computeObv(bars), [bars]);
   const cmf = useMemo(() => computeCmf(bars, period), [bars, period]);
   const rvol = useMemo(() => computeRvol(bars, period), [bars, period]);
+  const sma = useMemo(() => computeSma(bars, period), [bars, period]);
+  const ema = useMemo(() => computeEma(bars, period), [bars, period]);
+  const lwma = useMemo(() => computeLwma(bars, period), [bars, period]);
+  const wilderma = useMemo(() => computeWilderMa(bars, period), [bars, period]);
+  const distma = useMemo(() => computeDistMa(bars, period), [bars, period]);
   const mfi = useMemo(() => computeMfi(bars, period), [bars, period]);
   const ppo = useMemo(() => computePpo(bars, fast, slow, signal), [bars, fast, slow, signal]);
   const dmi = useMemo(() => computeDmi(bars, period), [bars, period]);
@@ -273,6 +383,23 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
     if (indicator === 'obv')
       return <PanelChart categories={dates} price={priceSeries} indicatorLabel="On Balance Volume (OBV)"
         indicators={[{ label: 'OBV', color: BLUE, values: sl(obv.line) }]} />;
+    if (indicator === 'sma')
+      return <OverlayChart categories={dates} price={priceSeries}
+        overlay={{ label: `SMA (${period})`, color: maColor, values: sl(sma.line) }} />;
+    if (indicator === 'ema')
+      return <OverlayChart categories={dates} price={priceSeries}
+        overlay={{ label: `EMA (${period})`, color: maColor, values: sl(ema.line) }} />;
+    if (indicator === 'lwma')
+      return <OverlayChart categories={dates} price={priceSeries}
+        overlay={{ label: `LWMA (${period})`, color: maColor, values: sl(lwma.line) }} />;
+    if (indicator === 'wilderma')
+      return <OverlayChart categories={dates} price={priceSeries}
+        overlay={{ label: `Wilder MA (${period})`, color: maColor, values: sl(wilderma.line) }} />;
+    if (indicator === 'distma')
+      return <OverlayChart categories={dates} price={priceSeries}
+        overlay={{ label: `SMA (${period})`, color: BLUE, values: sl(distma.smaLine) }}
+        indicator={{ label: `Distance from SMA (${period}) %`, values: sl(distma.distLine), color: PURPLE, suffix: '%',
+          refLines: [{ value: 0, label: '0', color: '#9ca3af' }] }} />;
     if (indicator === 'cmf')
       return <PanelChart categories={dates} price={priceSeries} indicatorLabel={`Chaikin Money Flow (${period})`}
         indicators={[{ label: `CMF (${period})`, color: PURPLE, values: sl(cmf.line) }]}
@@ -301,7 +428,37 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
 
       {/* Controls */}
       <div className="space-y-3 rounded-xl border border-zinc-200 bg-white p-4">
-        {usesEma ? (
+        {isMa ? (
+          <div className="space-y-4">
+            {/* Period */}
+            <div className="flex flex-wrap items-center gap-4">
+              <label className="flex items-center gap-3 text-sm text-zinc-700">
+                <span className="font-medium whitespace-nowrap">Period: <span className="text-emerald-700 font-bold">{period}</span></span>
+                <input type="range" min={2} max={200} value={period} onChange={(e) => setPeriod(Number(e.target.value))} className="w-40 accent-emerald-600" />
+              </label>
+              <div className="flex flex-wrap items-center gap-1">
+                {MA_PRESETS.map((p) => (
+                  <button key={p} type="button" onClick={() => setPeriod(p)}
+                    className={`rounded-md px-2.5 py-1 text-xs font-semibold transition border ${period === p ? 'bg-emerald-700 text-white border-emerald-700' : 'border-zinc-200 text-zinc-600 hover:border-emerald-400 hover:text-emerald-700'}`}>
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {/* MA colour picker */}
+            {indicator !== 'distma' && (
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="text-sm font-medium text-zinc-700">MA colour:</span>
+                {MA_COLORS_LIST.map((c) => (
+                  <button key={c.value} type="button" title={c.label} onClick={() => setMaColor(c.value)}
+                    className={`h-6 w-6 rounded-full border-2 transition ${maColor === c.value ? 'border-zinc-900 scale-110' : 'border-transparent hover:border-zinc-400'}`}
+                    style={{ backgroundColor: c.value }} />
+                ))}
+                <span className="text-xs text-zinc-400 ml-1">{MA_COLORS_LIST.find((c) => c.value === maColor)?.label}</span>
+              </div>
+            )}
+          </div>
+        ) : usesEma ? (
           <div className="flex flex-wrap items-center gap-5">
             {([['Fast EMA', fast, setFast], ['Slow EMA', slow, setSlow], ['Signal', signal, setSignal]] as const).map(([lbl, val, set]) => (
               <label key={lbl} className="flex items-center gap-2 text-sm text-zinc-700">
@@ -358,7 +515,9 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
         <p className="border-b border-zinc-100 px-4 py-3 text-sm font-semibold text-zinc-800">Step-by-step calculation (selected dates)</p>
         <div className="max-h-[420px] overflow-auto">
           <CalcTable indicator={indicator} roc={sl(roc.rows)} rsi={sl(rsi.rows)} macd={sl(macd.rows)}
-            stoch={sl(stoch.rows)} adl={sl(adl.rows)} mfi={sl(mfi.rows)} ppo={sl(ppo.rows)} dmi={sl(dmi.rows)} obv={sl(obv.rows)} cmf={sl(cmf.rows)} rvol={sl(rvol.rows)} />
+            stoch={sl(stoch.rows)} adl={sl(adl.rows)} mfi={sl(mfi.rows)} ppo={sl(ppo.rows)} dmi={sl(dmi.rows)}
+            obv={sl(obv.rows)} cmf={sl(cmf.rows)} rvol={sl(rvol.rows)}
+            sma={sl(sma.rows)} ema={sl(ema.rows)} lwma={sl(lwma.rows)} wilderma={sl(wilderma.rows)} distma={sl(distma.rows)} />
         </div>
       </div>
 
@@ -393,7 +552,7 @@ function th(label: string) { return <th className="whitespace-nowrap px-3 py-2 t
 function td(v: ReactNode, first = false) { return <td className={`whitespace-nowrap px-3 py-1.5 ${first ? 'text-left text-zinc-500' : 'text-right tabular-nums text-zinc-800'}`}>{v}</td>; }
 function fmtInt(v: number | null) { return v === null || !Number.isFinite(v) ? '—' : Math.round(v).toLocaleString('en-US'); }
 
-function CalcTable({ indicator, roc, rsi, macd, stoch, adl, mfi, ppo, dmi, obv, cmf, rvol }: {
+function CalcTable({ indicator, roc, rsi, macd, stoch, adl, mfi, ppo, dmi, obv, cmf, rvol, sma, ema, lwma, wilderma, distma }: {
   indicator: IndicatorKey;
   roc: ReturnType<typeof computeRoc>['rows'];
   rsi: ReturnType<typeof computeRsi>['rows'];
@@ -406,6 +565,11 @@ function CalcTable({ indicator, roc, rsi, macd, stoch, adl, mfi, ppo, dmi, obv, 
   obv: ReturnType<typeof computeObv>['rows'];
   cmf: ReturnType<typeof computeCmf>['rows'];
   rvol: ReturnType<typeof computeRvol>['rows'];
+  sma: ReturnType<typeof computeSma>['rows'];
+  ema: ReturnType<typeof computeEma>['rows'];
+  lwma: ReturnType<typeof computeLwma>['rows'];
+  wilderma: ReturnType<typeof computeWilderMa>['rows'];
+  distma: ReturnType<typeof computeDistMa>['rows'];
 }) {
   if (indicator === 'roc') {
     return (
@@ -486,6 +650,49 @@ function CalcTable({ indicator, roc, rsi, macd, stoch, adl, mfi, ppo, dmi, obv, 
         <tbody>{rvol.map((r) => <tr key={r.date} className="border-t border-zinc-50">
           {td(r.date, true)}{td(fmt(r.close))}{td(fmtInt(r.volume))}{td(r.avgVolume === null ? '—' : fmtInt(r.avgVolume))}
           {td(<span className={r.rvol === null ? '' : r.rvol >= 2 ? 'text-red-600 font-semibold' : r.rvol >= 1 ? 'text-emerald-600 font-semibold' : 'text-zinc-400'}>{r.rvol === null ? '—' : fmt(r.rvol)}</span>)}
+        </tr>)}</tbody>
+      </table>
+    );
+  }
+  if (indicator === 'sma') {
+    return (
+      <table className="w-full text-[13px]">
+        <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('SMA')}</tr></thead>
+        <tbody>{sma.map((r) => <tr key={r.date} className="border-t border-zinc-50">{td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.sma))}</tr>)}</tbody>
+      </table>
+    );
+  }
+  if (indicator === 'ema') {
+    return (
+      <table className="w-full text-[13px]">
+        <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('EMA')}</tr></thead>
+        <tbody>{ema.map((r) => <tr key={r.date} className="border-t border-zinc-50">{td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.ema))}</tr>)}</tbody>
+      </table>
+    );
+  }
+  if (indicator === 'lwma') {
+    return (
+      <table className="w-full text-[13px]">
+        <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('LWMA')}</tr></thead>
+        <tbody>{lwma.map((r) => <tr key={r.date} className="border-t border-zinc-50">{td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.lwma))}</tr>)}</tbody>
+      </table>
+    );
+  }
+  if (indicator === 'wilderma') {
+    return (
+      <table className="w-full text-[13px]">
+        <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('Wilder MA')}</tr></thead>
+        <tbody>{wilderma.map((r) => <tr key={r.date} className="border-t border-zinc-50">{td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.wma))}</tr>)}</tbody>
+      </table>
+    );
+  }
+  if (indicator === 'distma') {
+    return (
+      <table className="w-full text-[13px]">
+        <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('SMA')}{th('Distance %')}</tr></thead>
+        <tbody>{distma.map((r) => <tr key={r.date} className="border-t border-zinc-50">
+          {td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.sma))}
+          {td(<span className={r.dist === null ? '' : r.dist > 0 ? 'text-emerald-600 font-semibold' : 'text-red-500 font-semibold'}>{fmt(r.dist)}%</span>)}
         </tr>)}</tbody>
       </table>
     );
