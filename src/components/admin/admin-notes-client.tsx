@@ -6,7 +6,7 @@ import { normalizeNoteHtml } from '@/lib/utils/note-html';
 import { AdminLevelTabs, type AdminLevel } from '@/components/admin/admin-level-tabs';
 import { TinyMceEditor } from '@/components/admin/tinymce-editor';
 import { DEFAULT_WATERMARK_CONFIG, sanitizeWatermarkConfig, type WatermarkConfig, type WatermarkPosition } from '@/lib/utils/watermark';
-import { CheckCircle, Clock, AlertCircle, Loader2, Image as ImageIcon } from 'lucide-react';
+import { CheckCircle, Clock, AlertCircle, Loader2, Image as ImageIcon, Sparkles } from 'lucide-react';
 
 type AutoSaveStatus = 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
 
@@ -191,43 +191,78 @@ function ImageCaptionCard({ img }: { img: ChatbotImage }) {
 function NoteChatbotImages({ noteId, isPublished }: { noteId: string; isPublished: boolean }) {
   const [images, setImages] = useState<ChatbotImage[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [autoLabeling, setAutoLabeling] = useState(false);
+  const [autoMsg, setAutoMsg] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/notes/${noteId}/images`);
+      const data = await res.json();
+      setImages(data?.data?.images ?? []);
+    } catch {
+      setImages([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [noteId]);
 
   useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
     setImages(null);
-    fetch(`/api/admin/notes/${noteId}/images`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (!cancelled) setImages(data?.data?.images ?? []);
-      })
-      .catch(() => {
-        if (!cancelled) setImages([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [noteId]);
+    setAutoMsg(null);
+    load();
+  }, [load]);
+
+  const handleAutoLabel = useCallback(async () => {
+    setAutoLabeling(true);
+    setAutoMsg(null);
+    try {
+      const res = await fetch(`/api/admin/notes/${noteId}/images/autolabel`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error();
+      const d = data.data ?? {};
+      const parts = [`Suggested ${d.labelled ?? 0} caption${(d.labelled ?? 0) === 1 ? '' : 's'}`];
+      if (d.unclear) parts.push(`${d.unclear} unclear`);
+      if (d.skipped) parts.push(`${d.skipped} already set`);
+      setAutoMsg(`${parts.join(' · ')}. Please review and edit any that look off.`);
+      await load();
+    } catch {
+      setAutoMsg('Auto-labelling failed. Please try again.');
+    } finally {
+      setAutoLabeling(false);
+    }
+  }, [noteId, load]);
 
   const missing = images?.filter((i) => !i.caption.trim()).length ?? 0;
 
   return (
     <div className="mt-6 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
-      <div className="flex items-center gap-2">
-        <ImageIcon className="h-4 w-4 text-zinc-500" />
-        <p className="text-sm font-medium text-zinc-800">
-          Chatbot images
-          {images && images.length > 0 ? ` (${images.length})` : ''}
-        </p>
-        {missing > 0 && (
-          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">
-            {missing} need a description
-          </span>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <ImageIcon className="h-4 w-4 text-zinc-500" />
+          <p className="text-sm font-medium text-zinc-800">
+            Chatbot images
+            {images && images.length > 0 ? ` (${images.length})` : ''}
+          </p>
+          {missing > 0 && (
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+              {missing} need a description
+            </span>
+          )}
+        </div>
+        {images && images.length > 0 && (
+          <button
+            type="button"
+            onClick={handleAutoLabel}
+            disabled={autoLabeling}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-emerald-200 bg-white px-2.5 py-1.5 text-xs font-medium text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-50"
+          >
+            {autoLabeling ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+            {autoLabeling ? 'Labelling…' : 'Suggest with AI'}
+          </button>
         )}
       </div>
+      {autoMsg && <p className="mt-2 text-xs text-emerald-700">{autoMsg}</p>}
 
       {loading ? (
         <div className="mt-3 flex items-center gap-2 text-xs text-zinc-400">
@@ -242,7 +277,7 @@ function NoteChatbotImages({ noteId, isPublished }: { noteId: string; isPublishe
           </p>
           <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
             {images.map((img) => (
-              <ImageCaptionCard key={img.url} img={img} />
+              <ImageCaptionCard key={`${img.url}::${img.caption}`} img={img} />
             ))}
           </div>
         </>
