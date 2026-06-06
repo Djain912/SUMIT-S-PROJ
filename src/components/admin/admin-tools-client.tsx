@@ -13,6 +13,7 @@ const TOOLS = [
   { key: 'mfi', name: 'Money Flow Index', desc: 'A volume-weighted RSI (0–100).' },
   { key: 'ppo', name: 'PPO', desc: 'MACD shown as a percentage (normalized).' },
   { key: 'dmi', name: 'DMI / ADX', desc: 'Trend direction (+DI/−DI) and strength (ADX).' },
+  { key: 'obv', name: 'On Balance Volume (OBV)', desc: 'Cumulative volume: adds on up days, subtracts on down days.' },
 ];
 
 function snippet(key: string, name: string) {

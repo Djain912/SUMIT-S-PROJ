@@ -3,10 +3,10 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { AAPL_SAMPLE } from '@/lib/tools/sample-data';
-import { computeRoc, computeMacd, computeRsi, computeStochastics, computeAdl, computeMfi, computePpo, computeDmi } from '@/lib/tools/indicators';
+import { computeRoc, computeMacd, computeRsi, computeStochastics, computeAdl, computeMfi, computePpo, computeDmi, computeObv } from '@/lib/tools/indicators';
 import { PanelChart } from '@/components/tools/panel-chart';
 
-export type IndicatorKey = 'roc' | 'macd' | 'rsi' | 'stochastics' | 'adl' | 'mfi' | 'ppo' | 'dmi';
+export type IndicatorKey = 'roc' | 'macd' | 'rsi' | 'stochastics' | 'adl' | 'mfi' | 'ppo' | 'dmi' | 'obv';
 
 const EMERALD = '#047857';
 const BLUE = '#2563eb';
@@ -91,7 +91,7 @@ const META: Record<IndicatorKey, Meta> = {
     name: 'Accumulation / Distribution Line (ADL)',
     blurb: 'A running volume total that adds more on strong closes and subtracts on weak closes.',
     formula: 'Multiplier = ((Close−Low) − (High−Close)) ÷ (High−Low)   ·   ADL = previous ADL + Multiplier × Volume',
-    measures: 'ADL gauges buying vs selling pressure by weighting each day’s volume by where the close finished in its range.',
+    measures: 'ADL gauges buying vs selling pressure by weighting each day\'s volume by where the close finished in its range.',
     construction: [
       'Multiplier = ((Close−Low) − (High−Close)) ÷ (High−Low), a value between −1 and +1.',
       'Adjusted Volume = Multiplier × Volume.',
@@ -144,7 +144,7 @@ const META: Record<IndicatorKey, Meta> = {
     measures: 'The DMI separates trend direction (+DI vs −DI) from trend strength (ADX).',
     construction: [
       'True Range = max(High−Low, |High−prevClose|, |Low−prevClose|).',
-      '+DM / −DM = the part of today’s range that lies outside yesterday’s range.',
+      '+DM / −DM = the part of today\'s range that lies outside yesterday\'s range.',
       'Wilder-smooth TR, +DM, −DM over n, then +DI = +DM14÷TR14×100 and −DI = −DM14÷TR14×100.',
       'DX = |+DI − −DI| ÷ (+DI + −DI) × 100; ADX = the Wilder average of DX.',
     ],
@@ -152,6 +152,24 @@ const META: Record<IndicatorKey, Meta> = {
       '+DI above −DI = uptrend; −DI above +DI = downtrend.',
       'ADX above 25 and rising = a strong trend (up OR down — ADX is direction-agnostic).',
       'A falling ADX = the trend is weakening.',
+    ],
+  },
+  obv: {
+    name: 'On Balance Volume (OBV)',
+    blurb: 'OBV is a running volume total that adds volume on up days and subtracts it on down days.',
+    formula: 'If Close > prev Close: OBV = prev OBV + Volume   ·   If Close < prev Close: OBV = prev OBV − Volume   ·   If unchanged: OBV = prev OBV',
+    measures: 'OBV measures cumulative buying and selling pressure by tracking whether volume flows in (up day) or out (down day).',
+    construction: [
+      'Start with Day 1 volume as the initial OBV.',
+      'Each subsequent day: if the close is higher than the previous close, add that day\'s volume to OBV.',
+      'If the close is lower, subtract the volume. If unchanged, OBV stays the same.',
+      'Plot the running total as a line — the absolute value does not matter, only the trend.',
+    ],
+    reading: [
+      'Rising OBV = volume is flowing in on up days (accumulation / buying pressure).',
+      'Falling OBV = volume is flowing out on down days (distribution / selling pressure).',
+      'If price makes a new high but OBV does not, the breakout lacks volume support (bearish divergence).',
+      'Developed by Joe Granville — the original volume-based indicator (CMT curriculum).',
     ],
   },
 };
@@ -167,6 +185,7 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
 
   const usesEma = indicator === 'macd' || indicator === 'ppo';
   const usesPeriod = ['roc', 'rsi', 'stochastics', 'mfi', 'dmi'].includes(indicator);
+  const noControls = indicator === 'adl' || indicator === 'obv';
   const [period, setPeriod] = useState(indicator === 'roc' ? 10 : 14);
   const [fast, setFast] = useState(12);
   const [slow, setSlow] = useState(26);
@@ -188,6 +207,7 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
   const macd = useMemo(() => computeMacd(bars, fast, slow, signal), [bars, fast, slow, signal]);
   const stoch = useMemo(() => computeStochastics(bars, period), [bars, period]);
   const adl = useMemo(() => computeAdl(bars), [bars]);
+  const obv = useMemo(() => computeObv(bars), [bars]);
   const mfi = useMemo(() => computeMfi(bars, period), [bars, period]);
   const ppo = useMemo(() => computePpo(bars, fast, slow, signal), [bars, fast, slow, signal]);
   const dmi = useMemo(() => computeDmi(bars, period), [bars, period]);
@@ -212,6 +232,9 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
     if (indicator === 'adl')
       return <PanelChart categories={dates} price={priceSeries} indicatorLabel="Accumulation / Distribution Line"
         indicators={[{ label: 'ADL', color: EMERALD, values: sl(adl.line) }]} />;
+    if (indicator === 'obv')
+      return <PanelChart categories={dates} price={priceSeries} indicatorLabel="On Balance Volume (OBV)"
+        indicators={[{ label: 'OBV', color: BLUE, values: sl(obv.line) }]} />;
     if (indicator === 'mfi')
       return <PanelChart categories={dates} price={priceSeries} indicatorLabel={`MFI (${period})`} indMin={0} indMax={100}
         indicators={[{ label: `MFI (${period})`, color: EMERALD, values: sl(mfi.line) }]} refLines={[{ value: 70, label: '70 overbought' }, { value: 30, label: '30 oversold' }]} />;
@@ -248,7 +271,9 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
             <input type="range" min={2} max={20} value={period} onChange={(e) => setPeriod(Number(e.target.value))} className="w-full max-w-xs accent-emerald-600" />
           </label>
         ) : (
-          <p className="text-sm text-zinc-600">The ADL has no period setting — it is a cumulative running total of volume.</p>
+          <p className="text-sm text-zinc-600">
+            {indicator === 'obv' ? 'OBV has no period setting — it is a cumulative running total of volume, adding on up days and subtracting on down days.' : 'The ADL has no period setting — it is a cumulative running total of volume.'}
+          </p>
         )}
 
         {/* Date range */}
@@ -287,7 +312,7 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
         <p className="border-b border-zinc-100 px-4 py-3 text-sm font-semibold text-zinc-800">Step-by-step calculation (selected dates)</p>
         <div className="max-h-[420px] overflow-auto">
           <CalcTable indicator={indicator} roc={sl(roc.rows)} rsi={sl(rsi.rows)} macd={sl(macd.rows)}
-            stoch={sl(stoch.rows)} adl={sl(adl.rows)} mfi={sl(mfi.rows)} ppo={sl(ppo.rows)} dmi={sl(dmi.rows)} />
+            stoch={sl(stoch.rows)} adl={sl(adl.rows)} mfi={sl(mfi.rows)} ppo={sl(ppo.rows)} dmi={sl(dmi.rows)} obv={sl(obv.rows)} />
         </div>
       </div>
 
@@ -322,7 +347,7 @@ function th(label: string) { return <th className="whitespace-nowrap px-3 py-2 t
 function td(v: ReactNode, first = false) { return <td className={`whitespace-nowrap px-3 py-1.5 ${first ? 'text-left text-zinc-500' : 'text-right tabular-nums text-zinc-800'}`}>{v}</td>; }
 function fmtInt(v: number | null) { return v === null || !Number.isFinite(v) ? '—' : Math.round(v).toLocaleString('en-US'); }
 
-function CalcTable({ indicator, roc, rsi, macd, stoch, adl, mfi, ppo, dmi }: {
+function CalcTable({ indicator, roc, rsi, macd, stoch, adl, mfi, ppo, dmi, obv }: {
   indicator: IndicatorKey;
   roc: ReturnType<typeof computeRoc>['rows'];
   rsi: ReturnType<typeof computeRsi>['rows'];
@@ -332,6 +357,7 @@ function CalcTable({ indicator, roc, rsi, macd, stoch, adl, mfi, ppo, dmi }: {
   mfi: ReturnType<typeof computeMfi>['rows'];
   ppo: ReturnType<typeof computePpo>['rows'];
   dmi: ReturnType<typeof computeDmi>['rows'];
+  obv: ReturnType<typeof computeObv>['rows'];
 }) {
   if (indicator === 'roc') {
     return (
@@ -386,6 +412,14 @@ function CalcTable({ indicator, roc, rsi, macd, stoch, adl, mfi, ppo, dmi }: {
       <table className="w-full text-[13px]">
         <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('TR')}{th('+DI')}{th('−DI')}{th('DX')}{th('ADX')}</tr></thead>
         <tbody>{dmi.map((r) => <tr key={r.date} className="border-t border-zinc-50">{td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.tr))}{td(fmt(r.plusDI))}{td(fmt(r.minusDI))}{td(fmt(r.dx))}{td(fmt(r.adx))}</tr>)}</tbody>
+      </table>
+    );
+  }
+  if (indicator === 'obv') {
+    return (
+      <table className="w-full text-[13px]">
+        <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('Volume')}{th('Direction')}{th('OBV')}</tr></thead>
+        <tbody>{obv.map((r) => <tr key={r.date} className="border-t border-zinc-50">{td(r.date, true)}{td(fmt(r.close))}{td(fmtInt(r.volume))}{td(<span className={r.direction === '+' ? 'text-emerald-600 font-semibold' : r.direction === '−' ? 'text-red-500 font-semibold' : 'text-zinc-400'}>{r.direction}</span>)}{td(fmtInt(r.obv))}</tr>)}</tbody>
       </table>
     );
   }

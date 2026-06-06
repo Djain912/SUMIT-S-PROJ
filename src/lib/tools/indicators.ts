@@ -164,6 +164,23 @@ export function computePpo(bars: Bar[], fast: number, slow: number, signal: numb
   return { rows, ppoLine: ppo as Series, signalLine: sig as Series };
 }
 
+// ---- On Balance Volume (OBV) ----
+export type ObvRow = {
+  date: string; close: number; volume: number; direction: string; obv: number;
+};
+export function computeObv(bars: Bar[]) {
+  let run = 0;
+  const rows: ObvRow[] = bars.map((b, i) => {
+    if (i === 0) { run = b.volume; return { date: b.date, close: b.close, volume: b.volume, direction: '—', obv: run }; }
+    const prev = bars[i - 1].close;
+    let dir = '—';
+    if (b.close > prev) { run += b.volume; dir = '+'; }
+    else if (b.close < prev) { run -= b.volume; dir = '−'; }
+    return { date: b.date, close: b.close, volume: b.volume, direction: dir, obv: run };
+  });
+  return { rows, line: rows.map((r) => r.obv) as Series };
+}
+
 // ---- Directional Movement Index (Wilder): +DI, -DI, ADX ----
 export type DmiRow = {
   date: string; high: number; low: number; close: number;
