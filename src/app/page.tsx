@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import {
   BookOpen, ListChecks, BarChart2, ArrowRight,
-  TrendingUp, ChevronRight, Brain,
+  TrendingUp, ChevronRight, Brain, FlaskConical,
 } from 'lucide-react';
 import { auth } from '@/lib/auth/auth';
 import { siteConfig } from '@/lib/site';
@@ -108,6 +108,9 @@ export default async function HomePage() {
                   {link.label}
                 </Link>
               ))}
+              <Link href="/tools" className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition">
+                <FlaskConical className="h-3 w-3" /> Free Tools
+              </Link>
             </div>
 
             <div className="flex items-center gap-3">
@@ -297,6 +300,59 @@ export default async function HomePage() {
             </section>
           )}
 
+          {/* ── INDICATOR LAB ── */}
+          {!isAdmin && (
+            <section className="bg-white py-20 sm:py-24 border-t border-zinc-100">
+              <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+                <div className="mb-3 flex items-center justify-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-emerald-600">
+                    <FlaskConical className="h-3 w-3" /> 100% Free · No Login Required
+                  </span>
+                </div>
+                <div className="mb-10 text-center">
+                  <h2 className="text-3xl font-extrabold tracking-tight text-emerald-900 sm:text-4xl">
+                    The CMT Indicator Lab
+                  </h2>
+                  <p className="mt-3 text-base text-zinc-500 max-w-2xl mx-auto">
+                    Build every major indicator yourself — live chart, step-by-step calculation table, and exam-ready explanation. Exactly how the CMT curriculum teaches it.
+                  </p>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  {[
+                    { key: 'rsi',         name: 'RSI',                  desc: 'Momentum on a 0–100 scale',          color: 'bg-blue-50 border-blue-100 hover:border-blue-300' },
+                    { key: 'macd',        name: 'MACD',                 desc: 'Gap between fast & slow EMA',         color: 'bg-blue-50 border-blue-100 hover:border-blue-300' },
+                    { key: 'stochastics', name: 'Stochastics',          desc: 'Close vs n-bar high-low range',       color: 'bg-blue-50 border-blue-100 hover:border-blue-300' },
+                    { key: 'roc',         name: 'Rate of Change',       desc: '% price move vs n bars ago',          color: 'bg-blue-50 border-blue-100 hover:border-blue-300' },
+                    { key: 'obv',         name: 'On Balance Volume',    desc: 'Granville\'s volume running total',    color: 'bg-purple-50 border-purple-100 hover:border-purple-300' },
+                    { key: 'adl',         name: 'Accum/Distribution',   desc: 'Chaikin\'s volume multiplier line',    color: 'bg-purple-50 border-purple-100 hover:border-purple-300' },
+                    { key: 'cmf',         name: 'Chaikin Money Flow',   desc: 'Windowed money flow ratio',           color: 'bg-purple-50 border-purple-100 hover:border-purple-300' },
+                    { key: 'mfi',         name: 'Money Flow Index',     desc: 'Volume-weighted RSI (0–100)',         color: 'bg-purple-50 border-purple-100 hover:border-purple-300' },
+                    { key: 'dmi',         name: 'DMI / ADX',            desc: 'Trend direction + strength (Wilder)', color: 'bg-amber-50 border-amber-100 hover:border-amber-300' },
+                    { key: 'ppo',         name: 'PPO',                  desc: 'MACD as a % — normalized',            color: 'bg-blue-50 border-blue-100 hover:border-blue-300' },
+                    { key: 'rvol',        name: 'Relative Volume',      desc: 'Today\'s vol ÷ average vol',           color: 'bg-purple-50 border-purple-100 hover:border-purple-300' },
+                  ].map((t) => (
+                    <Link key={t.key} href={`/tools/${t.key}`}
+                      className={`group rounded-xl border p-4 transition ${t.color}`}>
+                      <p className="text-sm font-bold text-zinc-900 group-hover:text-emerald-800">{t.name}</p>
+                      <p className="mt-1 text-xs text-zinc-500">{t.desc}</p>
+                      <p className="mt-2 text-[11px] font-semibold text-emerald-700 flex items-center gap-0.5">
+                        Open <ChevronRight className="h-3 w-3" />
+                      </p>
+                    </Link>
+                  ))}
+                  {/* View all card */}
+                  <Link href="/tools"
+                    className="group flex flex-col items-center justify-center rounded-xl border border-emerald-200 bg-emerald-600 p-4 transition hover:bg-emerald-700 text-center">
+                    <p className="text-sm font-bold text-white">View All 11 Tools</p>
+                    <p className="mt-1 text-xs text-emerald-200">+ filter by category</p>
+                    <ArrowRight className="mt-2 h-4 w-4 text-white" />
+                  </Link>
+                </div>
+              </div>
+            </section>
+          )}
+
           {/* ── 4 PILLARS ── */}
           {!isAdmin && (
             <section className="bg-white py-20 sm:py-24">
@@ -430,6 +486,7 @@ export default async function HomePage() {
                     { label: 'Dashboard', href: '/user' },
                     { label: 'Quiz', href: '/user/quiz' },
                     { label: 'Analytics', href: '/user/analytics' },
+                    { label: 'Free Indicator Lab', href: '/tools' },
                     { label: 'Sign In', href: '/sign-in' },
                     { label: 'Get Started', href: '/sign-up' },
                   ].map((l) => (
