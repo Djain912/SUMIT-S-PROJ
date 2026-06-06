@@ -9,6 +9,21 @@ const CHUNK_OVERLAP = 80;
 // survives as a single "word" and stays in the chunk where the image appeared.
 const IMG_MARKER = /⟦IMG:(.*?)⟧/g;
 
+// A stored image entry packs the URL and its caption into one string (so we
+// don't need a separate DB column). Separator is the Unit Separator control
+// char, which never appears in URLs or caption text.
+const IMG_SEP = '␟';
+
+export function encodeStoredImage(url: string, caption: string): string {
+  return caption ? `${url}${IMG_SEP}${caption}` : url;
+}
+
+export function parseStoredImage(entry: string): { url: string; caption: string } {
+  const i = entry.indexOf(IMG_SEP);
+  if (i === -1) return { url: entry, caption: '' };
+  return { url: entry.slice(0, i), caption: entry.slice(i + IMG_SEP.length) };
+}
+
 // Replace each <img> tag with a space-free marker so the image's URL travels
 // with the text around it. Tags without a src are dropped.
 function replaceImagesWithMarkers(html: string): string {
@@ -16,6 +31,21 @@ function replaceImagesWithMarkers(html: string): string {
     const m = tag.match(/src\s*=\s*["']([^"']+)["']/i);
     return m ? ` ⟦IMG:${m[1]}⟧ ` : ' ';
   });
+}
+
+// Build a map of image URL → its caption (alt text), so each image can be
+// labelled with the admin's own description and the AI picks the right one.
+function extractImageAltMap(html: string): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const m of html.matchAll(/<img\b[^>]*>/gi)) {
+    const tag = m[0];
+    const src = tag.match(/src\s*=\s*["']([^"']+)["']/i);
+    if (!src) continue;
+    const alt = tag.match(/alt\s*=\s*["']([^"']*)["']/i);
+    const caption = (alt?.[1] ?? '').trim();
+    if (caption) map.set(src[1], caption);
+  }
+  return map;
 }
 
 function stripHtml(html: string): string {
@@ -79,6 +109,9 @@ export async function embedNote(note: {
     : '';
   if (!plainText || plainText.length < 50) return 0;
 
+  // Each image's caption (alt text) so the AI can identify which is which
+  const altMap = note.contentHtml ? extractImageAltMap(note.contentHtml) : new Map<string, string>();
+
   const headerContext = `[${note.chapterTitle ?? ''}${note.subtopicTitle ? ' > ' + note.subtopicTitle : ''}] ${note.title}: `;
   const chunks = chunkText(plainText);
   let stored = 0;
@@ -87,6 +120,8 @@ export async function embedNote(note: {
     const { text, images } = extractChunkImages(chunk);
     // Skip chunks that became empty after removing image markers
     if (text.length < 20) continue;
+
+    const imageEntries = images.map((url) => encodeStoredImage(url, altMap.get(url) ?? ''));
 
     const textToEmbed = headerContext + text;
     const embedding = await createEmbedding(textToEmbed);
@@ -98,7 +133,7 @@ export async function embedNote(note: {
       sourceId: note.id,
       chapterTitle: note.chapterTitle,
       subtopicTitle: note.subtopicTitle,
-      imageUrls: images,
+      imageUrls: imageEntries,
     });
     stored++;
   }
@@ -137,11 +172,13 @@ export async function buildContext(
           : '[Study Material]';
     contextParts.push(`${source}\n${c.content}`);
 
-    // Collect images from the most relevant chunks, labelled by their topic
-    for (const url of c.image_urls ?? []) {
+    // Collect images from the most relevant chunks, labelled by their own
+    // caption (alt text) so the AI can pick the one that matches the question
+    for (const entry of c.image_urls ?? []) {
+      const { url, caption } = parseStoredImage(entry);
       if (!url || seenUrls.has(url)) continue;
       seenUrls.add(url);
-      const label = c.subtopic_title ?? c.chapter_title ?? 'Study material diagram';
+      const label = caption || c.subtopic_title || c.chapter_title || 'Study material diagram';
       images.push({ url, label });
     }
   }

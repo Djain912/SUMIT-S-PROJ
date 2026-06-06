@@ -118,8 +118,10 @@ function NotePreview({ html }: { html: string }) {
 
 // Shows which images are indexed for the chatbot for a given note — i.e. the
 // images the AI tutor can actually surface in answers about this note.
+type ChatbotImage = { url: string; caption: string };
+
 function NoteChatbotImages({ noteId, isPublished }: { noteId: string; isPublished: boolean }) {
-  const [images, setImages] = useState<string[] | null>(null);
+  const [images, setImages] = useState<ChatbotImage[] | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -159,24 +161,28 @@ function NoteChatbotImages({ noteId, isPublished }: { noteId: string; isPublishe
       ) : images && images.length > 0 ? (
         <>
           <p className="mt-1 text-xs text-zinc-500">
-            The AI tutor can show these images when answering questions about this note.
+            The AI tutor matches a question to the image <span className="font-medium">caption</span> below. Images marked
+            <span className="font-medium text-amber-600"> “No caption”</span> may be picked incorrectly — add alt text to that image in the note for accurate matching.
           </p>
           <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {images.map((url) => (
+            {images.map((img) => (
               <a
-                key={url}
-                href={url}
+                key={img.url}
+                href={img.url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="group block overflow-hidden rounded-lg border border-zinc-200 bg-white"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={url}
-                  alt="Indexed for chatbot"
+                  src={img.url}
+                  alt={img.caption || 'Indexed for chatbot'}
                   loading="lazy"
                   className="aspect-video w-full object-cover transition group-hover:opacity-90"
                 />
+                <p className={`px-2 py-1.5 text-[11px] leading-snug ${img.caption ? 'text-zinc-600' : 'text-amber-600'}`}>
+                  {img.caption || 'No caption'}
+                </p>
               </a>
             ))}
           </div>

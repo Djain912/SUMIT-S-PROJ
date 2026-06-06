@@ -71,14 +71,14 @@ IMPORTANT: Do NOT make up facts. If unsure, say so clearly.`;
       ? `
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-DIAGRAMS AVAILABLE FROM THE STUDENT'S NOTES (these were retrieved because they relate to the question):
+DIAGRAMS AVAILABLE FROM THE STUDENT'S NOTES — each is listed as "description — url":
 ${images.map((img, i) => `${i + 1}. ${img.label} — ${img.url}`).join('\n')}
 
-These diagrams come from the exact study notes that match this question, so they are almost always relevant. DEFAULT TO SHOWING ONE — a visual helps the student learn.
-- Fill the DIAGRAM SLOT in the structure with the most fitting diagram, on its own line, using EXACTLY this markdown: ![short caption](url)
-- You may add a second diagram inside the Real-World Example if it clearly adds value.
-- Use ONLY the exact URLs listed above — copy them character-for-character. NEVER invent, guess, shorten, or modify a URL.
-- Only skip the diagram entirely if NONE of the listed diagrams relate to the topic at all (rare).
+HOW TO CHOOSE A DIAGRAM (read carefully — showing the WRONG diagram is worse than showing none):
+- Read each diagram's description and pick the ONE whose description specifically matches the exact concept the student asked about.
+- If a description clearly matches, embed it in the DIAGRAM SLOT on its own line using EXACTLY: ![description](url) — use the matching diagram's own description as the caption.
+- If NONE of the descriptions specifically match the concept asked about, do NOT include any image. Never show a loosely-related or unrelated diagram just to have one.
+- Use ONLY the exact URLs listed above — copy them character-for-character. NEVER invent, guess, shorten, or modify a URL, and never pair a description with a different image's URL.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
       : '';
 
