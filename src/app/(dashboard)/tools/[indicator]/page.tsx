@@ -6,11 +6,11 @@ import { IndicatorTool, type IndicatorKey } from '@/components/tools/indicator-t
 
 export const dynamic = 'force-dynamic';
 
-const VALID: IndicatorKey[] = ['roc', 'macd', 'rsi', 'stochastics', 'adl', 'mfi', 'ppo', 'dmi', 'obv', 'cmf'];
+const VALID: IndicatorKey[] = ['roc', 'macd', 'rsi', 'stochastics', 'adl', 'mfi', 'ppo', 'dmi', 'obv', 'cmf', 'rvol'];
 const NAMES: Record<IndicatorKey, string> = {
   roc: 'Rate of Change', macd: 'MACD', rsi: 'RSI', stochastics: 'Stochastics',
   adl: 'Accumulation / Distribution', mfi: 'Money Flow Index', ppo: 'PPO', dmi: 'DMI (ADX)',
-  obv: 'On Balance Volume', cmf: 'Chaikin Money Flow',
+  obv: 'On Balance Volume', cmf: 'Chaikin Money Flow', rvol: 'Relative Volume',
 };
 
 export default async function IndicatorToolPage({ params }: { params: Promise<{ indicator: string }> }) {

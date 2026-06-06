@@ -15,6 +15,7 @@ const TOOLS = [
   { key: 'dmi', name: 'DMI / ADX', desc: 'Trend direction (+DI/−DI) and strength (ADX).' },
   { key: 'obv', name: 'On Balance Volume (OBV)', desc: 'Cumulative volume: adds on up days, subtracts on down days.' },
   { key: 'cmf', name: 'Chaikin Money Flow (CMF)', desc: 'Windowed ratio of money flow volume to total volume. Oscillates −1 to +1.' },
+  { key: 'rvol', name: 'Relative Volume (RVOL)', desc: 'Today\'s volume divided by its n-period average. 1.0 = average; 2.0 = twice normal.' },
 ];
 
 function snippet(key: string, name: string) {

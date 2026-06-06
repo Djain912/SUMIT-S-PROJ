@@ -164,6 +164,24 @@ export function computePpo(bars: Bar[], fast: number, slow: number, signal: numb
   return { rows, ppoLine: ppo as Series, signalLine: sig as Series };
 }
 
+// ---- Relative Volume (RVOL) ----
+export type RvolRow = {
+  date: string; close: number; volume: number; avgVolume: number | null; rvol: number | null;
+};
+export function computeRvol(bars: Bar[], period: number) {
+  const n = bars.length;
+  const avgVol: (number | null)[] = Array(n).fill(null);
+  const rvol: (number | null)[] = Array(n).fill(null);
+  for (let i = period - 1; i < n; i++) {
+    let sum = 0;
+    for (let j = i - period + 1; j <= i; j++) sum += bars[j].volume;
+    avgVol[i] = sum / period;
+    rvol[i] = avgVol[i] === 0 ? null : bars[i].volume / (avgVol[i] as number);
+  }
+  const rows: RvolRow[] = bars.map((b, i) => ({ date: b.date, close: b.close, volume: b.volume, avgVolume: avgVol[i], rvol: rvol[i] }));
+  return { rows, line: rvol as Series };
+}
+
 // ---- Chaikin Money Flow (CMF) ----
 export type CmfRow = {
   date: string; high: number; low: number; close: number; volume: number;

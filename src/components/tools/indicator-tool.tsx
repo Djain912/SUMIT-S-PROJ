@@ -3,10 +3,10 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { AAPL_SAMPLE } from '@/lib/tools/sample-data';
-import { computeRoc, computeMacd, computeRsi, computeStochastics, computeAdl, computeMfi, computePpo, computeDmi, computeObv, computeCmf } from '@/lib/tools/indicators';
+import { computeRoc, computeMacd, computeRsi, computeStochastics, computeAdl, computeMfi, computePpo, computeDmi, computeObv, computeCmf, computeRvol } from '@/lib/tools/indicators';
 import { PanelChart } from '@/components/tools/panel-chart';
 
-export type IndicatorKey = 'roc' | 'macd' | 'rsi' | 'stochastics' | 'adl' | 'mfi' | 'ppo' | 'dmi' | 'obv' | 'cmf';
+export type IndicatorKey = 'roc' | 'macd' | 'rsi' | 'stochastics' | 'adl' | 'mfi' | 'ppo' | 'dmi' | 'obv' | 'cmf' | 'rvol';
 
 const EMERALD = '#047857';
 const BLUE = '#2563eb';
@@ -154,6 +154,24 @@ const META: Record<IndicatorKey, Meta> = {
       'A falling ADX = the trend is weakening.',
     ],
   },
+  rvol: {
+    name: 'Relative Volume (RVOL)',
+    blurb: 'RVOL compares today\'s volume to the average volume over a lookback period, showing whether participation is unusually high or low.',
+    formula: 'Average Volume = SMA of Volume over n bars   ·   RVOL = Today\'s Volume ÷ Average Volume',
+    measures: 'RVOL measures how today\'s volume compares to normal. A reading of 1.0 means average; 2.0 means twice the average volume.',
+    construction: [
+      'Calculate the Simple Moving Average (SMA) of volume over the lookback period n.',
+      'Divide today\'s volume by that average: RVOL = Volume ÷ Avg Volume.',
+      'A value of 1.0 is exactly average; above 1.0 is above average, below 1.0 is below average.',
+      'The reference line at 1.0 is the key level — everything is measured relative to it.',
+    ],
+    reading: [
+      'RVOL above 1.0 = above-average participation (confirms price moves, breakouts, reversals).',
+      'RVOL above 2.0 = significantly elevated volume — high conviction move or climax.',
+      'RVOL below 0.5 = very low participation — price moves on thin volume are less reliable.',
+      'RVOL is most powerful as a confirming indicator: a breakout on high RVOL is far more credible than one on low volume.',
+    ],
+  },
   cmf: {
     name: 'Chaikin Money Flow (CMF)',
     blurb: 'CMF measures buying and selling pressure over a period by summing volume weighted by where the close falls in the high-low range.',
@@ -202,9 +220,9 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
   const N = bars.length;
 
   const usesEma = indicator === 'macd' || indicator === 'ppo';
-  const usesPeriod = ['roc', 'rsi', 'stochastics', 'mfi', 'dmi', 'cmf'].includes(indicator);
+  const usesPeriod = ['roc', 'rsi', 'stochastics', 'mfi', 'dmi', 'cmf', 'rvol'].includes(indicator);
   const noControls = indicator === 'adl' || indicator === 'obv';
-  const [period, setPeriod] = useState(indicator === 'roc' ? 10 : indicator === 'cmf' ? 20 : 14);
+  const [period, setPeriod] = useState(indicator === 'roc' ? 10 : indicator === 'cmf' ? 20 : indicator === 'rvol' ? 20 : 14);
   const [fast, setFast] = useState(12);
   const [slow, setSlow] = useState(26);
   const [signal, setSignal] = useState(9);
@@ -227,6 +245,7 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
   const adl = useMemo(() => computeAdl(bars), [bars]);
   const obv = useMemo(() => computeObv(bars), [bars]);
   const cmf = useMemo(() => computeCmf(bars, period), [bars, period]);
+  const rvol = useMemo(() => computeRvol(bars, period), [bars, period]);
   const mfi = useMemo(() => computeMfi(bars, period), [bars, period]);
   const ppo = useMemo(() => computePpo(bars, fast, slow, signal), [bars, fast, slow, signal]);
   const dmi = useMemo(() => computeDmi(bars, period), [bars, period]);
@@ -257,7 +276,11 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
     if (indicator === 'cmf')
       return <PanelChart categories={dates} price={priceSeries} indicatorLabel={`Chaikin Money Flow (${period})`}
         indicators={[{ label: `CMF (${period})`, color: PURPLE, values: sl(cmf.line) }]}
-        refLines={[{ value: 0, label: '0', color: '#9ca3af' }, { value: 0.25, label: '+0.25 strong buy' }, { value: -0.25, label: '−0.25 strong sell' }]} />;
+        refLines={[{ value: 0, label: '0', color: '#9ca3af' }, { value: 0.25, label: '+0.25 strong buy' }, { value: -0.25, label: '-0.25 strong sell' }]} />;
+    if (indicator === 'rvol')
+      return <PanelChart categories={dates} price={priceSeries} indicatorLabel={`Relative Volume (${period})`}
+        indicators={[{ label: `RVOL (${period})`, color: AMBER, values: sl(rvol.line) }]}
+        refLines={[{ value: 1, label: '1.0 average', color: '#9ca3af' }, { value: 2, label: '2.0 high' }]} />;
     if (indicator === 'mfi')
       return <PanelChart categories={dates} price={priceSeries} indicatorLabel={`MFI (${period})`} indMin={0} indMax={100}
         indicators={[{ label: `MFI (${period})`, color: EMERALD, values: sl(mfi.line) }]} refLines={[{ value: 70, label: '70 overbought' }, { value: 30, label: '30 oversold' }]} />;
@@ -335,7 +358,7 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
         <p className="border-b border-zinc-100 px-4 py-3 text-sm font-semibold text-zinc-800">Step-by-step calculation (selected dates)</p>
         <div className="max-h-[420px] overflow-auto">
           <CalcTable indicator={indicator} roc={sl(roc.rows)} rsi={sl(rsi.rows)} macd={sl(macd.rows)}
-            stoch={sl(stoch.rows)} adl={sl(adl.rows)} mfi={sl(mfi.rows)} ppo={sl(ppo.rows)} dmi={sl(dmi.rows)} obv={sl(obv.rows)} cmf={sl(cmf.rows)} />
+            stoch={sl(stoch.rows)} adl={sl(adl.rows)} mfi={sl(mfi.rows)} ppo={sl(ppo.rows)} dmi={sl(dmi.rows)} obv={sl(obv.rows)} cmf={sl(cmf.rows)} rvol={sl(rvol.rows)} />
         </div>
       </div>
 
@@ -370,7 +393,7 @@ function th(label: string) { return <th className="whitespace-nowrap px-3 py-2 t
 function td(v: ReactNode, first = false) { return <td className={`whitespace-nowrap px-3 py-1.5 ${first ? 'text-left text-zinc-500' : 'text-right tabular-nums text-zinc-800'}`}>{v}</td>; }
 function fmtInt(v: number | null) { return v === null || !Number.isFinite(v) ? '—' : Math.round(v).toLocaleString('en-US'); }
 
-function CalcTable({ indicator, roc, rsi, macd, stoch, adl, mfi, ppo, dmi, obv, cmf }: {
+function CalcTable({ indicator, roc, rsi, macd, stoch, adl, mfi, ppo, dmi, obv, cmf, rvol }: {
   indicator: IndicatorKey;
   roc: ReturnType<typeof computeRoc>['rows'];
   rsi: ReturnType<typeof computeRsi>['rows'];
@@ -382,6 +405,7 @@ function CalcTable({ indicator, roc, rsi, macd, stoch, adl, mfi, ppo, dmi, obv, 
   dmi: ReturnType<typeof computeDmi>['rows'];
   obv: ReturnType<typeof computeObv>['rows'];
   cmf: ReturnType<typeof computeCmf>['rows'];
+  rvol: ReturnType<typeof computeRvol>['rows'];
 }) {
   if (indicator === 'roc') {
     return (
@@ -452,6 +476,17 @@ function CalcTable({ indicator, roc, rsi, macd, stoch, adl, mfi, ppo, dmi, obv, 
       <table className="w-full text-[13px]">
         <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('Volume')}{th('Multiplier')}{th('MFV')}{th('Sum MFV')}{th('Sum Vol')}{th('CMF')}</tr></thead>
         <tbody>{cmf.map((r) => <tr key={r.date} className="border-t border-zinc-50">{td(r.date, true)}{td(fmt(r.close))}{td(fmtInt(r.volume))}{td(fmt(r.multiplier))}{td(fmtInt(r.mfv))}{td(r.sumMfv === null ? '—' : fmtInt(r.sumMfv))}{td(r.sumVol === null ? '—' : fmtInt(r.sumVol))}{td(fmt(r.cmf, 4))}</tr>)}</tbody>
+      </table>
+    );
+  }
+  if (indicator === 'rvol') {
+    return (
+      <table className="w-full text-[13px]">
+        <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('Volume')}{th('Avg Volume')}{th('RVOL')}</tr></thead>
+        <tbody>{rvol.map((r) => <tr key={r.date} className="border-t border-zinc-50">
+          {td(r.date, true)}{td(fmt(r.close))}{td(fmtInt(r.volume))}{td(r.avgVolume === null ? '—' : fmtInt(r.avgVolume))}
+          {td(<span className={r.rvol === null ? '' : r.rvol >= 2 ? 'text-red-600 font-semibold' : r.rvol >= 1 ? 'text-emerald-600 font-semibold' : 'text-zinc-400'}>{r.rvol === null ? '—' : fmt(r.rvol)}</span>)}
+        </tr>)}</tbody>
       </table>
     );
   }
