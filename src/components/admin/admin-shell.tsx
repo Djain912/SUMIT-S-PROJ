@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { LayoutDashboard, BookOpen, FileText, ListChecks, Flag, ShieldCheck, Menu, X, LogOut, MessageSquare, Bot, Globe, ThumbsUp, Newspaper, Users } from 'lucide-react';
+import { LayoutDashboard, BookOpen, FileText, ListChecks, Flag, ShieldCheck, Menu, X, LogOut, MessageSquare, Bot, Globe, ThumbsUp, Newspaper, Users, LineChart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { signOut } from 'next-auth/react';
 
@@ -17,6 +17,7 @@ const navItems = [
   { label: 'Chapters', href: '/admin/chapters', icon: BookOpen },
   { label: 'Subtopics', href: '/admin/subtopics', icon: FileText },
   { label: 'Notes', href: '/admin/notes', icon: FileText },
+  { label: 'Practice Tools', href: '/admin/tools', icon: LineChart },
   { label: 'Questions', href: '/admin/questions', icon: ListChecks },
   { label: 'Question Reports', href: '/admin/question-reports', icon: Flag },
   { label: 'Note Reports', href: '/admin/note-reports', icon: ShieldCheck },

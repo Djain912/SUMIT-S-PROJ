@@ -4,7 +4,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { AAPL_SAMPLE } from '@/lib/tools/sample-data';
 import { computeRoc, computeMacd, computeRsi } from '@/lib/tools/indicators';
-import { LineChart } from '@/components/tools/line-chart';
+import { PanelChart } from '@/components/tools/panel-chart';
 
 export type IndicatorKey = 'roc' | 'macd' | 'rsi';
 
@@ -12,35 +12,60 @@ const EMERALD = '#047857';
 const BLUE = '#2563eb';
 const AMBER = '#d97706';
 
-const META: Record<IndicatorKey, { name: string; blurb: string; formula: string; points: string[] }> = {
+type Meta = {
+  name: string; blurb: string; formula: string;
+  measures: string; construction: string[]; reading: string[];
+};
+const META: Record<IndicatorKey, Meta> = {
   roc: {
     name: 'Rate of Change (ROC)',
     blurb: 'ROC shows how much price has changed, in percent, compared with a set number of bars ago.',
-    formula: 'ROC = ((Current Close − Close n bars ago) ÷ Close n bars ago) × 100',
-    points: [
-      'Above the 0 line = price is higher than n bars ago (upward momentum).',
-      'Below the 0 line = price is lower than n bars ago (downward momentum).',
+    formula: 'ROC = ((Close today − Close n bars ago) ÷ Close n bars ago) × 100',
+    measures: 'ROC measures momentum — the percentage change in price over a chosen lookback period.',
+    construction: [
+      'Choose a lookback period n (the slider above).',
+      'Take today\'s close and the close n bars ago.',
+      'Subtract them, divide by the old close, and multiply by 100 to get a %.',
+      'Plot that value as a line and repeat for every bar.',
+    ],
+    reading: [
+      'Crossing above the 0 line = price is now higher than it was n bars ago (upward momentum).',
+      'A rising ROC = momentum accelerating; a falling ROC = momentum slowing.',
       'It is unbounded, but the value is meaningful — it is the actual % change.',
     ],
   },
   macd: {
     name: 'MACD',
     blurb: 'MACD measures momentum as the gap between a fast and a slow moving average of price.',
-    formula: 'MACD = Fast EMA − Slow EMA · Signal = EMA of MACD · Histogram = MACD − Signal',
-    points: [
-      'MACD above 0 = fast EMA is above slow EMA (bullish).',
-      'MACD above its Signal line = momentum strengthening (histogram positive).',
-      'It is unbounded — focus on direction and crossovers, not the value.',
+    formula: 'MACD = Fast EMA − Slow EMA   ·   Signal = EMA of MACD   ·   Histogram = MACD − Signal',
+    measures: 'MACD measures momentum as the distance between a fast EMA and a slow EMA of the close.',
+    construction: [
+      'Compute a fast EMA and a slow EMA of the closing price.',
+      'MACD line = fast EMA − slow EMA.',
+      'Signal line = an EMA of the MACD line.',
+      'Histogram = MACD line − Signal line.',
+    ],
+    reading: [
+      'MACD above 0 = the fast EMA is above the slow EMA (uptrend bias).',
+      'MACD crossing above its Signal line = momentum turning up (histogram flips positive).',
+      'A widening histogram = accelerating momentum; a shrinking one = decelerating.',
     ],
   },
   rsi: {
     name: 'Relative Strength Index (RSI)',
     blurb: 'RSI compares average gains to average losses to show momentum on a fixed 0–100 scale.',
-    formula: 'RS = Average Gain ÷ Average Loss · RSI = 100 − (100 ÷ (1 + RS))',
-    points: [
-      '70 and above = overbought (relatively high). 30 and below = oversold (relatively low).',
-      '50 is the midline: above 50 gains dominate, below 50 losses dominate.',
-      'Uses Wilder smoothing; the default exam period is 14.',
+    formula: 'RS = Average Gain ÷ Average Loss   ·   RSI = 100 − (100 ÷ (1 + RS))',
+    measures: 'RSI measures momentum by comparing the average size of up moves to down moves, on a 0–100 scale.',
+    construction: [
+      'For each bar, record the gain (if price rose) or the loss (if it fell).',
+      'Average the gains and the losses over the period using Wilder smoothing.',
+      'RS = average gain ÷ average loss.',
+      'RSI = 100 − 100 ÷ (1 + RS).',
+    ],
+    reading: [
+      '70 and above = overbought (relatively high); 30 and below = oversold (relatively low).',
+      '50 is the midline — above 50 gains dominate, below 50 losses dominate.',
+      'These are conditions, not automatic buy or sell signals.',
     ],
   },
 };
@@ -52,29 +77,37 @@ function fmt(v: number | null, d = 2) {
 export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
   const meta = META[indicator];
   const bars = AAPL_SAMPLE;
-  const dates = bars.map((b) => b.date.slice(5)); // MM-DD
-  const closeSeries = bars.map((b) => b.close);
+  const N = bars.length;
 
   const [period, setPeriod] = useState(indicator === 'rsi' ? 14 : 10);
   const [fast, setFast] = useState(12);
   const [slow, setSlow] = useState(26);
   const [signal, setSignal] = useState(9);
+  const [fromI, setFromI] = useState(Math.max(0, N - 60));
+  const [toI, setToI] = useState(N - 1);
 
+  // compute on the FULL series, then show only the selected window
   const roc = useMemo(() => computeRoc(bars, period), [bars, period]);
   const rsi = useMemo(() => computeRsi(bars, period), [bars, period]);
   const macd = useMemo(() => computeMacd(bars, fast, slow, signal), [bars, fast, slow, signal]);
 
-  const indicatorChart = (() => {
+  const sl = <T,>(arr: T[]) => arr.slice(fromI, toI + 1);
+  const dates = sl(bars.map((b) => b.date.slice(5)));
+  const priceSeries = { label: 'Close', color: '#18181b', values: sl(bars.map((b) => b.close)) };
+
+  const chart = (() => {
     if (indicator === 'roc')
-      return <LineChart categories={dates} series={[{ label: `ROC (${period})`, color: EMERALD, values: roc.line }]} refLines={[{ value: 0, label: '0', color: '#9ca3af' }]} valueSuffix="%" />;
+      return <PanelChart categories={dates} price={priceSeries} indicatorLabel={`ROC (${period})`} indSuffix="%"
+        indicators={[{ label: `ROC (${period})`, color: EMERALD, values: sl(roc.line) }]} refLines={[{ value: 0, label: '0', color: '#9ca3af' }]} />;
     if (indicator === 'rsi')
-      return <LineChart categories={dates} series={[{ label: `RSI (${period})`, color: EMERALD, values: rsi.line }]} refLines={[{ value: 70, label: '70 overbought' }, { value: 30, label: '30 oversold' }]} yMin={0} yMax={100} />;
-    return <LineChart categories={dates} series={[{ label: 'MACD', color: BLUE, values: macd.macdLine }, { label: 'Signal', color: AMBER, values: macd.signalLine }]} refLines={[{ value: 0, label: '0', color: '#9ca3af' }]} />;
+      return <PanelChart categories={dates} price={priceSeries} indicatorLabel={`RSI (${period})`} indMin={0} indMax={100}
+        indicators={[{ label: `RSI (${period})`, color: EMERALD, values: sl(rsi.line) }]} refLines={[{ value: 70, label: '70 overbought' }, { value: 30, label: '30 oversold' }]} />;
+    return <PanelChart categories={dates} price={priceSeries} indicatorLabel="MACD"
+      indicators={[{ label: 'MACD', color: BLUE, values: sl(macd.macdLine) }, { label: 'Signal', color: AMBER, values: sl(macd.signalLine) }]} refLines={[{ value: 0, label: '0', color: '#9ca3af' }]} />;
   })();
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <p className="text-xs font-semibold uppercase tracking-widest text-emerald-700">Interactive Tool</p>
         <h1 className="mt-1 text-2xl font-bold tracking-tight text-zinc-950 sm:text-3xl">{meta.name}</h1>
@@ -82,7 +115,7 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
       </div>
 
       {/* Controls */}
-      <div className="rounded-xl border border-zinc-200 bg-white p-4">
+      <div className="space-y-3 rounded-xl border border-zinc-200 bg-white p-4">
         {indicator === 'macd' ? (
           <div className="flex flex-wrap items-center gap-5">
             {([['Fast EMA', fast, setFast], ['Slow EMA', slow, setSlow], ['Signal', signal, setSignal]] as const).map(([lbl, val, set]) => (
@@ -99,40 +132,62 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
             <input type="range" min={2} max={20} value={period} onChange={(e) => setPeriod(Number(e.target.value))} className="w-full max-w-xs accent-emerald-600" />
           </label>
         )}
-        <p className="mt-2 text-xs text-zinc-500">Move the controls and watch the chart and table update instantly.</p>
+
+        {/* Date range */}
+        <div className="flex flex-wrap items-center gap-4 border-t border-zinc-100 pt-3">
+          <label className="flex items-center gap-2 text-sm text-zinc-700">
+            <span className="font-medium">From</span>
+            <select value={fromI} onChange={(e) => { const v = Number(e.target.value); setFromI(v); if (v > toI) setToI(v); }}
+              className="rounded-lg border border-zinc-300 px-2 py-1 text-sm">
+              {bars.map((b, i) => <option key={b.date} value={i}>{b.date}</option>)}
+            </select>
+          </label>
+          <label className="flex items-center gap-2 text-sm text-zinc-700">
+            <span className="font-medium">To</span>
+            <select value={toI} onChange={(e) => { const v = Number(e.target.value); setToI(v); if (v < fromI) setFromI(v); }}
+              className="rounded-lg border border-zinc-300 px-2 py-1 text-sm">
+              {bars.map((b, i) => <option key={b.date} value={i}>{b.date}</option>)}
+            </select>
+          </label>
+          <span className="text-xs text-zinc-400">Showing {toI - fromI + 1} of {N} bars. Calculations always use the full history, so values are correct from the first day shown.</span>
+        </div>
       </div>
 
-      {/* Charts */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-xl border border-zinc-200 bg-white p-4">
-          <p className="mb-2 text-sm font-semibold text-zinc-800">Apple (AAPL) — Closing Price</p>
-          <LineChart categories={dates} series={[{ label: 'Close', color: '#18181b', values: closeSeries }]} />
-        </div>
-        <div className="rounded-xl border border-zinc-200 bg-white p-4">
-          <p className="mb-2 text-sm font-semibold text-zinc-800">{meta.name}</p>
-          {indicatorChart}
-        </div>
-      </div>
-
-      {/* Formula + explanation */}
-      <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">
-        <p className="text-sm font-semibold text-emerald-900">How it is calculated</p>
-        <p className="mt-1 font-mono text-[13px] text-emerald-800">{meta.formula}</p>
-        <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-zinc-700">
-          {meta.points.map((p) => <li key={p}>{p}</li>)}
-        </ul>
+      {/* Combined chart: price on top, indicator below */}
+      <div className="rounded-xl border border-zinc-200 bg-white p-4">
+        {chart}
       </div>
 
       {/* Calculation table */}
       <div className="rounded-xl border border-zinc-200 bg-white">
-        <p className="border-b border-zinc-100 px-4 py-3 text-sm font-semibold text-zinc-800">Step-by-step calculation</p>
+        <p className="border-b border-zinc-100 px-4 py-3 text-sm font-semibold text-zinc-800">Step-by-step calculation (selected dates)</p>
         <div className="max-h-[420px] overflow-auto">
-          <CalcTable indicator={indicator} roc={roc.rows} rsi={rsi.rows} macd={macd.rows} />
+          <CalcTable indicator={indicator} roc={sl(roc.rows)} rsi={sl(rsi.rows)} macd={sl(macd.rows)} />
+        </div>
+      </div>
+
+      {/* Detailed explanation BELOW the table */}
+      <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-5 space-y-4">
+        <div>
+          <h2 className="text-base font-semibold text-emerald-900">What {meta.name} measures</h2>
+          <p className="mt-1 text-sm text-zinc-700">{meta.measures}</p>
+        </div>
+        <div>
+          <h3 className="text-sm font-semibold text-emerald-900">How it is constructed</h3>
+          <ol className="mt-1 list-decimal space-y-1 pl-5 text-sm text-zinc-700">{meta.construction.map((p) => <li key={p}>{p}</li>)}</ol>
+        </div>
+        <div>
+          <h3 className="text-sm font-semibold text-emerald-900">How to read it</h3>
+          <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-zinc-700">{meta.reading.map((p) => <li key={p}>{p}</li>)}</ul>
+        </div>
+        <div className="rounded-lg border border-emerald-200 bg-white p-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Formula</p>
+          <p className="mt-1 font-mono text-[13px] text-zinc-800">{meta.formula}</p>
         </div>
       </div>
 
       <p className="text-center text-xs text-zinc-400">
-        Sample data: 35 recent AAPL daily bars, for learning the calculation. <Link href="/user/notes" className="text-emerald-700 underline">Back to notes</Link>
+        Sample data: {N} AAPL daily bars, for learning the calculation. <Link href="/user/notes" className="text-emerald-700 underline">Back to notes</Link>
       </p>
     </div>
   );
