@@ -8,6 +8,11 @@ const TOOLS = [
   { key: 'rsi', name: 'RSI', desc: 'Relative Strength Index — momentum on a 0–100 scale.' },
   { key: 'roc', name: 'ROC', desc: 'Rate of Change — % price change vs n bars ago.' },
   { key: 'macd', name: 'MACD', desc: 'Momentum from the gap between two EMAs.' },
+  { key: 'stochastics', name: 'Stochastics', desc: 'Close vs the recent high-low range (%K / %D).' },
+  { key: 'adl', name: 'Accumulation / Distribution', desc: 'Running volume total weighted by close position.' },
+  { key: 'mfi', name: 'Money Flow Index', desc: 'A volume-weighted RSI (0–100).' },
+  { key: 'ppo', name: 'PPO', desc: 'MACD shown as a percentage (normalized).' },
+  { key: 'dmi', name: 'DMI / ADX', desc: 'Trend direction (+DI/−DI) and strength (ADX).' },
 ];
 
 function snippet(key: string, name: string) {

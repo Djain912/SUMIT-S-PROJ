@@ -3,14 +3,16 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { AAPL_SAMPLE } from '@/lib/tools/sample-data';
-import { computeRoc, computeMacd, computeRsi } from '@/lib/tools/indicators';
+import { computeRoc, computeMacd, computeRsi, computeStochastics, computeAdl, computeMfi, computePpo, computeDmi } from '@/lib/tools/indicators';
 import { PanelChart } from '@/components/tools/panel-chart';
 
-export type IndicatorKey = 'roc' | 'macd' | 'rsi';
+export type IndicatorKey = 'roc' | 'macd' | 'rsi' | 'stochastics' | 'adl' | 'mfi' | 'ppo' | 'dmi';
 
 const EMERALD = '#047857';
 const BLUE = '#2563eb';
 const AMBER = '#d97706';
+const RED = '#dc2626';
+const PURPLE = '#7c3aed';
 
 type Meta = {
   name: string; blurb: string; formula: string;
@@ -68,6 +70,90 @@ const META: Record<IndicatorKey, Meta> = {
       'These are conditions, not automatic buy or sell signals.',
     ],
   },
+  stochastics: {
+    name: 'Stochastics (Fast %K / %D)',
+    blurb: 'Stochastics shows where the close sits within the recent high-to-low range.',
+    formula: '%K = (Close − Lowest Low n) ÷ (Highest High n − Lowest Low n) × 100   ·   %D = 3-bar average of %K',
+    measures: 'Stochastics measures momentum by the position of the close within the high-low range over the lookback.',
+    construction: [
+      'Find the lowest low and highest high over the last n bars.',
+      '%K = (Close − lowest low) ÷ (highest high − lowest low) × 100.',
+      '%D = the 3-bar average of %K (the signal line).',
+      '%D Slow = the 3-bar average of %D (used by the slow stochastic).',
+    ],
+    reading: [
+      'Above 80 = overbought; below 20 = oversold (relatively high / low).',
+      '%K crossing %D can flag a momentum shift.',
+      'Bounded 0–100; it uses the high and low, not just the close.',
+    ],
+  },
+  adl: {
+    name: 'Accumulation / Distribution Line (ADL)',
+    blurb: 'A running volume total that adds more on strong closes and subtracts on weak closes.',
+    formula: 'Multiplier = ((Close−Low) − (High−Close)) ÷ (High−Low)   ·   ADL = previous ADL + Multiplier × Volume',
+    measures: 'ADL gauges buying vs selling pressure by weighting each day’s volume by where the close finished in its range.',
+    construction: [
+      'Multiplier = ((Close−Low) − (High−Close)) ÷ (High−Low), a value between −1 and +1.',
+      'Adjusted Volume = Multiplier × Volume.',
+      'ADL = previous ADL + Adjusted Volume (a cumulative running total).',
+    ],
+    reading: [
+      'Rising ADL = accumulation (buying); falling ADL = distribution (selling).',
+      'It is an unbounded index — watch its trend, not the raw value.',
+      'Price up but ADL down (or vice-versa) is a divergence worth noting.',
+    ],
+  },
+  mfi: {
+    name: 'Money Flow Index (MFI)',
+    blurb: 'A volume-weighted RSI on a fixed 0–100 scale.',
+    formula: 'Typical Price = (H+L+C) ÷ 3   ·   MFI = 100 − 100 ÷ (1 + Positive Flow ÷ Negative Flow over n)',
+    measures: 'MFI measures buying vs selling pressure like RSI, but weights each move by its volume.',
+    construction: [
+      'Typical Price = (High + Low + Close) ÷ 3.',
+      'Raw Money Flow = Typical Price × Volume.',
+      'Over n bars, sum the flows on up days and on down days.',
+      'MFI = 100 − 100 ÷ (1 + positive-flow sum ÷ negative-flow sum).',
+    ],
+    reading: [
+      '70 and above = overbought; 30 and below = oversold.',
+      'Because it uses volume, high-volume moves count more than in plain RSI.',
+      'A divergence from price hints at weakening pressure.',
+    ],
+  },
+  ppo: {
+    name: 'Percentage Price Oscillator (PPO)',
+    blurb: 'A normalized MACD shown in percent, so it is comparable across any price level.',
+    formula: 'PPO = ((Fast EMA − Slow EMA) ÷ Slow EMA) × 100   ·   Signal = EMA of PPO',
+    measures: 'PPO measures the same momentum as MACD, but as a percentage — comparable across stocks and over long ranges.',
+    construction: [
+      'Compute the fast EMA and slow EMA of the close.',
+      'PPO = (fast EMA − slow EMA) ÷ slow EMA × 100.',
+      'Signal = an EMA of the PPO.',
+      'Histogram = PPO − Signal.',
+    ],
+    reading: [
+      'Above 0 = fast EMA is above slow EMA (uptrend bias).',
+      'PPO crossing its Signal line = momentum turning.',
+      'Being a %, it compares fairly between different-priced stocks.',
+    ],
+  },
+  dmi: {
+    name: 'Directional Movement Index (+DI, −DI, ADX)',
+    blurb: 'Shows trend direction with the two DI lines and trend strength with the ADX.',
+    formula: 'TR = max(H−L, |H−prevC|, |L−prevC|)   ·   +DI = +DM14÷TR14×100   ·   DX = |+DI−−DI|÷(+DI+−DI)×100   ·   ADX = Wilder avg of DX',
+    measures: 'The DMI separates trend direction (+DI vs −DI) from trend strength (ADX).',
+    construction: [
+      'True Range = max(High−Low, |High−prevClose|, |Low−prevClose|).',
+      '+DM / −DM = the part of today’s range that lies outside yesterday’s range.',
+      'Wilder-smooth TR, +DM, −DM over n, then +DI = +DM14÷TR14×100 and −DI = −DM14÷TR14×100.',
+      'DX = |+DI − −DI| ÷ (+DI + −DI) × 100; ADX = the Wilder average of DX.',
+    ],
+    reading: [
+      '+DI above −DI = uptrend; −DI above +DI = downtrend.',
+      'ADX above 25 and rising = a strong trend (up OR down — ADX is direction-agnostic).',
+      'A falling ADX = the trend is weakening.',
+    ],
+  },
 };
 
 function fmt(v: number | null, d = 2) {
@@ -79,7 +165,9 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
   const bars = AAPL_SAMPLE;
   const N = bars.length;
 
-  const [period, setPeriod] = useState(indicator === 'rsi' ? 14 : 10);
+  const usesEma = indicator === 'macd' || indicator === 'ppo';
+  const usesPeriod = ['roc', 'rsi', 'stochastics', 'mfi', 'dmi'].includes(indicator);
+  const [period, setPeriod] = useState(indicator === 'roc' ? 10 : 14);
   const [fast, setFast] = useState(12);
   const [slow, setSlow] = useState(26);
   const [signal, setSignal] = useState(9);
@@ -98,6 +186,11 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
   const roc = useMemo(() => computeRoc(bars, period), [bars, period]);
   const rsi = useMemo(() => computeRsi(bars, period), [bars, period]);
   const macd = useMemo(() => computeMacd(bars, fast, slow, signal), [bars, fast, slow, signal]);
+  const stoch = useMemo(() => computeStochastics(bars, period), [bars, period]);
+  const adl = useMemo(() => computeAdl(bars), [bars]);
+  const mfi = useMemo(() => computeMfi(bars, period), [bars, period]);
+  const ppo = useMemo(() => computePpo(bars, fast, slow, signal), [bars, fast, slow, signal]);
+  const dmi = useMemo(() => computeDmi(bars, period), [bars, period]);
 
   const sl = <T,>(arr: T[]) => arr.slice(lo, hi + 1);
   const dates = sl(bars.map((b) => b.date.slice(5)));
@@ -110,8 +203,23 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
     if (indicator === 'rsi')
       return <PanelChart categories={dates} price={priceSeries} indicatorLabel={`RSI (${period})`} indMin={0} indMax={100}
         indicators={[{ label: `RSI (${period})`, color: EMERALD, values: sl(rsi.line) }]} refLines={[{ value: 70, label: '70 overbought' }, { value: 30, label: '30 oversold' }]} />;
-    return <PanelChart categories={dates} price={priceSeries} indicatorLabel="MACD"
-      indicators={[{ label: 'MACD', color: BLUE, values: sl(macd.macdLine) }, { label: 'Signal', color: AMBER, values: sl(macd.signalLine) }]} refLines={[{ value: 0, label: '0', color: '#9ca3af' }]} />;
+    if (indicator === 'macd')
+      return <PanelChart categories={dates} price={priceSeries} indicatorLabel="MACD"
+        indicators={[{ label: 'MACD', color: BLUE, values: sl(macd.macdLine) }, { label: 'Signal', color: AMBER, values: sl(macd.signalLine) }]} refLines={[{ value: 0, label: '0', color: '#9ca3af' }]} />;
+    if (indicator === 'stochastics')
+      return <PanelChart categories={dates} price={priceSeries} indicatorLabel={`Stochastics %K/%D (${period})`} indMin={0} indMax={100}
+        indicators={[{ label: '%K', color: EMERALD, values: sl(stoch.kLine) }, { label: '%D', color: AMBER, values: sl(stoch.dLine) }]} refLines={[{ value: 80, label: '80 overbought' }, { value: 20, label: '20 oversold' }]} />;
+    if (indicator === 'adl')
+      return <PanelChart categories={dates} price={priceSeries} indicatorLabel="Accumulation / Distribution Line"
+        indicators={[{ label: 'ADL', color: EMERALD, values: sl(adl.line) }]} />;
+    if (indicator === 'mfi')
+      return <PanelChart categories={dates} price={priceSeries} indicatorLabel={`MFI (${period})`} indMin={0} indMax={100}
+        indicators={[{ label: `MFI (${period})`, color: EMERALD, values: sl(mfi.line) }]} refLines={[{ value: 70, label: '70 overbought' }, { value: 30, label: '30 oversold' }]} />;
+    if (indicator === 'ppo')
+      return <PanelChart categories={dates} price={priceSeries} indicatorLabel="PPO" indSuffix="%"
+        indicators={[{ label: 'PPO', color: BLUE, values: sl(ppo.ppoLine) }, { label: 'Signal', color: AMBER, values: sl(ppo.signalLine) }]} refLines={[{ value: 0, label: '0', color: '#9ca3af' }]} />;
+    return <PanelChart categories={dates} price={priceSeries} indicatorLabel={`DMI (${period})`} indMin={0}
+      indicators={[{ label: '+DI', color: EMERALD, values: sl(dmi.plusDI) }, { label: '−DI', color: RED, values: sl(dmi.minusDI) }, { label: 'ADX', color: PURPLE, values: sl(dmi.adx) }]} refLines={[{ value: 25, label: '25 strong trend' }]} />;
   })();
 
   return (
@@ -124,7 +232,7 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
 
       {/* Controls */}
       <div className="space-y-3 rounded-xl border border-zinc-200 bg-white p-4">
-        {indicator === 'macd' ? (
+        {usesEma ? (
           <div className="flex flex-wrap items-center gap-5">
             {([['Fast EMA', fast, setFast], ['Slow EMA', slow, setSlow], ['Signal', signal, setSignal]] as const).map(([lbl, val, set]) => (
               <label key={lbl} className="flex items-center gap-2 text-sm text-zinc-700">
@@ -134,11 +242,13 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
               </label>
             ))}
           </div>
-        ) : (
+        ) : usesPeriod ? (
           <label className="flex items-center gap-3 text-sm text-zinc-700">
             <span className="font-medium whitespace-nowrap">Period: <span className="text-emerald-700">{period}</span></span>
             <input type="range" min={2} max={20} value={period} onChange={(e) => setPeriod(Number(e.target.value))} className="w-full max-w-xs accent-emerald-600" />
           </label>
+        ) : (
+          <p className="text-sm text-zinc-600">The ADL has no period setting — it is a cumulative running total of volume.</p>
         )}
 
         {/* Date range */}
@@ -176,7 +286,8 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
       <div className="rounded-xl border border-zinc-200 bg-white">
         <p className="border-b border-zinc-100 px-4 py-3 text-sm font-semibold text-zinc-800">Step-by-step calculation (selected dates)</p>
         <div className="max-h-[420px] overflow-auto">
-          <CalcTable indicator={indicator} roc={sl(roc.rows)} rsi={sl(rsi.rows)} macd={sl(macd.rows)} />
+          <CalcTable indicator={indicator} roc={sl(roc.rows)} rsi={sl(rsi.rows)} macd={sl(macd.rows)}
+            stoch={sl(stoch.rows)} adl={sl(adl.rows)} mfi={sl(mfi.rows)} ppo={sl(ppo.rows)} dmi={sl(dmi.rows)} />
         </div>
       </div>
 
@@ -209,12 +320,18 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
 
 function th(label: string) { return <th className="whitespace-nowrap px-3 py-2 text-right font-semibold text-zinc-600 first:text-left">{label}</th>; }
 function td(v: ReactNode, first = false) { return <td className={`whitespace-nowrap px-3 py-1.5 ${first ? 'text-left text-zinc-500' : 'text-right tabular-nums text-zinc-800'}`}>{v}</td>; }
+function fmtInt(v: number | null) { return v === null || !Number.isFinite(v) ? '—' : Math.round(v).toLocaleString('en-US'); }
 
-function CalcTable({ indicator, roc, rsi, macd }: {
+function CalcTable({ indicator, roc, rsi, macd, stoch, adl, mfi, ppo, dmi }: {
   indicator: IndicatorKey;
   roc: ReturnType<typeof computeRoc>['rows'];
   rsi: ReturnType<typeof computeRsi>['rows'];
   macd: ReturnType<typeof computeMacd>['rows'];
+  stoch: ReturnType<typeof computeStochastics>['rows'];
+  adl: ReturnType<typeof computeAdl>['rows'];
+  mfi: ReturnType<typeof computeMfi>['rows'];
+  ppo: ReturnType<typeof computePpo>['rows'];
+  dmi: ReturnType<typeof computeDmi>['rows'];
 }) {
   if (indicator === 'roc') {
     return (
@@ -229,6 +346,46 @@ function CalcTable({ indicator, roc, rsi, macd }: {
       <table className="w-full text-[13px]">
         <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('Change')}{th('Gain')}{th('Loss')}{th('Avg Gain')}{th('Avg Loss')}{th('RS')}{th('RSI')}</tr></thead>
         <tbody>{rsi.map((r) => <tr key={r.date} className="border-t border-zinc-50">{td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.change))}{td(fmt(r.gain))}{td(fmt(r.loss))}{td(fmt(r.avgGain))}{td(fmt(r.avgLoss))}{td(fmt(r.rs))}{td(fmt(r.rsi))}</tr>)}</tbody>
+      </table>
+    );
+  }
+  if (indicator === 'stochastics') {
+    return (
+      <table className="w-full text-[13px]">
+        <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('Low n')}{th('High n')}{th('%K')}{th('%D')}</tr></thead>
+        <tbody>{stoch.map((r) => <tr key={r.date} className="border-t border-zinc-50">{td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.lowN))}{td(fmt(r.highN))}{td(fmt(r.k))}{td(fmt(r.d))}</tr>)}</tbody>
+      </table>
+    );
+  }
+  if (indicator === 'adl') {
+    return (
+      <table className="w-full text-[13px]">
+        <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('Volume')}{th('Multiplier')}{th('Adj Volume')}{th('ADL')}</tr></thead>
+        <tbody>{adl.map((r) => <tr key={r.date} className="border-t border-zinc-50">{td(r.date, true)}{td(fmt(r.close))}{td(fmtInt(r.volume))}{td(fmt(r.multiplier))}{td(fmtInt(r.adjVol))}{td(fmtInt(r.adl))}</tr>)}</tbody>
+      </table>
+    );
+  }
+  if (indicator === 'mfi') {
+    return (
+      <table className="w-full text-[13px]">
+        <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('Typ Price')}{th('Pos Flow')}{th('Neg Flow')}{th('MFI')}</tr></thead>
+        <tbody>{mfi.map((r) => <tr key={r.date} className="border-t border-zinc-50">{td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.typical))}{td(fmtInt(r.posFlow))}{td(fmtInt(r.negFlow))}{td(fmt(r.mfi))}</tr>)}</tbody>
+      </table>
+    );
+  }
+  if (indicator === 'ppo') {
+    return (
+      <table className="w-full text-[13px]">
+        <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('Fast EMA')}{th('Slow EMA')}{th('PPO %')}{th('Signal')}{th('Histogram')}</tr></thead>
+        <tbody>{ppo.map((r) => <tr key={r.date} className="border-t border-zinc-50">{td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.emaFast))}{td(fmt(r.emaSlow))}{td(fmt(r.ppo))}{td(fmt(r.signal))}{td(fmt(r.hist))}</tr>)}</tbody>
+      </table>
+    );
+  }
+  if (indicator === 'dmi') {
+    return (
+      <table className="w-full text-[13px]">
+        <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('TR')}{th('+DI')}{th('−DI')}{th('DX')}{th('ADX')}</tr></thead>
+        <tbody>{dmi.map((r) => <tr key={r.date} className="border-t border-zinc-50">{td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.tr))}{td(fmt(r.plusDI))}{td(fmt(r.minusDI))}{td(fmt(r.dx))}{td(fmt(r.adx))}</tr>)}</tbody>
       </table>
     );
   }
