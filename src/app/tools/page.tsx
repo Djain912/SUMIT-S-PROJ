@@ -3,8 +3,8 @@ import Link from 'next/link';
 import { TrendingUp, ArrowRight, ChevronRight } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Free CMT Indicator Lab | Interactive Technical Analysis Tools — Chartix',
-  description: 'Free interactive calculators for every major CMT indicator — RSI, MACD, Stochastics, ADL, OBV, CMF and more. Live chart + step-by-step calculations. No login required.',
+  title: 'Chartix Indicator Lab | Free Interactive Technical Analysis Tools',
+  description: 'Free interactive calculators for every major technical indicator — RSI, MACD, Stochastics, moving averages, OBV, CMF and more. Live chart + step-by-step calculations. No login required.',
 };
 
 const TOOLS = [
@@ -62,10 +62,10 @@ export default function ToolsIndexPage() {
               100% Free · No Login Required
             </span>
             <h1 className="mt-4 text-4xl font-extrabold tracking-tight text-emerald-900 sm:text-5xl">
-              The CMT Indicator Lab
+              Chartix Indicator Lab
             </h1>
             <p className="mt-4 text-base leading-7 text-zinc-500 max-w-xl mx-auto">
-              Build every major technical indicator yourself — interactive charts, step-by-step calculations, and clear explanations. Exactly how the CMT curriculum teaches it.
+              Build every major technical indicator yourself — interactive charts, step-by-step calculations, and clear explanations. The best way to truly understand how each indicator works.
             </p>
           </div>
         </section>

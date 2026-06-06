@@ -311,10 +311,10 @@ export default async function HomePage() {
                 </div>
                 <div className="mb-10 text-center">
                   <h2 className="text-3xl font-extrabold tracking-tight text-emerald-900 sm:text-4xl">
-                    The CMT Indicator Lab
+                    Chartix Indicator Lab
                   </h2>
                   <p className="mt-3 text-base text-zinc-500 max-w-2xl mx-auto">
-                    Build every major indicator yourself — live chart, step-by-step calculation table, and exam-ready explanation. Exactly how the CMT curriculum teaches it.
+                    Build every major technical indicator yourself — live chart, step-by-step calculation table, and a clear explanation. The best way to truly understand how each indicator works.
                   </p>
                 </div>
 

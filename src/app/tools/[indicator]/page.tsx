@@ -18,8 +18,8 @@ export async function generateMetadata({ params }: { params: Promise<{ indicator
   const { indicator } = await params;
   const name = NAMES[indicator as IndicatorKey] ?? 'Indicator';
   return {
-    title: `${name} Interactive Calculator | Chartix CMT Tools`,
-    description: `Free interactive ${name} calculator with live chart, step-by-step calculation table, and detailed explanation. Built for CMT exam candidates.`,
+    title: `${name} Calculator — Free Interactive Tool | Chartix Indicator Lab`,
+    description: `Free interactive ${name} calculator with a live price chart, step-by-step calculation table, and a clear explanation. Learn exactly how ${name} is built.`,
   };
 }
 
