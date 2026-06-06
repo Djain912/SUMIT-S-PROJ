@@ -287,3 +287,25 @@ summary:focus-visible {
   outline: 2px solid hsl(var(--ring));
   outline-offset: 2px;
 }
+
+/* ── Protected notes: block printing / Save-as-PDF ──────────────────────────
+   The notes UI is hidden when the page is printed, and a notice is shown
+   instead, so note content never reaches paper or a PDF — regardless of
+   whether print was triggered by Cmd/Ctrl+P, the browser menu, or Save as PDF. */
+.note-print-guard {
+  display: none;
+}
+
+@media print {
+  .notes-protected-root {
+    display: none !important;
+  }
+  .note-print-guard {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    padding: 2rem;
+    text-align: center;
+  }
+}

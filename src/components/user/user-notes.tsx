@@ -245,13 +245,40 @@ export function UserNotesClient() {
     }
   }, [selectedNote, reportReason]);
 
+  // Block print / save shortcuts (Cmd/Ctrl + P or S). The CSS @media print
+  // rule is the real safeguard; this just gives instant feedback.
+  useEffect(() => {
+    const blockPrint = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase();
+      if ((e.metaKey || e.ctrlKey) && (key === 'p' || key === 's')) {
+        e.preventDefault();
+        setProtectionNotice('Printing and saving are disabled on protected notes.');
+        window.setTimeout(() => setProtectionNotice(null), 1800);
+      }
+    };
+    window.addEventListener('keydown', blockPrint);
+    return () => window.removeEventListener('keydown', blockPrint);
+  }, []);
+
   return (
-    <div
-      onContextMenu={(e) => { e.preventDefault(); setProtectionNotice('Right-click is restricted.'); window.setTimeout(() => setProtectionNotice(null), 1500); }}
-      onCopy={(e) => { e.preventDefault(); setProtectionNotice('Copy is disabled on protected notes.'); window.setTimeout(() => setProtectionNotice(null), 1500); }}
-      onCut={(e) => e.preventDefault()}
-      onDragStart={(e) => e.preventDefault()}
-    >
+    <>
+      {/* Shown ONLY when the page is sent to a printer or "Save as PDF" */}
+      <div className="note-print-guard">
+        <div>
+          <p className="text-lg font-semibold text-zinc-900">Printing is disabled</p>
+          <p className="mt-2 max-w-md text-sm text-zinc-600">
+            These study notes are protected content of Chartix.in and cannot be printed or saved as a PDF.
+          </p>
+        </div>
+      </div>
+
+      <div
+        className="notes-protected-root"
+        onContextMenu={(e) => { e.preventDefault(); setProtectionNotice('Right-click is restricted.'); window.setTimeout(() => setProtectionNotice(null), 1500); }}
+        onCopy={(e) => { e.preventDefault(); setProtectionNotice('Copy is disabled on protected notes.'); window.setTimeout(() => setProtectionNotice(null), 1500); }}
+        onCut={(e) => e.preventDefault()}
+        onDragStart={(e) => e.preventDefault()}
+      >
       {reportSuccess && (
         <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
           Note reported successfully. Thank you!
@@ -418,6 +445,7 @@ export function UserNotesClient() {
         </div>
         </>
       )}
-    </div>
+      </div>
+    </>
   );
 }
