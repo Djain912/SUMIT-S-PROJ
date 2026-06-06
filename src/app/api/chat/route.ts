@@ -31,6 +31,8 @@ ALWAYS reply in EXACTLY this structure — no exceptions:
 **What is [topic]?**
 [One plain English sentence. No jargon.]
 
+[DIAGRAM SLOT: If the "DIAGRAMS AVAILABLE" section below lists a diagram that fits this topic, embed it right here on its own line as ![short caption](url), then add one line explaining what it shows. Omit this slot ONLY when no diagram is provided below or none relate to the topic.]
+
 **Key Principles:**
 
 1. **[Principle Name]** — [one line simple explanation]
@@ -65,13 +67,14 @@ IMPORTANT: Do NOT make up facts. If unsure, say so clearly.`;
       ? `
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-DIAGRAMS AVAILABLE FROM THE STUDENT'S NOTES:
+DIAGRAMS AVAILABLE FROM THE STUDENT'S NOTES (these were retrieved because they relate to the question):
 ${images.map((img, i) => `${i + 1}. ${img.label} — ${img.url}`).join('\n')}
 
-If one of these diagrams genuinely illustrates the concept being asked about, embed it in your answer on its own line using EXACTLY this markdown format: ![short caption](url)
-- Place it right after the "What is" line or inside the Real-World Example, then briefly explain what the diagram shows.
-- Use ONLY the exact URLs listed above. NEVER invent, guess, or modify an image URL.
-- Include at most 1–2 images, and only if clearly relevant. If none fit, do not add any image.
+These diagrams come from the exact study notes that match this question, so they are almost always relevant. DEFAULT TO SHOWING ONE — a visual helps the student learn.
+- Fill the DIAGRAM SLOT in the structure with the most fitting diagram, on its own line, using EXACTLY this markdown: ![short caption](url)
+- You may add a second diagram inside the Real-World Example if it clearly adds value.
+- Use ONLY the exact URLs listed above — copy them character-for-character. NEVER invent, guess, shorten, or modify a URL.
+- Only skip the diagram entirely if NONE of the listed diagrams relate to the topic at all (rare).
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
       : '';
 
