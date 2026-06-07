@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Download, Users, Mail, Chrome, RefreshCw, Crown, Shield } from 'lucide-react';
+import { Search, Download, Users, Mail, Chrome, RefreshCw, Crown, Shield, Infinity as InfinityIcon, Loader2 } from 'lucide-react';
 
 type User = {
   id: string;
@@ -9,10 +9,25 @@ type User = {
   fullName: string | null;
   role: string;
   isPremium: boolean;
+  premiumUntil: string | null;
   signInMethod: 'Email' | 'Google';
   quizAttempts: number;
   joinedAt: string;
 };
+
+// Works out a user's current access state for display.
+function accessInfo(u: User): { label: string; tone: 'admin' | 'lifetime' | 'temp' | 'expired' | 'free' } {
+  if (u.role === 'ADMIN') return { label: 'Admin', tone: 'admin' };
+  if (u.isPremium && !u.premiumUntil) return { label: 'Lifetime', tone: 'lifetime' };
+  if (u.isPremium && u.premiumUntil) {
+    const until = new Date(u.premiumUntil);
+    if (until > new Date()) {
+      return { label: `Until ${until.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}`, tone: 'temp' };
+    }
+    return { label: 'Expired', tone: 'expired' };
+  }
+  return { label: 'Free', tone: 'free' };
+}
 
 type Meta = { total: number; page: number; limit: number };
 
@@ -34,6 +49,30 @@ export function UsersTable({ initialUsers, initialMeta }: { initialUsers: User[]
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [filter, setFilter] = useState<'all' | 'Email' | 'Google' | 'premium'>('all');
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  const updateAccess = useCallback(async (userId: string, action: 'grant_lifetime' | 'revoke') => {
+    setUpdatingId(userId);
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, action }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setUsers((prev) => prev.map((u) =>
+          u.id === userId ? { ...u, isPremium: json.data.isPremium, premiumUntil: json.data.premiumUntil } : u,
+        ));
+      } else {
+        alert(json.error?.message ?? 'Update failed');
+      }
+    } catch {
+      alert('Update failed. Please try again.');
+    } finally {
+      setUpdatingId(null);
+    }
+  }, []);
 
   const fetchUsers = useCallback(async (q: string) => {
     setIsLoading(true);
@@ -164,7 +203,7 @@ export function UsersTable({ initialUsers, initialMeta }: { initialUsers: User[]
           <table className="min-w-full divide-y divide-zinc-100">
             <thead className="bg-zinc-50">
               <tr>
-                {['#', 'Email', 'Name', 'Sign-in', 'Role', 'Quizzes', 'Joined'].map((h) => (
+                {['#', 'Email', 'Name', 'Sign-in', 'Access', 'Quizzes', 'Joined', 'Action'].map((h) => (
                   <th key={h} className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
                     {h}
                   </th>
@@ -174,7 +213,7 @@ export function UsersTable({ initialUsers, initialMeta }: { initialUsers: User[]
             <tbody className="divide-y divide-zinc-50">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-sm text-zinc-400">
+                  <td colSpan={8} className="py-12 text-center text-sm text-zinc-400">
                     No users found
                   </td>
                 </tr>
@@ -206,21 +245,47 @@ export function UsersTable({ initialUsers, initialMeta }: { initialUsers: User[]
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      {u.role === 'ADMIN' ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-0.5 text-[11px] font-semibold text-red-600">
-                          <Shield className="h-3 w-3" /> Admin
-                        </span>
-                      ) : u.isPremium ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold text-amber-600">
-                          <Crown className="h-3 w-3" /> Premium
-                        </span>
-                      ) : (
-                        <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-[11px] font-semibold text-zinc-500">Free</span>
-                      )}
+                      {(() => {
+                        const a = accessInfo(u);
+                        const styles: Record<string, string> = {
+                          admin: 'bg-red-50 text-red-600',
+                          lifetime: 'bg-violet-50 text-violet-700',
+                          temp: 'bg-amber-50 text-amber-600',
+                          expired: 'bg-zinc-100 text-zinc-400 line-through',
+                          free: 'bg-zinc-100 text-zinc-500',
+                        };
+                        const Icon = a.tone === 'admin' ? Shield : a.tone === 'lifetime' ? InfinityIcon : a.tone === 'temp' ? Crown : null;
+                        return (
+                          <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${styles[a.tone]}`}>
+                            {Icon && <Icon className="h-3 w-3" />} {a.label}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-4 py-3 text-sm tabular-nums text-zinc-500">{u.quizAttempts}</td>
                     <td className="px-4 py-3 text-xs tabular-nums text-zinc-400">
                       {new Date(u.joinedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </td>
+                    <td className="px-4 py-3">
+                      {u.role === 'ADMIN' ? (
+                        <span className="text-[11px] text-zinc-300">—</span>
+                      ) : updatingId === u.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
+                      ) : u.isPremium && !u.premiumUntil ? (
+                        <button
+                          onClick={() => updateAccess(u.id, 'revoke')}
+                          className="rounded-lg border border-zinc-200 px-2.5 py-1 text-[11px] font-semibold text-zinc-500 transition hover:border-red-300 hover:text-red-600"
+                        >
+                          Revoke
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => updateAccess(u.id, 'grant_lifetime')}
+                          className="inline-flex items-center gap-1 rounded-lg bg-violet-600 px-2.5 py-1 text-[11px] font-semibold text-white transition hover:bg-violet-700"
+                        >
+                          <InfinityIcon className="h-3 w-3" /> Grant Lifetime
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))
