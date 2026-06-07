@@ -19,13 +19,33 @@ export type AccessState = {
 export async function getAccessByEmail(email: string): Promise<AccessState | null> {
   const user = await prisma.user.findUnique({
     where: { email },
-    select: { role: true, isPremium: true, premiumUntil: true, createdAt: true },
+    select: { id: true, role: true, isPremium: true, premiumUntil: true, createdAt: true },
   });
   if (!user) return null;
 
   const now = new Date();
   const withinWindow = !user.premiumUntil || user.premiumUntil > now;
   const active = user.role === 'ADMIN' || (user.isPremium && withinWindow);
+
+  // If the user has no full-premium access, check for scoped (chapter-level)
+  // entitlements granted by a coupon — these store their expiry separately.
+  if (!active && user.role !== 'ADMIN') {
+    const ents = await prisma.entitlement.findMany({
+      where: { userId: user.id, expiresAt: { gt: now } },
+      select: { expiresAt: true },
+      orderBy: { expiresAt: 'desc' },
+      take: 1,
+    });
+    if (ents.length > 0) {
+      return {
+        active: true,
+        isPremium: true,
+        premiumUntil: ents[0].expiresAt,
+        role: user.role,
+        createdAt: user.createdAt,
+      };
+    }
+  }
 
   return {
     active,
