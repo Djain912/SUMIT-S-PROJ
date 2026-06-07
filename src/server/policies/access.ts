@@ -11,6 +11,7 @@ export type AccessState = {
   isPremium: boolean;
   premiumUntil: Date | null;
   role: 'ADMIN' | 'USER';
+  createdAt: Date;
 };
 
 // Fresh DB lookup of a user's access — does NOT rely on the (cached) JWT,
@@ -18,7 +19,7 @@ export type AccessState = {
 export async function getAccessByEmail(email: string): Promise<AccessState | null> {
   const user = await prisma.user.findUnique({
     where: { email },
-    select: { role: true, isPremium: true, premiumUntil: true },
+    select: { role: true, isPremium: true, premiumUntil: true, createdAt: true },
   });
   if (!user) return null;
 
@@ -31,5 +32,6 @@ export async function getAccessByEmail(email: string): Promise<AccessState | nul
     isPremium: user.isPremium,
     premiumUntil: user.premiumUntil ?? null,
     role: user.role,
+    createdAt: user.createdAt,
   };
 }
