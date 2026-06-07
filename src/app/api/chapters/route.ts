@@ -1,13 +1,15 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 import { AuthError, requireAuthenticatedUser } from '@/server/policies/auth';
+import { getChapterAccess } from '@/server/policies/access';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 60;
+// Per-user access filtering — must not be shared-cached across users.
+export const revalidate = 0;
 
 export async function GET(request: Request) {
   try {
-    await requireAuthenticatedUser();
+    const user = await requireAuthenticatedUser();
     const { searchParams } = new URL(request.url);
     const level = searchParams.get('level') as 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3' | null;
 
@@ -27,10 +29,12 @@ export async function GET(request: Request) {
       },
     });
 
-    return NextResponse.json({ success: true, data: chapters }, {
-      headers: {
-        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
-      },
+    // Scoped (coupon) users only see chapters they hold a live entitlement for.
+    const access = await getChapterAccess(user.email);
+    const data = access.full ? chapters : chapters.filter((c) => access.chapterIds.has(c.id));
+
+    return NextResponse.json({ success: true, data }, {
+      headers: { 'Cache-Control': 'private, no-store' },
     });
   } catch (error) {
     if (error instanceof AuthError) {

@@ -2,13 +2,15 @@ import { NextResponse } from 'next/server';
 import { AuthError, requireAuthenticatedUser } from '@/server/policies/auth';
 import { resolveQuizQuestions } from '@/server/services/quiz.service';
 import { quizSelectionSchema } from '@/server/validators/quiz';
+import { getChapterAccess } from '@/server/policies/access';
 
 export async function POST(request: Request) {
   try {
-    await requireAuthenticatedUser();
+    const user = await requireAuthenticatedUser();
     const payload = await request.json();
     const selection = quizSelectionSchema.parse(payload);
-    const questions = await resolveQuizQuestions(selection);
+    const access = await getChapterAccess(user.email);
+    const questions = await resolveQuizQuestions(selection, access.full ? 'ALL' : [...access.chapterIds]);
 
     return NextResponse.json({ success: true, data: questions });
   } catch (error) {

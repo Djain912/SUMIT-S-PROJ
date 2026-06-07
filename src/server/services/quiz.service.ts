@@ -11,7 +11,11 @@ function shuffle<T>(items: T[]) {
   return output;
 }
 
-export async function resolveQuizQuestions(selection: QuizSelectionInput) {
+// Limits questions to a set of accessible chapters for scoped (coupon) users.
+// Pass 'ALL' for admins / full-premium users (no restriction).
+export type ChapterScope = 'ALL' | string[];
+
+export async function resolveQuizQuestions(selection: QuizSelectionInput, scope: ChapterScope = 'ALL') {
   const where: Prisma.QuestionWhereInput = {
     isPublished: true,
     isDeleted: false,
@@ -34,6 +38,14 @@ export async function resolveQuizQuestions(selection: QuizSelectionInput) {
 
   if (orConditions.length > 0) {
     where.OR = orConditions;
+  }
+
+  // Scoped users: every returned question must belong to a chapter they hold
+  // (directly via chapterId, or via its subtopic's chapter). An empty scope
+  // means no access → no questions.
+  if (scope !== 'ALL') {
+    if (scope.length === 0) return [];
+    where.AND = [{ OR: [{ chapterId: { in: scope } }, { subtopic: { chapterId: { in: scope } } }] }];
   }
 
   const questions = await prisma.question.findMany({
@@ -64,8 +76,8 @@ export async function resolveQuizQuestions(selection: QuizSelectionInput) {
   return orderedQuestions.slice(0, selection.questionCount);
 }
 
-export async function startQuizAttempt(userId: string, selection: QuizSelectionInput) {
-  const questions = await resolveQuizQuestions(selection);
+export async function startQuizAttempt(userId: string, selection: QuizSelectionInput, scope: ChapterScope = 'ALL') {
+  const questions = await resolveQuizQuestions(selection, scope);
 
   const attempt = await prisma.quizAttempt.create({
     data: {

@@ -4,6 +4,7 @@ import { validateCsrfOrigin } from '@/server/policies/csrf';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
 import { startQuizAttempt } from '@/server/services/quiz.service';
 import { quizSelectionSchema } from '@/server/validators/quiz';
+import { getChapterAccess } from '@/server/policies/access';
 
 export async function POST(request: Request) {
   try {
@@ -37,7 +38,8 @@ export async function POST(request: Request) {
 
     const payload = await request.json();
     const selection = quizSelectionSchema.parse(payload);
-    const attempt = await startQuizAttempt(user.id, selection);
+    const access = await getChapterAccess(user.email);
+    const attempt = await startQuizAttempt(user.id, selection, access.full ? 'ALL' : [...access.chapterIds]);
 
     return NextResponse.json({ success: true, data: attempt }, { status: 201 });
   } catch (error) {

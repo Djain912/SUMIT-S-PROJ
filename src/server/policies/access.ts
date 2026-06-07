@@ -35,3 +35,38 @@ export async function getAccessByEmail(email: string): Promise<AccessState | nul
     createdAt: user.createdAt,
   };
 }
+
+export type ChapterAccess = {
+  // true when the user can see EVERYTHING (admin or full premium)
+  full: boolean;
+  // when not full, the exact set of chapter IDs they currently have access to
+  chapterIds: Set<string>;
+};
+
+// Resolves which chapters a user can access right now. Admins and full-premium
+// users get `full: true`. Everyone else gets the set of chapters they hold an
+// unexpired entitlement for (granted by redeeming a scoped coupon).
+export async function getChapterAccess(email: string): Promise<ChapterAccess> {
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true, role: true, isPremium: true, premiumUntil: true },
+  });
+  if (!user) return { full: false, chapterIds: new Set() };
+
+  const now = new Date();
+  const full = user.role === 'ADMIN' || (user.isPremium && (!user.premiumUntil || user.premiumUntil > now));
+  if (full) return { full: true, chapterIds: new Set() };
+
+  const ents = await prisma.entitlement.findMany({
+    where: { userId: user.id, expiresAt: { gt: now } },
+    select: { chapterId: true },
+  });
+  return { full: false, chapterIds: new Set(ents.map((e) => e.chapterId)) };
+}
+
+// True when the user has ANY access at all (full OR at least one live chapter).
+// Used to decide whether to let them into the student area.
+export async function hasAnyAccess(email: string): Promise<boolean> {
+  const access = await getChapterAccess(email);
+  return access.full || access.chapterIds.size > 0;
+}

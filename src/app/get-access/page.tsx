@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { TrendingUp, CheckCircle, Lock, Clock } from 'lucide-react';
 import { auth } from '@/lib/auth/auth';
-import { getAccessByEmail } from '@/server/policies/access';
+import { hasAnyAccess } from '@/server/policies/access';
 import { CouponRedeemForm } from '@/components/get-access-client';
 
 export const dynamic = 'force-dynamic';
@@ -29,9 +29,8 @@ export default async function GetAccessPage() {
   // Not signed in → send to sign-up, then back here.
   if (!email) redirect('/sign-up?next=/get-access');
 
-  // Already have access → no need for this page.
-  const access = await getAccessByEmail(email);
-  if (access?.active) redirect('/user');
+  // Already have access (full or scoped) → no need for this page.
+  if (await hasAnyAccess(email)) redirect('/user');
 
   return (
     <div className="min-h-screen bg-[#f0f7f4]">

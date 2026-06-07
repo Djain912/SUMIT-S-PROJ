@@ -1,13 +1,15 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 import { AuthError, requireAuthenticatedUser } from '@/server/policies/auth';
+import { getChapterAccess } from '@/server/policies/access';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 60;
+// Per-user access gating — must not be shared-cached across users.
+export const revalidate = 0;
 
 export async function GET(request: Request) {
   try {
-    await requireAuthenticatedUser();
+    const user = await requireAuthenticatedUser();
     const { searchParams } = new URL(request.url);
     let subtopicId = searchParams.get('subtopicId') ?? searchParams.get('subtopic');
     const chapterId = searchParams.get('chapterId') ?? searchParams.get('chapter');
@@ -27,6 +29,21 @@ export async function GET(request: Request) {
 
     if (!subtopicId && !chapterId) {
       return NextResponse.json({ success: false, error: { message: 'subtopicId or chapterId required' } }, { status: 400 });
+    }
+
+    // Chapter-level access gate: resolve which chapter these notes belong to,
+    // then deny if a scoped (coupon) user doesn't hold that chapter.
+    const access = await getChapterAccess(user.email);
+    if (!access.full) {
+      let effectiveChapterId = chapterId;
+      if (!effectiveChapterId && subtopicId) {
+        const sub = await prisma.subtopic.findUnique({ where: { id: subtopicId }, select: { chapterId: true } });
+        effectiveChapterId = sub?.chapterId ?? null;
+      }
+      if (!effectiveChapterId || !access.chapterIds.has(effectiveChapterId)) {
+        return NextResponse.json({ success: true, data: [], locked: true, _openNoteId: noteId ?? null },
+          { headers: { 'Cache-Control': 'private, no-store' } });
+      }
     }
 
     const where: { isPublished: true; isDeleted: false; subtopicId?: string; subtopic?: { chapterId: string } } = {
@@ -55,9 +72,7 @@ export async function GET(request: Request) {
     });
 
     return NextResponse.json({ success: true, data: notes, _openNoteId: noteId ?? null }, {
-      headers: {
-        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
-      },
+      headers: { 'Cache-Control': 'private, no-store' },
     });
   } catch (error) {
     if (error instanceof AuthError) {

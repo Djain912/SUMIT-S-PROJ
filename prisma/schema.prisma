@@ -29,6 +29,42 @@ model User {
   updatedQuestions  Question[]       @relation("QuestionUpdatedBy")
   questionReports   QuestionReport[]
   quizAttempts      QuizAttempt[]
+  entitlements      Entitlement[]
+}
+
+// A coupon code created from the admin panel. Grants either full access
+// (allChapters) or access to a specific set of chapters, for `days` days
+// counted from the moment the user redeems it.
+model Coupon {
+  id             String   @id @default(cuid())
+  code           String   @unique
+  days           Int
+  allChapters    Boolean  @default(false)
+  chapterIds     Json     @default("[]")
+  isActive       Boolean  @default(true)
+  maxRedemptions Int?
+  redeemedCount  Int      @default(0)
+  note           String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// A single user's access to a single chapter, granted by redeeming a coupon.
+// Expires at `expiresAt`. Upserted on redemption (extends if the new expiry is later).
+model Entitlement {
+  id         String   @id @default(cuid())
+  userId     String
+  chapterId  String
+  expiresAt  DateTime
+  couponCode String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chapter    Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, chapterId])
+  @@index([userId])
+  @@index([chapterId])
 }
 
 model Chapter {
@@ -45,6 +81,7 @@ model Chapter {
   updatedAt   DateTime   @updatedAt
   questions   Question[]
   subtopics   Subtopic[]
+  entitlements Entitlement[]
 
   @@unique([level, slug])
   @@index([level, isPublished, orderIndex])
