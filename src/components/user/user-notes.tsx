@@ -79,6 +79,7 @@ export function UserNotesClient() {
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isLocked, setIsLocked] = useState(false);
   const [showReportForm, setShowReportForm] = useState(false);
   const [reportReason, setReportReason] = useState('');
   const [isReporting, setIsReporting] = useState(false);
@@ -104,12 +105,19 @@ export function UserNotesClient() {
       else if (noteId) searchParams.set('note', noteId);
 
       const response = await fetch(`/api/notes?${searchParams.toString()}`);
-      const payload = await response.json() as ApiResponse<Note[]> & { _openNoteId?: string | null };
+      const payload = await response.json() as ApiResponse<Note[]> & { _openNoteId?: string | null; locked?: boolean };
 
       if (!response.ok || !payload.success) {
         throw new Error(payload.error?.message ?? 'Failed to load notes');
       }
 
+      if (payload.locked) {
+        setIsLocked(true);
+        setNotes([]);
+        return;
+      }
+
+      setIsLocked(false);
       const data = payload.data ?? [];
       setNotes(data);
       if (data.length > 0) {
@@ -305,8 +313,15 @@ export function UserNotesClient() {
       ) : error ? (
         <div className="rounded-2xl border border-zinc-100 bg-white py-16 text-center text-sm text-rose-600">{error}</div>
       ) : notes.length === 0 ? (
-        <div className="rounded-2xl border border-zinc-100 bg-white py-16 text-center text-sm text-zinc-500">
-          No notes available for this selection.
+        <div className="rounded-2xl border border-zinc-100 bg-white py-16 text-center">
+          {isLocked ? (
+            <>
+              <p className="text-sm font-medium text-zinc-700">Your coupon does not have access to this note.</p>
+              <p className="mt-1 text-xs text-zinc-400">Please contact support or upgrade your plan to unlock this content.</p>
+            </>
+          ) : (
+            <p className="text-sm text-zinc-500">No notes available for this selection.</p>
+          )}
           <div className="mt-4"><Link href="/user" className="inline-flex rounded-full border border-zinc-200 px-4 py-2 text-sm text-zinc-600 hover:bg-zinc-50">Back to Dashboard</Link></div>
         </div>
       ) : (
