@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { TrendingUp, ArrowRight, ChevronRight } from 'lucide-react';
+import { TrendingUp, ArrowRight, ChevronRight, Calculator } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Chartix Indicator Lab | Free Interactive Technical Analysis Tools',
@@ -83,7 +83,10 @@ export default function ToolsIndexPage() {
                     <h2 className="text-sm font-bold text-zinc-900 group-hover:text-emerald-800">{t.name}</h2>
                     <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${TAG_COLORS[t.tag]}`}>{t.tag}</span>
                   </div>
-                  <p className="mt-2 text-xs leading-5 text-zinc-500">{t.desc}</p>
+                  <p className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-700">
+                    <Calculator className="h-3 w-3" /> Calculation Method &amp; Live Chart
+                  </p>
+                  <p className="mt-1.5 text-xs leading-5 text-zinc-500">{t.desc}</p>
                 </div>
                 <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-emerald-700">
                   Open tool <ChevronRight className="h-3.5 w-3.5" />

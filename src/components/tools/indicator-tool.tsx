@@ -320,6 +320,112 @@ const META: Record<IndicatorKey, Meta> = {
   },
 };
 
+// Practical, real-market applications — how traders actually put each indicator to work.
+const USE_CASES: Record<IndicatorKey, string[]> = {
+  roc: [
+    'Momentum ranking: scan a watchlist and rank stocks by ROC to surface the strongest and weakest movers for rotation strategies.',
+    'Divergence alerts: if price makes a new high but ROC makes a lower high, the move is losing fuel — a heads-up for an upcoming pullback.',
+    'Breakout confirmation: a sharp jump in ROC as price clears resistance adds conviction that the breakout is real, not a fake-out.',
+    'Cycle timing: in range-bound markets, repeated ROC peaks and troughs help time swing entries and exits.',
+  ],
+  macd: [
+    'Trend entries: in an uptrend, traders buy when the MACD line crosses above its signal line and trim when it crosses back below.',
+    'Zero-line filter: MACD above zero confirms an up-bias, below zero a down-bias — used to only take trades in the trend\'s direction.',
+    'Early warnings: the histogram shrinks before a crossover, giving an advance signal that momentum is fading.',
+    'Reversal hunting: MACD/price divergence at the end of a long trend often precedes a turn — popular on daily and weekly charts.',
+  ],
+  rsi: [
+    'Mean-reversion timing: buy pullbacks when RSI dips below 30 (oversold) and fades rallies near 70 (overbought) in range markets.',
+    'Trend filter: keeping RSI above 50 for longs / below 50 for shorts keeps you on the right side of the trend.',
+    'Divergence: bullish/bearish RSI divergence is one of the most-used early reversal signals across all timeframes.',
+    'Strong-trend tweak: in powerful trends, traders shift the bands (e.g. 40–80) so RSI doesn\'t flash "overbought" too early.',
+  ],
+  stochastics: [
+    'Pullback entries: in an uptrend, a %K cross up out of oversold (<20) pinpoints low-risk re-entry points.',
+    'Range trading: fade overbought (>80) and oversold (<20) turns when price is stuck in a sideways band.',
+    'Crossover timing: %K crossing %D is a fast, short-term momentum trigger for active traders.',
+    'Divergence: stochastic divergence at tops and bottoms warns of exhaustion before price actually turns.',
+  ],
+  adl: [
+    'Trend health check: a rising ADL alongside rising price confirms genuine accumulation behind the advance.',
+    'Hidden distribution: price climbing while ADL falls warns that big players are quietly selling into strength.',
+    'Base spotting: ADL rising during a flat consolidation hints at accumulation before a breakout.',
+    'Breakout validation: a breakout backed by a jump in ADL is far more trustworthy than one without volume flow.',
+  ],
+  mfi: [
+    'Volume-confirmed extremes: because MFI uses volume, its overbought/oversold signals are often more reliable than plain RSI on liquid names.',
+    'Exhaustion divergence: MFI failing to confirm a new price high flags a move running out of money.',
+    'Smart-money clues: sustained high MFI suggests accumulation; collapsing MFI suggests distribution.',
+    'Breakout filter: traders require rising MFI to back a breakout, screening out low-conviction moves.',
+  ],
+  ppo: [
+    'Cross-stock comparison: because PPO is a percentage, you can directly compare momentum between a ₹100 stock and a ₹5,000 stock.',
+    'Portfolio ranking: rank a whole watchlist by PPO to find the strongest momentum candidates.',
+    'Same signals as MACD: zero-line crosses, signal-line crosses and divergence — but normalized and comparable.',
+    'Long-history backtests: PPO stays meaningful even when a stock\'s price has changed 10x over the years.',
+  ],
+  dmi: [
+    'Strategy switch: ADX above 25 says "trend is strong → use trend-following"; below 20 says "choppy → use range tactics or stand aside".',
+    'Directional entries: +DI crossing above −DI signals an uptrend entry; −DI over +DI signals a downtrend.',
+    'Whipsaw filter: skipping trades when ADX is low avoids the death-by-a-thousand-cuts of sideways markets.',
+    'Riding trends: as long as ADX keeps rising, traders hold; a falling ADX warns the trend is tiring.',
+  ],
+  obv: [
+    'Breakout confirmation: OBV breaking to new highs with price confirms real buying behind the move.',
+    'Divergence: price at a new high but OBV lagging warns the rally lacks volume support (and vice-versa at bottoms).',
+    'Early accumulation: OBV can rise before price during a base, hinting that smart money is loading up.',
+    'Trend confirmation: a steadily rising OBV reassures trend-followers their position is well-supported.',
+  ],
+  cmf: [
+    'Pressure gauge: CMF above zero confirms net buying behind an uptrend; below zero confirms selling pressure.',
+    'Divergence: CMF rolling over while price rises warns the advance is weakening internally.',
+    'Shift detection: CMF crossing up through zero flags a change from distribution to accumulation.',
+    'Breakout conviction: a breakout with strongly positive CMF is more likely to follow through.',
+  ],
+  rvol: [
+    'Trade filter: many day-traders only take setups where RVOL is above 1.5–2, ensuring there\'s enough participation to move.',
+    'Stocks "in play": pre-market scanners use RVOL to find gappers and news names worth watching that day.',
+    'Breakout reliability: a breakout on 3x RVOL is far more credible than the same breakout on thin volume.',
+    'Climax spotting: an extreme RVOL spike after a long run can mark exhaustion and a turning point.',
+  ],
+  sma: [
+    'Dynamic support/resistance: the 50- and 200-day SMAs act as battle lines that institutions watch and defend.',
+    'Golden / Death Cross: the 50-day crossing the 200-day is a widely-followed long-term trend signal.',
+    'Trend filter: only buying when price is above the 200-day SMA keeps systematic traders on the right side of the market.',
+    'Stop placement: a rising SMA gives a logical, objective level to trail a stop beneath.',
+  ],
+  ema: [
+    'Faster signals: active traders use 9/21 EMAs on intraday charts to react quicker than the SMA allows.',
+    'Dynamic support: in trends, pullbacks to the 20-EMA are classic low-risk entry zones.',
+    'EMA ribbons: stacking several EMAs visualizes trend strength and direction at a glance.',
+    'System building block: the EMA is the engine inside MACD, PPO and many automated strategies.',
+  ],
+  lwma: [
+    'Less lag, less noise: LWMA reacts faster than SMA but is steadier than EMA — useful for cleaner trend entries.',
+    'Crossover systems: a fast LWMA crossing a slow LWMA is a responsive trend-change trigger.',
+    'Smoothing intraday data: the linear weighting tames choppy short-timeframe price without over-smoothing.',
+    'Adaptive strategies: weighting recent data more makes LWMA popular in custom, faster-reacting systems.',
+  ],
+  wilderma: [
+    'Understand your indicators: Wilder smoothing is the math inside RSI, ADX/DMI and ATR — knowing it explains how those behave.',
+    'Fewer whipsaws: its slow, stable nature suits position traders who want to avoid false signals.',
+    'Volatility stops: ATR (which uses Wilder smoothing) drives the popular chandelier and ATR-trailing stops.',
+    'Long-term trend tracking: a Wilder MA of n behaves like an EMA of (2n−1), so it rides longer trends smoothly.',
+  ],
+  distma: [
+    'Mean-reversion: when price stretches to an unusually large % above/below its MA, traders fade the extreme back toward the average.',
+    'Overextension alerts: large positive readings flag rallies that have run too far, too fast.',
+    'Cross-stock comparison: the % framing lets you compare how stretched different stocks are right now.',
+    'Re-entry timing: after a snap-back toward the MA (distance near zero), trend traders look to re-enter.',
+  ],
+  bb: [
+    'The Squeeze: when the bands pinch to their tightest in months, volatility is coiling — traders pre-position for the breakout that often follows.',
+    'Band rides: in strong trends, price "walks the band", hugging the upper band up (or lower band down) — a sign of trend strength, not a reversal.',
+    'Range reversion: in sideways markets, tags of the upper/lower band mark fade entries back toward the middle.',
+    'Stops & targets: the opposite band and the middle SMA give objective, volatility-adjusted exit and target levels; W-bottoms and M-tops are confirmed with the bands.',
+  ],
+};
+
 function fmt(v: number | null, d = 2) {
   return v === null || !Number.isFinite(v) ? '—' : v.toFixed(d);
 }
@@ -576,6 +682,16 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
           <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Formula</p>
           <p className="mt-1 font-mono text-[13px] text-zinc-800">{meta.formula}</p>
         </div>
+      </div>
+
+      {/* Real-world use cases */}
+      <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-5">
+        <p className="text-xs font-semibold uppercase tracking-widest text-amber-700">In Practice</p>
+        <h2 className="mt-1 text-base font-semibold text-amber-900">How traders use {meta.name} in real markets</h2>
+        <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-zinc-700">
+          {USE_CASES[indicator].map((u) => <li key={u}>{u}</li>)}
+        </ul>
+        <p className="mt-4 text-xs text-amber-700/80">Educational examples only — not investment or trading advice.</p>
       </div>
 
       <p className="text-center text-xs text-zinc-400">
