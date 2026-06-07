@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import {
   BookOpen, ListChecks, BarChart2, ArrowRight,
-  TrendingUp, ChevronRight, Brain, FlaskConical,
+  TrendingUp, ChevronRight, Brain, FlaskConical, Linkedin,
 } from 'lucide-react';
 import { auth } from '@/lib/auth/auth';
 import { siteConfig } from '@/lib/site';
@@ -463,6 +463,22 @@ export default async function HomePage() {
                 <p className="mt-3 text-xs leading-6 text-zinc-400">
                   Purpose-built CMT exam prep for Level I, II, and III candidates. Not affiliated with the CMT Association.
                 </p>
+
+                {/* Founder */}
+                <div className="mt-5 border-t border-emerald-50 pt-4">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-emerald-600">Founder</p>
+                  <p className="mt-2 text-xs leading-6 text-zinc-500">
+                    Built by <Link href="/about" className="font-semibold text-zinc-700 hover:text-emerald-700 transition">Sumit Jain</Link> — CMT Level 3 cleared. Have a question? Reach out anytime.
+                  </p>
+                  <a
+                    href="https://www.linkedin.com/in/sumitjain-9749041a7"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-[#0A66C2] hover:underline"
+                  >
+                    <Linkedin className="h-3.5 w-3.5" /> Connect on LinkedIn
+                  </a>
+                </div>
               </div>
 
               <div>
