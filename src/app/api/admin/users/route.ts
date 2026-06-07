@@ -23,6 +23,8 @@ export async function GET(request: Request) {
         }
       : {};
 
+    const now = new Date();
+
     const [users, total] = await Promise.all([
       prisma.user.findMany({
         where,
@@ -33,9 +35,16 @@ export async function GET(request: Request) {
           role: true,
           isPremium: true,
           premiumUntil: true,
+          couponRedeemed: true,
           passwordHash: true, // used only to detect sign-in method — not sent to client
           createdAt: true,
           _count: { select: { quizAttempts: true } },
+          entitlements: {
+            where: { expiresAt: { gt: now } },
+            select: { couponCode: true, expiresAt: true },
+            orderBy: { expiresAt: 'desc' },
+            take: 1,
+          },
         },
         orderBy: { createdAt: 'desc' },
         take: limit,
@@ -44,17 +53,24 @@ export async function GET(request: Request) {
       prisma.user.count({ where }),
     ]);
 
-    const data = users.map((u) => ({
-      id: u.id,
-      email: u.email,
-      fullName: u.fullName ?? null,
-      role: u.role,
-      isPremium: u.isPremium,
-      premiumUntil: u.premiumUntil ? u.premiumUntil.toISOString() : null,
-      signInMethod: u.passwordHash ? 'Email' : 'Google',
-      quizAttempts: u._count.quizAttempts,
-      joinedAt: u.createdAt.toISOString(),
-    }));
+    const data = users.map((u) => {
+      const ent = u.entitlements[0] ?? null;
+      return {
+        id: u.id,
+        email: u.email,
+        fullName: u.fullName ?? null,
+        role: u.role,
+        isPremium: u.isPremium,
+        premiumUntil: u.premiumUntil ? u.premiumUntil.toISOString() : null,
+        couponRedeemed: u.couponRedeemed ?? null,
+        // Scoped-coupon fields (entitlement-based access, no isPremium flag)
+        entitlementCoupon: ent?.couponCode ?? null,
+        entitlementExpiry: ent ? ent.expiresAt.toISOString() : null,
+        signInMethod: u.passwordHash ? 'Email' : 'Google',
+        quizAttempts: u._count.quizAttempts,
+        joinedAt: u.createdAt.toISOString(),
+      };
+    });
 
     return NextResponse.json({ success: true, data, meta: { total, page, limit } });
   } catch (error) {
@@ -65,8 +81,8 @@ export async function GET(request: Request) {
   }
 }
 
-// Grant or revoke access for a specific user (admin only).
-// action: 'grant_lifetime' | 'revoke'
+// Grant / revoke / remove a user (admin only).
+// action: 'grant_lifetime' | 'revoke' | 'remove'
 export async function PATCH(request: Request) {
   try {
     await requireAdminUser();
@@ -74,8 +90,20 @@ export async function PATCH(request: Request) {
     const body = await request.json();
     const userId = String(body?.userId ?? '');
     const action = String(body?.action ?? '');
-    if (!userId || !['grant_lifetime', 'revoke'].includes(action)) {
+    if (!userId || !['grant_lifetime', 'revoke', 'remove'].includes(action)) {
       return NextResponse.json({ success: false, error: { message: 'Invalid request' } }, { status: 400 });
+    }
+
+    // Remove — hard-delete the account. The user can sign up again fresh.
+    if (action === 'remove') {
+      // Safety: do not allow deleting an admin account via this endpoint.
+      const target = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+      if (!target) return NextResponse.json({ success: false, error: { message: 'User not found' } }, { status: 404 });
+      if (target.role === 'ADMIN') {
+        return NextResponse.json({ success: false, error: { message: 'Cannot remove an admin account.' } }, { status: 403 });
+      }
+      await prisma.user.delete({ where: { id: userId } });
+      return NextResponse.json({ success: true, data: { removed: true } });
     }
 
     const data =
