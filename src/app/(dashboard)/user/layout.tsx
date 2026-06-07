@@ -1,11 +1,19 @@
 import type { ReactNode } from 'react';
+import { redirect } from 'next/navigation';
 import { requireAuthenticatedUser } from '@/server/policies/auth';
+import { getAccessByEmail } from '@/server/policies/access';
 import { ChatWidget } from '@/components/chat/ChatWidget';
 
 export default async function UserLayout({ children }: { children: ReactNode }) {
-  await requireAuthenticatedUser();
+  const user = await requireAuthenticatedUser();
 
-  // Show chatbot to all logged-in users for now (restrict to premium later when payments are live)
+  // Gate the whole student area behind active access (paid or coupon).
+  // Admins always pass. Fresh DB lookup so a just-redeemed coupon works instantly.
+  const access = await getAccessByEmail(user.email);
+  if (!access?.active) {
+    redirect('/get-access');
+  }
+
   return (
     <>
       {children}

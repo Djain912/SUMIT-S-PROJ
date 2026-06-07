@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { ArrowRight, CheckCircle, TrendingUp, Clock, AlertCircle } from 'lucide-react';
+import { ArrowRight, CheckCircle, TrendingUp, Clock, AlertCircle, Lock } from 'lucide-react';
 
 const plans = [
   {
     level: 'CMT Level 1',
     badge: 'L1',
+    comingSoon: false,
     priceINR: '₹6,999',
     priceUSD: '$89',
     period: 'per level',
@@ -27,6 +28,7 @@ const plans = [
   {
     level: 'CMT Level 2',
     badge: 'L2',
+    comingSoon: true,
     priceINR: '₹6,999',
     priceUSD: '$89',
     period: 'per level',
@@ -47,6 +49,7 @@ const plans = [
   {
     level: 'CMT Level 3',
     badge: 'L3',
+    comingSoon: true,
     priceINR: '₹6,999',
     priceUSD: '$89',
     period: 'per level',
@@ -173,23 +176,34 @@ export default function PricingPage() {
           {plans.map((plan) => (
             <div
               key={plan.level}
-              className="relative rounded-2xl border border-emerald-100 bg-white p-7 flex flex-col shadow-sm hover:shadow-md hover:border-emerald-200 transition"
+              className={`relative rounded-2xl border p-7 flex flex-col shadow-sm transition ${
+                plan.comingSoon
+                  ? 'border-zinc-200 bg-zinc-50'
+                  : 'border-emerald-100 bg-white hover:shadow-md hover:border-emerald-200'
+              }`}
             >
+              {/* Coming Soon ribbon */}
+              {plan.comingSoon && (
+                <span className="absolute right-5 top-5 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-700">
+                  <Lock className="h-3 w-3" /> Coming Soon
+                </span>
+              )}
+
               {/* Badge */}
-              <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-700 font-bold text-sm text-white mb-5">
+              <div className={`inline-flex h-10 w-10 items-center justify-center rounded-xl font-bold text-sm text-white mb-5 ${plan.comingSoon ? 'bg-zinc-400' : 'bg-emerald-700'}`}>
                 {plan.badge}
               </div>
 
-              <p className="text-xs font-semibold uppercase tracking-widest text-emerald-600 mb-1">
+              <p className={`text-xs font-semibold uppercase tracking-widest mb-1 ${plan.comingSoon ? 'text-zinc-400' : 'text-emerald-600'}`}>
                 {plan.level}
               </p>
               <div className="flex items-end gap-1.5 mb-2">
-                <span className="text-4xl font-extrabold text-emerald-900">
+                <span className={`text-4xl font-extrabold ${plan.comingSoon ? 'text-zinc-400' : 'text-emerald-900'}`}>
                   {currency === 'INR' ? plan.priceINR : plan.priceUSD}
                 </span>
                 <span className="mb-1 text-sm text-zinc-400">{plan.period}</span>
               </div>
-              {currency === 'USD' && (
+              {currency === 'USD' && !plan.comingSoon && (
                 <p className="text-[11px] text-zinc-400 -mt-1 mb-1">
                   International cards accepted via Razorpay
                 </p>
@@ -198,25 +212,31 @@ export default function PricingPage() {
 
               {/* Access duration pill */}
               <div className="flex items-center gap-1.5 mb-6">
-                <Clock className="h-3.5 w-3.5 text-emerald-600" />
-                <span className="text-xs font-semibold text-emerald-700">6 months access</span>
+                <Clock className={`h-3.5 w-3.5 ${plan.comingSoon ? 'text-zinc-400' : 'text-emerald-600'}`} />
+                <span className={`text-xs font-semibold ${plan.comingSoon ? 'text-zinc-400' : 'text-emerald-700'}`}>6 months access</span>
               </div>
 
               <ul className="space-y-3 mb-8 flex-1">
                 {plan.features.map((f) => (
                   <li key={f} className="flex items-start gap-2.5">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                    <span className="text-sm text-zinc-600">{f}</span>
+                    <CheckCircle className={`mt-0.5 h-4 w-4 shrink-0 ${plan.comingSoon ? 'text-zinc-300' : 'text-emerald-600'}`} />
+                    <span className={`text-sm ${plan.comingSoon ? 'text-zinc-400' : 'text-zinc-600'}`}>{f}</span>
                   </li>
                 ))}
               </ul>
 
-              <Link
-                href="/sign-up"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-600"
-              >
-                Get started <ArrowRight className="h-4 w-4" />
-              </Link>
+              {plan.comingSoon ? (
+                <div className="inline-flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-zinc-200 px-5 py-3 text-sm font-bold text-zinc-500">
+                  <Lock className="h-4 w-4" /> Coming Soon
+                </div>
+              ) : (
+                <Link
+                  href="/sign-up"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-600"
+                >
+                  Get started <ArrowRight className="h-4 w-4" />
+                </Link>
+              )}
             </div>
           ))}
         </div>
