@@ -3,12 +3,12 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { AAPL_SAMPLE } from '@/lib/tools/sample-data';
-import { computeRoc, computeMacd, computeRsi, computeStochastics, computeAdl, computeMfi, computePpo, computeDmi, computeObv, computeCmf, computeRvol, computeSma, computeEma, computeLwma, computeWilderMa, computeDistMa } from '@/lib/tools/indicators';
+import { computeRoc, computeMacd, computeRsi, computeStochastics, computeAdl, computeMfi, computePpo, computeDmi, computeObv, computeCmf, computeRvol, computeSma, computeEma, computeLwma, computeWilderMa, computeDistMa, computeBollinger } from '@/lib/tools/indicators';
 import { PanelChart } from '@/components/tools/panel-chart';
 import { OverlayChart } from '@/components/tools/overlay-chart';
 
-export type IndicatorKey = 'roc' | 'macd' | 'rsi' | 'stochastics' | 'adl' | 'mfi' | 'ppo' | 'dmi' | 'obv' | 'cmf' | 'rvol' | 'sma' | 'ema' | 'lwma' | 'wilderma' | 'distma';
-export const MA_KEYS: IndicatorKey[] = ['sma', 'ema', 'lwma', 'wilderma', 'distma'];
+export type IndicatorKey = 'roc' | 'macd' | 'rsi' | 'stochastics' | 'adl' | 'mfi' | 'ppo' | 'dmi' | 'obv' | 'cmf' | 'rvol' | 'sma' | 'ema' | 'lwma' | 'wilderma' | 'distma' | 'bb';
+export const MA_KEYS: IndicatorKey[] = ['sma', 'ema', 'lwma', 'wilderma', 'distma', 'bb'];
 
 const EMERALD = '#047857';
 const BLUE = '#2563eb';
@@ -300,6 +300,24 @@ const META: Record<IndicatorKey, Meta> = {
       'Developed by Joe Granville — the original volume-based indicator (CMT curriculum).',
     ],
   },
+  bb: {
+    name: 'Bollinger Bands®',
+    blurb: 'Bollinger Bands wrap price in a moving average plus and minus a multiple of standard deviation, so the bands widen when volatility rises and tighten when it falls.',
+    formula: 'Middle = 20-period SMA of close   ·   Upper = Middle + (2 × 20-period std dev)   ·   Lower = Middle − (2 × 20-period std dev)',
+    measures: 'Bollinger Bands show whether price is high or low on a relative basis, and whether volatility is expanding or contracting. John Bollinger\'s key insight: volatility is dynamic, not fixed — so the bands set their own width automatically.',
+    construction: [
+      'Middle band = a simple moving average of the closing price (default 20 periods).',
+      'Compute the population standard deviation (÷ n, the same way the moving average is built) of those same 20 closes.',
+      'Upper band = middle + (multiplier × standard deviation). Default multiplier = 2.',
+      'Lower band = middle − (multiplier × standard deviation). Squaring the deviations makes the bands expand fast in trends and pull in tight during consolidations.',
+    ],
+    reading: [
+      'Price near the upper band = relatively high; near the lower band = relatively low. This does NOT automatically mean "too high / too low" — that is the most common error.',
+      'Bands tightening = "The Squeeze" (low volatility, often precedes a move); bands bulging outward = "The Bulge" (expanding volatility).',
+      'Roughly 90% of price action stays inside the bands — security prices are fat-tailed, so not the ~95% a normal distribution would imply.',
+      'Created by John Bollinger. Bollinger Bands are a tool, not a standalone trading system.',
+    ],
+  },
 };
 
 function fmt(v: number | null, d = 2) {
@@ -316,8 +334,9 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
   const usesPeriod = ['roc', 'rsi', 'stochastics', 'mfi', 'dmi', 'cmf', 'rvol'].includes(indicator);
   const noControls = indicator === 'adl' || indicator === 'obv';
   const [period, setPeriod] = useState(
-    indicator === 'roc' ? 10 : ['cmf', 'rvol', 'sma', 'ema', 'lwma', 'wilderma', 'distma'].includes(indicator) ? 20 : 14
+    indicator === 'roc' ? 10 : ['cmf', 'rvol', 'sma', 'ema', 'lwma', 'wilderma', 'distma', 'bb'].includes(indicator) ? 20 : 14
   );
+  const [mult, setMult] = useState(2); // Bollinger std-dev multiplier
   const MA_COLORS_LIST = [
     { label: 'Blue',   value: '#2563eb' },
     { label: 'Orange', value: '#d97706' },
@@ -356,6 +375,7 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
   const lwma = useMemo(() => computeLwma(bars, period), [bars, period]);
   const wilderma = useMemo(() => computeWilderMa(bars, period), [bars, period]);
   const distma = useMemo(() => computeDistMa(bars, period), [bars, period]);
+  const bb = useMemo(() => computeBollinger(bars, period, mult), [bars, period, mult]);
   const mfi = useMemo(() => computeMfi(bars, period), [bars, period]);
   const ppo = useMemo(() => computePpo(bars, fast, slow, signal), [bars, fast, slow, signal]);
   const dmi = useMemo(() => computeDmi(bars, period), [bars, period]);
@@ -400,6 +420,10 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
         overlay={{ label: `SMA (${period})`, color: BLUE, values: sl(distma.smaLine) }}
         indicator={{ label: `Distance from SMA (${period}) %`, values: sl(distma.distLine), color: PURPLE, suffix: '%',
           refLines: [{ value: 0, label: '0', color: '#9ca3af' }] }} />;
+    if (indicator === 'bb')
+      return <OverlayChart categories={dates} price={priceSeries}
+        overlay={{ label: `Middle SMA (${period})`, color: maColor, values: sl(bb.middleLine) }}
+        bands={{ upper: sl(bb.upperLine), lower: sl(bb.lowerLine), label: `Upper / Lower (${mult}σ)` }} />;
     if (indicator === 'cmf')
       return <PanelChart categories={dates} price={priceSeries} indicatorLabel={`Chaikin Money Flow (${period})`}
         indicators={[{ label: `CMF (${period})`, color: PURPLE, values: sl(cmf.line) }]}
@@ -455,6 +479,19 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
                     style={{ backgroundColor: c.value }} />
                 ))}
                 <span className="text-xs text-zinc-400 ml-1">{MA_COLORS_LIST.find((c) => c.value === maColor)?.label}</span>
+              </div>
+            )}
+            {/* Bollinger std-dev multiplier */}
+            {indicator === 'bb' && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium text-zinc-700">Std deviations:</span>
+                {[1, 2, 3].map((m) => (
+                  <button key={m} type="button" onClick={() => setMult(m)}
+                    className={`rounded-md px-2.5 py-1 text-xs font-semibold transition border ${mult === m ? 'bg-emerald-700 text-white border-emerald-700' : 'border-zinc-200 text-zinc-600 hover:border-emerald-400 hover:text-emerald-700'}`}>
+                    {m}σ
+                  </button>
+                ))}
+                <span className="text-xs text-zinc-400 ml-1">Default is 2 standard deviations</span>
               </div>
             )}
           </div>
@@ -517,7 +554,7 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
           <CalcTable indicator={indicator} roc={sl(roc.rows)} rsi={sl(rsi.rows)} macd={sl(macd.rows)}
             stoch={sl(stoch.rows)} adl={sl(adl.rows)} mfi={sl(mfi.rows)} ppo={sl(ppo.rows)} dmi={sl(dmi.rows)}
             obv={sl(obv.rows)} cmf={sl(cmf.rows)} rvol={sl(rvol.rows)}
-            sma={sl(sma.rows)} ema={sl(ema.rows)} lwma={sl(lwma.rows)} wilderma={sl(wilderma.rows)} distma={sl(distma.rows)} />
+            sma={sl(sma.rows)} ema={sl(ema.rows)} lwma={sl(lwma.rows)} wilderma={sl(wilderma.rows)} distma={sl(distma.rows)} bb={sl(bb.rows)} />
         </div>
       </div>
 
@@ -552,7 +589,7 @@ function th(label: string) { return <th className="whitespace-nowrap px-3 py-2 t
 function td(v: ReactNode, first = false) { return <td className={`whitespace-nowrap px-3 py-1.5 ${first ? 'text-left text-zinc-500' : 'text-right tabular-nums text-zinc-800'}`}>{v}</td>; }
 function fmtInt(v: number | null) { return v === null || !Number.isFinite(v) ? '—' : Math.round(v).toLocaleString('en-US'); }
 
-function CalcTable({ indicator, roc, rsi, macd, stoch, adl, mfi, ppo, dmi, obv, cmf, rvol, sma, ema, lwma, wilderma, distma }: {
+function CalcTable({ indicator, roc, rsi, macd, stoch, adl, mfi, ppo, dmi, obv, cmf, rvol, sma, ema, lwma, wilderma, distma, bb }: {
   indicator: IndicatorKey;
   roc: ReturnType<typeof computeRoc>['rows'];
   rsi: ReturnType<typeof computeRsi>['rows'];
@@ -570,6 +607,7 @@ function CalcTable({ indicator, roc, rsi, macd, stoch, adl, mfi, ppo, dmi, obv, 
   lwma: ReturnType<typeof computeLwma>['rows'];
   wilderma: ReturnType<typeof computeWilderMa>['rows'];
   distma: ReturnType<typeof computeDistMa>['rows'];
+  bb: ReturnType<typeof computeBollinger>['rows'];
 }) {
   if (indicator === 'roc') {
     return (
@@ -693,6 +731,17 @@ function CalcTable({ indicator, roc, rsi, macd, stoch, adl, mfi, ppo, dmi, obv, 
         <tbody>{distma.map((r) => <tr key={r.date} className="border-t border-zinc-50">
           {td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.sma))}
           {td(<span className={r.dist === null ? '' : r.dist > 0 ? 'text-emerald-600 font-semibold' : 'text-red-500 font-semibold'}>{fmt(r.dist)}%</span>)}
+        </tr>)}</tbody>
+      </table>
+    );
+  }
+  if (indicator === 'bb') {
+    return (
+      <table className="w-full text-[13px]">
+        <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('Middle (SMA)')}{th('Std Dev')}{th('Upper')}{th('Lower')}{th('%B')}</tr></thead>
+        <tbody>{bb.map((r) => <tr key={r.date} className="border-t border-zinc-50">
+          {td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.middle))}{td(fmt(r.stdev))}{td(fmt(r.upper))}{td(fmt(r.lower))}
+          {td(<span className={r.pctB === null ? '' : r.pctB >= 100 ? 'text-red-600 font-semibold' : r.pctB <= 0 ? 'text-emerald-600 font-semibold' : 'text-zinc-800'}>{r.pctB === null ? '—' : fmt(r.pctB, 0) + '%'}</span>)}
         </tr>)}</tbody>
       </table>
     );

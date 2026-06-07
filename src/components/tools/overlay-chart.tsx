@@ -8,6 +8,8 @@ type OverlayChartProps = {
   categories: string[];
   price: { label: string; values: number[] };
   overlay: { label: string; color: string; values: Series };
+  // optional volatility bands drawn on the price panel (for Bollinger Bands)
+  bands?: { upper: Series; lower: Series; label?: string };
   // optional second panel (for Distance from MA)
   indicator?: {
     label: string;
@@ -18,7 +20,7 @@ type OverlayChartProps = {
   };
 };
 
-export function OverlayChart({ categories, price, overlay, indicator }: OverlayChartProps) {
+export function OverlayChart({ categories, price, overlay, bands, indicator }: OverlayChartProps) {
   const W = 760, padL = 52, padR = 16, padT = 26, padB = 26;
   const priceH = indicator ? 200 : 300;
   const gap = indicator ? 30 : 0;
@@ -36,10 +38,10 @@ export function OverlayChart({ categories, price, overlay, indicator }: OverlayC
     return { mn: mn - pad, mx: mx + pad };
   };
 
-  // price panel range: encompass BOTH price and overlay MA
+  // price panel range: encompass price, overlay MA, and any volatility bands
   const pr = useMemo(() => range(
-    [...price.values, ...overlay.values],
-  ), [price.values, overlay.values]);
+    [...price.values, ...overlay.values, ...(bands ? [...bands.upper, ...bands.lower] : [])],
+  ), [price.values, overlay.values, bands]);
 
   const ir = useMemo(() => indicator
     ? range(indicator.values, (indicator.refLines ?? []).map((r) => r.value))
@@ -62,6 +64,20 @@ export function OverlayChart({ categories, price, overlay, indicator }: OverlayC
     return d.trim();
   };
 
+  // closed polygon between an upper and lower series (for the shaded Bollinger band)
+  const areaPath = (upper: (number | null)[], lower: (number | null)[], yfn: (v: number) => number) => {
+    const idx: number[] = [];
+    for (let i = 0; i < upper.length; i++) {
+      const u = upper[i], l = lower[i];
+      if (u !== null && l !== null && Number.isFinite(u as number) && Number.isFinite(l as number)) idx.push(i);
+    }
+    if (idx.length < 2) return '';
+    let d = '';
+    idx.forEach((i, k) => { d += `${k === 0 ? 'M' : 'L'}${x(i).toFixed(1)} ${yfn(upper[i] as number).toFixed(1)} `; });
+    for (let k = idx.length - 1; k >= 0; k--) { const i = idx[k]; d += `L${x(i).toFixed(1)} ${yfn(lower[i] as number).toFixed(1)} `; }
+    return d + 'Z';
+  };
+
   const fmt = (v: number) => (Math.abs(v) >= 1000 ? v.toFixed(0) : Math.abs(v) >= 100 ? v.toFixed(1) : v.toFixed(2));
   const xidx = n <= 1 ? [0] : [0, Math.floor((n - 1) / 4), Math.floor((n - 1) / 2), Math.floor(3 * (n - 1) / 4), n - 1];
 
@@ -78,6 +94,15 @@ export function OverlayChart({ categories, price, overlay, indicator }: OverlayC
             <text x={padL - 6} y={yP(t) + 3} textAnchor="end" fontSize={10} fill="#71717a">{fmt(t)}</text>
           </g>
         ))}
+
+        {/* volatility bands (shaded area + dashed upper/lower) — drawn under the price line */}
+        {bands && (
+          <>
+            <path d={areaPath(bands.upper, bands.lower, yP)} fill={overlay.color} fillOpacity={0.08} stroke="none" />
+            <path d={path(bands.upper, yP)} fill="none" stroke={overlay.color} strokeWidth={1.25} strokeDasharray="4 3" strokeLinejoin="round" strokeLinecap="round" />
+            <path d={path(bands.lower, yP)} fill="none" stroke={overlay.color} strokeWidth={1.25} strokeDasharray="4 3" strokeLinejoin="round" strokeLinecap="round" />
+          </>
+        )}
 
         {/* price line */}
         <path d={path(price.values, yP)} fill="none" stroke="#18181b" strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />
@@ -123,6 +148,11 @@ export function OverlayChart({ categories, price, overlay, indicator }: OverlayC
         <span className="inline-flex items-center gap-1.5 text-xs text-zinc-600">
           <span className="inline-block h-[3px] w-5 rounded-sm" style={{ backgroundColor: overlay.color }} />{overlay.label}
         </span>
+        {bands && (
+          <span className="inline-flex items-center gap-1.5 text-xs text-zinc-600">
+            <span className="inline-block h-[2px] w-5 rounded-sm border-t-2 border-dashed" style={{ borderColor: overlay.color }} />{bands.label ?? 'Upper / Lower band'}
+          </span>
+        )}
         {indicator && (
           <span className="inline-flex items-center gap-1.5 text-xs text-zinc-600">
             <span className="inline-block h-[2px] w-5 rounded-sm" style={{ backgroundColor: indicator.color }} />{indicator.label}

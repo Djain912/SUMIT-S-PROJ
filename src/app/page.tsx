@@ -331,6 +331,7 @@ export default async function HomePage() {
                     { key: 'dmi',         name: 'DMI / ADX',            desc: 'Trend direction + strength (Wilder)', color: 'bg-amber-50 border-amber-100 hover:border-amber-300' },
                     { key: 'ppo',         name: 'PPO',                  desc: 'MACD as a % — normalized',            color: 'bg-blue-50 border-blue-100 hover:border-blue-300' },
                     { key: 'rvol',        name: 'Relative Volume',      desc: 'Today\'s vol ÷ average vol',           color: 'bg-purple-50 border-purple-100 hover:border-purple-300' },
+                    { key: 'bb',          name: 'Bollinger Bands®',      desc: 'SMA ± 2σ volatility bands',           color: 'bg-rose-50 border-rose-100 hover:border-rose-300' },
                   ].map((t) => (
                     <Link key={t.key} href={`/tools/${t.key}`}
                       className={`group rounded-xl border p-4 transition ${t.color}`}>
@@ -344,7 +345,7 @@ export default async function HomePage() {
                   {/* View all card */}
                   <Link href="/tools"
                     className="group flex flex-col items-center justify-center rounded-xl border border-emerald-200 bg-emerald-600 p-4 transition hover:bg-emerald-700 text-center">
-                    <p className="text-sm font-bold text-white">View All 16 Tools</p>
+                    <p className="text-sm font-bold text-white">View All 17 Tools</p>
                     <p className="mt-1 text-xs text-emerald-200">+ filter by category</p>
                     <ArrowRight className="mt-2 h-4 w-4 text-white" />
                   </Link>

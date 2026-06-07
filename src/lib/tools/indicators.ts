@@ -74,6 +74,39 @@ export function computeDistMa(bars: Bar[], period: number) {
   return { rows, smaLine: smaLine as Series, distLine: rows.map((r) => r.dist) as Series };
 }
 
+// ---- Bollinger Bands® (John Bollinger) ----
+// Middle = SMA of close. Upper/Lower = middle ± (mult × population standard deviation)
+// of the SAME window. Population std dev (÷ n) mirrors the moving-average calculation.
+export type BollingerRow = {
+  date: string; close: number; middle: number | null; stdev: number | null;
+  upper: number | null; lower: number | null; pctB: number | null; bandwidth: number | null;
+};
+export function computeBollinger(bars: Bar[], period: number, mult: number) {
+  const n = bars.length;
+  const middle: (number | null)[] = Array(n).fill(null);
+  const stdev: (number | null)[] = Array(n).fill(null);
+  const upper: (number | null)[] = Array(n).fill(null);
+  const lower: (number | null)[] = Array(n).fill(null);
+  for (let i = period - 1; i < n; i++) {
+    let sum = 0;
+    for (let j = i - period + 1; j <= i; j++) sum += bars[j].close;
+    const mean = sum / period;
+    let sq = 0;
+    for (let j = i - period + 1; j <= i; j++) { const d = bars[j].close - mean; sq += d * d; }
+    const sd = Math.sqrt(sq / period); // population standard deviation
+    middle[i] = mean; stdev[i] = sd;
+    upper[i] = mean + mult * sd;
+    lower[i] = mean - mult * sd;
+  }
+  const rows: BollingerRow[] = bars.map((b, i) => {
+    const m = middle[i], u = upper[i], l = lower[i];
+    const pctB = u !== null && l !== null && u !== l ? ((b.close - l) / (u - l)) * 100 : null;
+    const bandwidth = m !== null && m !== 0 && u !== null && l !== null ? ((u - l) / m) * 100 : null;
+    return { date: b.date, close: b.close, middle: m, stdev: stdev[i], upper: u, lower: l, pctB, bandwidth };
+  });
+  return { rows, middleLine: middle as Series, upperLine: upper as Series, lowerLine: lower as Series };
+}
+
 // ---- Rate of Change (ROC) ----
 export type RocRow = { date: string; close: number; roc: number | null };
 export function computeRoc(bars: Bar[], period: number) {
