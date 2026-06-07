@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { MessageSquare, X, Send, Loader2, Bot, ChevronDown, Sparkles } from 'lucide-react';
 import { FeedbackButtons } from '@/components/chat/FeedbackButtons';
+import { cleanLatex } from '@/lib/clean-latex';
 
 // ── Inline renderer: handles **bold**, *italic*, `code` ──────────────────────
 function renderInline(text: string): React.ReactNode {
@@ -27,7 +28,7 @@ const IMAGE_RE = /!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g;
 
 // ── Block renderer: headings, bullet lists, numbered lists, paragraphs ───────
 function MarkdownMessage({ content }: { content: string }) {
-  const lines = content.split('\n');
+  const lines = cleanLatex(content).split('\n');
   const elements: React.ReactNode[] = [];
   let key = 0;
   let i = 0;

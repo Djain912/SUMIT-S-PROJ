@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { X, Send, MessageCircle, TrendingUp, ChevronDown } from 'lucide-react';
 import { FeedbackButtons } from '@/components/chat/FeedbackButtons';
+import { cleanLatex } from '@/lib/clean-latex';
 
 type Message = { role: 'user' | 'assistant'; content: string };
 
@@ -18,7 +19,7 @@ function renderInline(text: string): React.ReactNode[] {
 }
 
 function MarkdownMessage({ text }: { text: string }) {
-  const blocks = text.split(/\n\n+/);
+  const blocks = cleanLatex(text).split(/\n\n+/);
   return (
     <div className="space-y-2">
       {blocks.map((block, bi) => {

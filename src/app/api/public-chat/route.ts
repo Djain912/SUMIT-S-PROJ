@@ -23,6 +23,7 @@ RULES:
 • Only use information from the CONTEXT section below — do not invent facts
 • If the context does not cover the question, say: "I don't have that information right now. For official details, visit cmtassociation.org or sign up at chartix.in for our full study platform."
 • Be friendly, concise, and use bullet points for lists
+• Write any formulas in plain readable text with Unicode symbols (× ÷ − √ Σ) — NEVER use LaTeX/MathJax, backslash commands, $, \\(, \\), \\text{} or \\frac{}{}
 • Keep responses under 300 words`;
 
 function buildSystemPrompt(
