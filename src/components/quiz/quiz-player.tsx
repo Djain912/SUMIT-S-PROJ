@@ -40,6 +40,7 @@ type QuizAttempt = {
 type ApiResponse<T> = { success: boolean; data?: T; error?: { message?: string } };
 
 const levelOptions: Level[] = ['LEVEL_1', 'LEVEL_2', 'LEVEL_3'];
+const lockedLevels: Level[] = ['LEVEL_2', 'LEVEL_3'];
 
 function tiptapToHtml(node: unknown): string {
   if (!node || typeof node !== 'object') return '';
@@ -126,7 +127,7 @@ export function QuizPlayer() {
     const urlMode = params.get('mode');
     const urlChapter = params.get('chapter');
     const urlSubtopic = params.get('subtopic');
-    if (urlLevel && (['LEVEL_1', 'LEVEL_2', 'LEVEL_3'] as string[]).includes(urlLevel)) setLevel(urlLevel as Level);
+    if (urlLevel && (['LEVEL_1'] as string[]).includes(urlLevel)) setLevel(urlLevel as Level);
     if (urlMode && (['SUBTOPIC', 'CHAPTER', 'CUSTOM', 'FULL_TEST'] as string[]).includes(urlMode)) setMode(urlMode as QuizMode);
     if (urlChapter) setSelectedChapterId(urlChapter);
     if (urlSubtopic) setSelectedSubtopicId(urlSubtopic);
@@ -308,8 +309,8 @@ export function QuizPlayer() {
             <div className="grid gap-4 sm:grid-cols-3">
               {[
                 { label: 'Level', field: (
-                  <select value={level} onChange={e => setLevel(e.target.value as Level)} className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-300">
-                    {levelOptions.map(l => <option key={l} value={l}>{l.replace('_', ' ')}</option>)}
+                  <select value={level} onChange={e => { const v = e.target.value as Level; if (!lockedLevels.includes(v)) setLevel(v); }} className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-300">
+                    {levelOptions.map(l => <option key={l} value={l} disabled={lockedLevels.includes(l)}>{l.replace('_', ' ')}{lockedLevels.includes(l) ? ' — Coming Soon' : ''}</option>)}
                   </select>
                 )},
                 { label: 'Mode', field: (

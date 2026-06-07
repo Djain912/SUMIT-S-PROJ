@@ -5,7 +5,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   ChevronRight, Search, ChevronsDownUp, ChevronsUpDown,
-  BookOpen, Brain, FileText, LayoutGrid, TrendingUp,
+  BookOpen, Brain, FileText, LayoutGrid, TrendingUp, Lock,
 } from 'lucide-react';
 
 type Level = 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3';
@@ -68,6 +68,7 @@ interface ApiResponse<T> {
 }
 
 const levelOptions: Level[] = ['LEVEL_1', 'LEVEL_2', 'LEVEL_3'];
+const lockedLevels: Level[] = ['LEVEL_2', 'LEVEL_3'];
 const levelLabels: Record<Level, string> = {
   LEVEL_1: 'Level I',
   LEVEL_2: 'Level II',
@@ -333,7 +334,10 @@ export function SectionCard({ title, children }: SectionCardProps) {
 }
 
 export function UserDashboardClient({ initialData }: { initialData?: DashboardData }) {
-  const [selectedLevel, setSelectedLevel] = useState<Level>((initialData?.level as Level) ?? 'LEVEL_1');
+  const initialLevel = (initialData?.level as Level) ?? 'LEVEL_1';
+  const [selectedLevel, setSelectedLevel] = useState<Level>(
+    lockedLevels.includes(initialLevel) ? 'LEVEL_1' : initialLevel,
+  );
   const [search, setSearch] = useState('');
   const [forceExpanded, setForceExpanded] = useState<boolean | null>(null);
 
@@ -363,20 +367,37 @@ export function UserDashboardClient({ initialData }: { initialData?: DashboardDa
       <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
         {/* Level tabs */}
         <div className="flex border-b border-zinc-100">
-          {levelOptions.map((level) => (
-            <button
-              key={level}
-              type="button"
-              onClick={() => { setSelectedLevel(level); setSearch(''); setForceExpanded(null); }}
-              className={`flex-1 py-3 text-sm font-semibold transition-colors ${
-                selectedLevel === level
-                  ? 'bg-emerald-700 text-white'
-                  : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800'
-              }`}
-            >
-              {levelLabels[level]}
-            </button>
-          ))}
+          {levelOptions.map((level) => {
+            const locked = lockedLevels.includes(level);
+            if (locked) {
+              return (
+                <div
+                  key={level}
+                  title="Coming Soon"
+                  className="flex flex-1 cursor-not-allowed flex-col items-center justify-center gap-0.5 py-2.5 text-zinc-300"
+                >
+                  <span className="flex items-center gap-1.5 text-sm font-semibold">
+                    <Lock className="h-3.5 w-3.5" /> {levelLabels[level]}
+                  </span>
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-500">Coming Soon</span>
+                </div>
+              );
+            }
+            return (
+              <button
+                key={level}
+                type="button"
+                onClick={() => { setSelectedLevel(level); setSearch(''); setForceExpanded(null); }}
+                className={`flex-1 py-3 text-sm font-semibold transition-colors ${
+                  selectedLevel === level
+                    ? 'bg-emerald-700 text-white'
+                    : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800'
+                }`}
+              >
+                {levelLabels[level]}
+              </button>
+            );
+          })}
         </div>
 
         <div className="p-5">
