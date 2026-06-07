@@ -21,6 +21,15 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react', '@tanstack/react-query'],
   },
+  async redirects() {
+    return [
+      {
+        source: '/feedback',
+        destination: 'https://forms.gle/ijTwYzVtibyFKHNx9',
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
