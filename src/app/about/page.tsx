@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowRight, BookOpen, Target, TrendingUp, Shield, Zap, Linkedin, Mail } from 'lucide-react';
+import { ArrowRight, BookOpen, Target, TrendingUp, Shield, Zap, Linkedin, Mail, Brain } from 'lucide-react';
 import { siteConfig } from '@/lib/site';
 
 const aboutDescription =
@@ -95,23 +95,40 @@ export default function AboutPage() {
       <main className="bg-white">
 
         {/* Hero */}
-        <section className="relative overflow-hidden border-b border-zinc-100">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(0,0,0,0.04),transparent)]" />
+        <section className="relative overflow-hidden border-b border-emerald-100 bg-gradient-to-b from-emerald-50/70 via-white to-white">
+          <div className="pointer-events-none absolute -top-24 left-1/2 h-72 w-[40rem] -translate-x-1/2 rounded-full bg-emerald-200/40 blur-3xl" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_50%_-10%,rgba(16,185,129,0.08),transparent)]" />
           <div className="relative mx-auto max-w-6xl px-4 pb-20 pt-16 sm:px-6 sm:pb-24 sm:pt-24 lg:px-8">
-            <div className="mx-auto max-w-2xl text-center">
-              <span className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-zinc-500">
-                About Chartix
+            <div className="mx-auto max-w-3xl text-center">
+              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white/80 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-emerald-600 shadow-sm backdrop-blur">
+                <TrendingUp className="h-3.5 w-3.5" /> About Chartix
               </span>
-              <h1 className="mt-6 text-4xl font-bold tracking-tight text-zinc-950 sm:text-5xl font-heading">
+              <h1 className="mt-7 text-4xl font-bold tracking-tight text-zinc-950 sm:text-5xl lg:text-6xl font-heading">
                 Built by analysts,{' '}
-                <span className="relative">
+                <span className="relative whitespace-nowrap text-emerald-600">
                   <span className="relative z-10">for analysts.</span>
-                  <span className="absolute bottom-1 left-0 right-0 h-3 bg-zinc-100 -z-0 rounded" />
+                  <span className="absolute bottom-1.5 left-0 right-0 h-3 -z-0 rounded bg-emerald-200/60" />
                 </span>
               </h1>
-              <p className="mt-6 text-lg leading-8 text-zinc-500">
-                Chartix started with a simple observation: most exam prep resources are generic. We built the tool we wished we had - laser-focused on the CMT exams and designed to get you to passing faster.
+              <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-zinc-500">
+                Most CMT prep resources are generic. Chartix is the opposite — a focused platform built by someone who&apos;s actually sat the exams and traded the markets, designed to get you to passing faster.
               </p>
+
+              {/* Trust pills */}
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-2.5">
+                {[
+                  { icon: BookOpen, label: 'All 3 CMT levels' },
+                  { icon: Target, label: 'Syllabus-mapped' },
+                  { icon: Brain, label: 'AI tutor included' },
+                ].map((pill) => {
+                  const Icon = pill.icon;
+                  return (
+                    <span key={pill.label} className="inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-white px-3.5 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm">
+                      <Icon className="h-3.5 w-3.5 text-emerald-600" /> {pill.label}
+                    </span>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </section>
