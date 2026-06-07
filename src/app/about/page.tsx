@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowRight, BookOpen, Target, TrendingUp, Users, Shield, Zap } from 'lucide-react';
+import { ArrowRight, BookOpen, Target, TrendingUp, Shield, Zap, Linkedin, Mail } from 'lucide-react';
 import { siteConfig } from '@/lib/site';
 
 const aboutDescription =
@@ -209,32 +209,67 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* Team */}
+        {/* Meet the Founder */}
         <section className="bg-white py-20 sm:py-24">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-            <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
-              <div>
-                <h2 className="text-3xl font-bold tracking-tight text-zinc-950 sm:text-4xl font-heading">Who we are</h2>
-                <p className="mt-4 text-base leading-7 text-zinc-500">
-                  We&apos;re a small, focused team with backgrounds in technical analysis, finance education, and software engineering. We built Chartix because we saw a gap - and we&apos;re committed to filling it.
+            <div className="mx-auto max-w-2xl text-center">
+              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-emerald-600">
+                Meet the Founder
+              </span>
+              <h2 className="mt-6 text-3xl font-bold tracking-tight text-zinc-950 sm:text-4xl font-heading">
+                Built by someone who&apos;s actually traded the markets — not just studied them.
+              </h2>
+            </div>
+
+            <div className="mx-auto mt-12 max-w-3xl rounded-3xl border border-zinc-200 bg-zinc-50 p-8 shadow-sm sm:p-10">
+              <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
+                {/* Initials avatar */}
+                <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-2xl font-bold text-white shadow-md">
+                  SJ
+                </div>
+                <div className="text-center sm:text-left">
+                  <h3 className="text-xl font-bold text-zinc-950">Sumit Jain</h3>
+                  <p className="mt-1 text-sm font-semibold text-emerald-700">Founder, Chartix · CMT Level 3 Cleared</p>
+                  <div className="mt-2 flex flex-wrap justify-center gap-2 sm:justify-start">
+                    {['CMT Level 3 Cleared', 'BSE/NSE Certified', 'Mutual Fund Distributor', 'Equity & Derivatives Trader'].map((tag) => (
+                      <span key={tag} className="rounded-full border border-zinc-200 bg-white px-2.5 py-0.5 text-[11px] font-medium text-zinc-600">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-8 space-y-4 text-base leading-7 text-zinc-600">
+                <p>
+                  Hi, I&apos;m <span className="font-semibold text-zinc-900">Sumit Jain</span> — founder of Chartix and <span className="font-semibold text-zinc-900">CMT Level 3 cleared</span>, based in Mumbai.
                 </p>
-                <p className="mt-4 text-base leading-7 text-zinc-500">
-                  Every feature we ship is driven by one question: does this help a candidate study more effectively and pass the exam?
+                <p>
+                  I work as an Equity Research Analyst at a Mumbai-based family office, where I&apos;ve spent the last 4+ years analysing the markets across both technical and fundamental angles. I&apos;m BSE/NSE certified, a registered Mutual Fund Distributor, and an active equity &amp; derivatives trader — with deep hands-on experience in chart reading, options strategies, and financial instruments.
+                </p>
+                <p>
+                  I built Chartix because when I was preparing for the CMT exams, I couldn&apos;t find a single resource that explained the concepts clearly, in the way a real practitioner thinks about them. So I created the platform I wish I&apos;d had — structured notes, practice questions, and an AI tutor, all designed to help you actually understand technical analysis and clear the CMT exams with confidence.
+                </p>
+                <p className="font-semibold text-zinc-900">
+                  Have a question about the CMT journey or Chartix? I&apos;d genuinely love to hear from you.
                 </p>
               </div>
-              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-8">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-900">
-                  <Users className="h-6 w-6 text-white" />
-                </div>
-                <blockquote className="mt-6">
-                  <p className="text-base leading-7 text-zinc-700">
-                    &ldquo;We spent months preparing for the CMT exam using fragmented resources - textbooks, random websites, flashcard apps. Chartix is what we wished existed from day one.&rdquo;
-                  </p>
-                  <footer className="mt-4">
-                    <p className="text-sm font-semibold text-zinc-900">The Chartix team</p>
-                    <p className="text-sm text-zinc-500">Founders & CMT charterholders</p>
-                  </footer>
-                </blockquote>
+
+              <div className="mt-8 flex flex-wrap gap-3">
+                <a
+                  href="https://www.linkedin.com/in/sumitjain-9749041a7"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 rounded-full bg-[#0A66C2] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#004182]"
+                >
+                  <Linkedin className="h-4 w-4" /> Connect on LinkedIn
+                </a>
+                <a
+                  href="mailto:chartix.in@gmail.com"
+                  className="inline-flex items-center gap-2 rounded-full border border-zinc-300 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-700 transition hover:border-emerald-400 hover:text-emerald-700"
+                >
+                  <Mail className="h-4 w-4" /> Email Me
+                </a>
               </div>
             </div>
           </div>
