@@ -18,10 +18,19 @@ export function normalizeNoteHtml(html: string): string {
 
   const doc = new DOMParser().parseFromString(html, 'text/html');
 
-  // 1. Strip ALL class attributes and ChatGPT/editor data-* markers.
-  //    All visual styling comes from `.prose` — foreign classes only break it.
+  // Chartix note-theme utility classes we intentionally keep (styled in
+  // globals.css). Everything else foreign is still stripped below.
+  const KEEP_CLASSES = new Set(['formula', 'key', 'tip']);
+
+  // 1. Strip foreign class attributes and ChatGPT/editor data-* markers, but
+  //    preserve our whitelisted Chartix note classes so formula & callout
+  //    boxes render. All other visual styling comes from `.prose`.
   doc.body.querySelectorAll('*').forEach((el) => {
-    el.removeAttribute('class');
+    const kept = (el.getAttribute('class') ?? '')
+      .split(/\s+/)
+      .filter((c) => KEEP_CLASSES.has(c));
+    if (kept.length) el.setAttribute('class', kept.join(' '));
+    else el.removeAttribute('class');
     // Remove data-start / data-end / data-section-id / data-col-size / etc.
     [...el.attributes].forEach((attr) => {
       if (attr.name.startsWith('data-')) el.removeAttribute(attr.name);
