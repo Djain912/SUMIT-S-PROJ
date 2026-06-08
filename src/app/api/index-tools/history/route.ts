@@ -6,11 +6,29 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 // Server-side proxy for Yahoo Finance daily price history.
-// Browsers can't call Yahoo directly (CORS); this fetches it server-side
-// and returns clean JSON. Results are cached in Redis to cut Yahoo calls.
+// Scaling strategy: we fetch and cache each symbol's FULL history once
+// (a wide window), then slice it to whatever date range the user asks for.
+// So almost every index build is served from Redis — Yahoo is hit at most
+// once per symbol per cache window, no matter how many users or date ranges.
 
 const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36';
+
+// How far back the cached full history goes (covers virtually all backtests).
+const LOOKBACK_YEARS = 20;
+// Cache TTL for full history. Daily bars finalise after market close, so a few
+// hours keeps data fresh while still collapsing all traffic to ~1 call/symbol.
+const FULL_TTL_SECONDS = 60 * 60 * 6; // 6h
+
+type FullHistory = {
+  symbol: string;
+  dates: string[];
+  open: (number | null)[];
+  high: (number | null)[];
+  low: (number | null)[];
+  close: (number | null)[];
+  adjclose: (number | null)[] | null;
+};
 
 let redis: Redis | null = null;
 function getRedis(): Redis | null {
@@ -24,8 +42,61 @@ function getRedis(): Redis | null {
   return redis;
 }
 
-function toEpoch(dateStr: string): number {
-  return Math.floor(new Date(`${dateStr}T00:00:00Z`).getTime() / 1000);
+// Filter the full history down to the requested [start, end] window.
+// Date strings are YYYY-MM-DD so lexicographic comparison is correct.
+function sliceRange(full: FullHistory, start: string, end: string) {
+  const out: FullHistory = {
+    symbol: full.symbol,
+    dates: [],
+    open: [],
+    high: [],
+    low: [],
+    close: [],
+    adjclose: full.adjclose ? [] : null,
+  };
+  const fadj = full.adjclose;
+  for (let i = 0; i < full.dates.length; i++) {
+    const d = full.dates[i];
+    if (d >= start && d <= end) {
+      out.dates.push(d);
+      out.open.push(full.open[i] ?? null);
+      out.high.push(full.high[i] ?? null);
+      out.low.push(full.low[i] ?? null);
+      out.close.push(full.close[i] ?? null);
+      if (out.adjclose && fadj) out.adjclose.push(fadj[i] ?? null);
+    }
+  }
+  return out;
+}
+
+async function fetchFullHistory(symbol: string): Promise<FullHistory | null> {
+  const now = Math.floor(Date.now() / 1000);
+  const p1 = now - LOOKBACK_YEARS * 365 * 24 * 60 * 60;
+  const p2 = now + 86_400;
+  const url =
+    `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}` +
+    `?interval=1d&period1=${p1}&period2=${p2}&events=div,split`;
+
+  const r = await fetch(url, {
+    headers: { 'User-Agent': UA, Accept: 'application/json, text/plain, */*', Referer: 'https://finance.yahoo.com/' },
+    cache: 'no-store',
+  });
+  if (!r.ok) throw new Error(`Yahoo HTTP ${r.status}`);
+  const j = await r.json();
+  const result = j?.chart?.result?.[0];
+  if (!result) return null;
+  const ts: number[] = result.timestamp ?? [];
+  const quote = result.indicators?.quote?.[0] ?? {};
+  const adj = result.indicators?.adjclose?.[0]?.adjclose ?? null;
+  return {
+    symbol,
+    dates: ts.map((t) => new Date(t * 1000).toISOString().slice(0, 10)),
+    open: quote.open ?? [],
+    high: quote.high ?? [],
+    low: quote.low ?? [],
+    close: quote.close ?? [],
+    adjclose: adj,
+  };
 }
 
 export async function GET(request: Request) {
@@ -50,60 +121,35 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'symbol, start and end are required' }, { status: 400 });
   }
 
-  const cacheKey = `idxh:${symbol}:${start}:${end}`;
+  const cacheKey = `idxfull:${symbol}`;
   const cache = getRedis();
+
+  // 1. Try the cached full history → slice → return (the common, fast path).
   if (cache) {
     try {
-      const hit = await cache.get(cacheKey);
-      if (hit) return NextResponse.json(hit, { headers: { 'X-Cache': 'HIT' } });
+      const cached = (await cache.get(cacheKey)) as FullHistory | null;
+      if (cached && cached.dates?.length) {
+        return NextResponse.json(sliceRange(cached, start, end), { headers: { 'X-Cache': 'HIT' } });
+      }
     } catch {
       /* ignore cache errors */
     }
   }
 
-  const p1 = toEpoch(start);
-  const p2 = toEpoch(end) + 86_400; // inclusive of end date
-  const url =
-    `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}` +
-    `?interval=1d&period1=${p1}&period2=${p2}&events=div,split`;
-
+  // 2. Cache miss → fetch the full history once from Yahoo, cache it, then slice.
   try {
-    const r = await fetch(url, {
-      headers: { 'User-Agent': UA, Accept: 'application/json, text/plain, */*', Referer: 'https://finance.yahoo.com/' },
-      cache: 'no-store',
-    });
-    if (!r.ok) {
-      return NextResponse.json({ error: `Yahoo HTTP ${r.status} for ${symbol}`, symbol }, { status: 502 });
-    }
-    const j = await r.json();
-    const result = j?.chart?.result?.[0];
-    if (!result) {
+    const full = await fetchFullHistory(symbol);
+    if (!full) {
       return NextResponse.json({ error: 'no data', symbol }, { status: 404 });
     }
-    const ts: number[] = result.timestamp ?? [];
-    const quote = result.indicators?.quote?.[0] ?? {};
-    const adj = result.indicators?.adjclose?.[0]?.adjclose ?? null;
-    const dates = ts.map((t) => new Date(t * 1000).toISOString().slice(0, 10));
-
-    const payload = {
-      symbol,
-      dates,
-      open: quote.open ?? [],
-      high: quote.high ?? [],
-      low: quote.low ?? [],
-      close: quote.close ?? [],
-      adjclose: adj,
-    };
-
     if (cache) {
       try {
-        await cache.set(cacheKey, payload, { ex: 60 * 60 * 6 }); // 6h
+        await cache.set(cacheKey, full, { ex: FULL_TTL_SECONDS });
       } catch {
         /* ignore */
       }
     }
-
-    return NextResponse.json(payload, { headers: { 'X-Cache': 'MISS' } });
+    return NextResponse.json(sliceRange(full, start, end), { headers: { 'X-Cache': 'MISS' } });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message, symbol }, { status: 502 });
   }
