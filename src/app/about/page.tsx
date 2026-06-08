@@ -324,6 +324,9 @@ export default function AboutPage() {
               <Link href="/sign-in" className="text-xs text-zinc-400 hover:text-zinc-950 transition">Sign in</Link>
             </div>
           </div>
+          <p className="mt-5 border-t border-zinc-50 pt-5 text-center text-[11px] leading-5 text-zinc-400 sm:text-left">
+            CMT® and Chartered Market Technician® are registered trademarks owned by the CMT Association. Chartix is not affiliated with, endorsed by, or sponsored by the CMT Association.
+          </p>
         </div>
       </footer>
     </>

@@ -461,7 +461,10 @@ export default async function HomePage() {
                   <span className="text-sm font-bold text-emerald-900">Chartix</span>
                 </div>
                 <p className="mt-3 text-xs leading-6 text-zinc-400">
-                  Purpose-built CMT exam prep for Level I, II, and III candidates. Not affiliated with the CMT Association.
+                  Purpose-built CMT exam prep for Level I, II, and III candidates. Not affiliated with, endorsed by, or sponsored by the CMT Association.
+                </p>
+                <p className="mt-2 text-[11px] leading-5 text-zinc-400">
+                  CMT® and Chartered Market Technician® are registered trademarks owned by the CMT Association.
                 </p>
 
                 {/* Founder */}
