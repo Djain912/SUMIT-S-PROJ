@@ -25,7 +25,7 @@ const nextConfig = {
     return [
       {
         source: '/feedback',
-        destination: 'https://forms.gle/ijTwYzVtibyFKHNx9',
+        destination: 'https://forms.gle/fUSrURc3w9pBePf48',
         permanent: false,
       },
     ];
