@@ -1,14 +1,17 @@
 import { ImageResponse } from 'next/og';
-import { siteConfig } from '@/lib/site';
 
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
+export const runtime = 'nodejs';
 export const alt = 'Chartix Custom Index Builder — build your own stock index, free';
 
 // Heights for a faux "rising index" bar chart (advertises what the tool does).
 const BARS = [70, 95, 82, 130, 110, 165, 140, 205, 180, 240];
 
-export default function OpenGraphImage() {
+export default async function OpenGraphImage() {
+  const buf = await fetch('https://chartix.in/chartix-icon.png').then((r) => r.arrayBuffer());
+  const logo = `data:image/png;base64,${Buffer.from(buf).toString('base64')}`;
+
   return new ImageResponse(
     (
       <div
@@ -27,23 +30,9 @@ export default function OpenGraphImage() {
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
-            <div
-              style={{
-                width: '64px',
-                height: '64px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '16px',
-                background: '#059669',
-                color: '#ffffff',
-                fontSize: '34px',
-                fontWeight: 800,
-              }}
-            >
-              C
-            </div>
-            <div style={{ fontSize: '34px', fontWeight: 800, color: '#064e3b' }}>{siteConfig.name}</div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={logo} width={64} height={64} alt="Chartix" style={{ borderRadius: '14px' }} />
+            <div style={{ fontSize: '34px', fontWeight: 800, color: '#064e3b' }}>Chartix</div>
           </div>
           <div
             style={{
