@@ -103,17 +103,13 @@ export default async function HomePage() {
                 { label: 'Pricing', href: '/pricing' },
                 { label: 'About', href: '/about' },
                 { label: 'Contact', href: '/contact' },
+                { label: 'Index Builder', href: '/tools/index-builder' },
+                { label: 'Free Tools', href: '/tools' },
               ].map((link) => (
                 <Link key={link.href} href={link.href} className="text-sm font-medium text-zinc-500 hover:text-emerald-700 transition">
                   {link.label}
                 </Link>
               ))}
-              <Link href="/tools/index-builder" className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-100 transition">
-                <BarChart2 className="h-3 w-3" /> Index Builder
-              </Link>
-              <Link href="/tools" className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition">
-                <FlaskConical className="h-3 w-3" /> Free Tools
-              </Link>
             </div>
 
             <div className="flex items-center gap-3">
