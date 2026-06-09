@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { TrendingUp, ArrowRight, BookOpen, Scale, BarChart3, Download, Rocket } from 'lucide-react';
+import Image from 'next/image';
+import { ArrowRight, BookOpen, Scale, BarChart3, Download, Rocket } from 'lucide-react';
 import { siteConfig } from '@/lib/site';
 
 export const metadata: Metadata = {
@@ -81,9 +82,7 @@ export default function IndexBuilderPage() {
       <header className="sticky top-0 z-50 border-b border-emerald-100 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-3.5">
           <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600">
-              <TrendingUp className="h-4 w-4 text-white" />
-            </div>
+            <Image src="/chartix-icon.png" alt="Chartix logo" width={34} height={34} priority />
             <span className="text-base font-bold tracking-tight text-emerald-900">Chartix</span>
           </Link>
           <a

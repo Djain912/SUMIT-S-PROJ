@@ -1,10 +1,11 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import React, { useState, useRef, useEffect } from 'react';
 import { signOut } from 'next-auth/react';
-import { TrendingUp, Menu, X, LayoutDashboard, Brain, BarChart3, Shield, Infinity as InfinityIcon, Crown, Calendar, Clock, BookOpen, LogOut, ChevronDown } from 'lucide-react';
+import { Menu, X, LayoutDashboard, Brain, BarChart3, Shield, Infinity as InfinityIcon, Crown, Calendar, Clock, BookOpen, LogOut, ChevronDown } from 'lucide-react';
 
 type Access = {
   isPremium: boolean;
@@ -115,9 +116,7 @@ export function AppNavbarClient({ isLoggedIn, role, userName, userEmail, access 
           href={isLoggedIn && !isAdmin ? '/user' : '/'}
           className="flex shrink-0 items-center gap-2"
         >
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-700">
-            <TrendingUp className="h-3.5 w-3.5 text-white" />
-          </div>
+          <Image src="/chartix-icon.png" alt="Chartix logo" width={28} height={28} priority />
           <span className="hidden text-sm font-bold tracking-tight text-zinc-950 sm:block font-heading">
             Chartix
           </span>

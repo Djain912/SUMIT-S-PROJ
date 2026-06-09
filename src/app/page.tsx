@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   BookOpen, ListChecks, BarChart2, ArrowRight,
   TrendingUp, ChevronRight, Brain, FlaskConical, Linkedin,
@@ -90,9 +91,7 @@ export default async function HomePage() {
         <nav className="sticky top-0 z-50 border-b border-emerald-100 bg-white/95 backdrop-blur shadow-sm">
           <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8">
             <Link href="/" className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600">
-                <TrendingUp className="h-4 w-4 text-white" />
-              </div>
+              <Image src="/chartix-icon.png" alt="Chartix logo" width={34} height={34} priority />
               <span className="text-base font-bold tracking-tight text-emerald-900">Chartix</span>
             </Link>
 
@@ -454,9 +453,7 @@ export default async function HomePage() {
             <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
               <div className="sm:col-span-2 lg:col-span-1">
                 <div className="flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600">
-                    <TrendingUp className="h-3.5 w-3.5 text-white" />
-                  </div>
+                  <Image src="/chartix-icon.png" alt="Chartix logo" width={28} height={28} />
                   <span className="text-sm font-bold text-emerald-900">Chartix</span>
                 </div>
                 <p className="mt-3 text-xs leading-6 text-zinc-400">

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { TrendingUp, ArrowRight, ChevronRight, Calculator } from 'lucide-react';
+import Image from 'next/image';
+import { ArrowRight, ChevronRight, Calculator } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Chartix Indicator Lab | Free Interactive Technical Analysis Tools',
@@ -42,9 +43,7 @@ export default function ToolsIndexPage() {
       <nav className="sticky top-0 z-50 border-b border-emerald-100 bg-white/95 backdrop-blur shadow-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8">
           <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600">
-              <TrendingUp className="h-4 w-4 text-white" />
-            </div>
+            <Image src="/chartix-icon.png" alt="Chartix logo" width={34} height={34} priority />
             <span className="text-base font-bold tracking-tight text-emerald-900">Chartix</span>
           </Link>
           <div className="flex items-center gap-3">
