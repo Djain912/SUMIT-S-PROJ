@@ -116,10 +116,7 @@ export function AppNavbarClient({ isLoggedIn, role, userName, userEmail, access 
           href={isLoggedIn && !isAdmin ? '/user' : '/'}
           className="flex shrink-0 items-center gap-2"
         >
-          <Image src="/chartix-icon.png" alt="Chartix logo" width={28} height={28} priority />
-          <span className="hidden text-sm font-bold tracking-tight text-zinc-950 sm:block font-heading">
-            Chartix
-          </span>
+          <Image src="/chartix-wordmark.png" alt="Chartix" width={109} height={28} priority />
         </Link>
 
         {/* Desktop nav — centered */}

@@ -91,8 +91,7 @@ export default async function HomePage() {
         <nav className="sticky top-0 z-50 border-b border-emerald-100 bg-white/95 backdrop-blur shadow-sm">
           <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8">
             <Link href="/" className="flex items-center gap-2">
-              <Image src="/chartix-icon.png" alt="Chartix logo" width={34} height={34} priority />
-              <span className="text-base font-bold tracking-tight text-emerald-900">Chartix</span>
+              <Image src="/chartix-wordmark.png" alt="Chartix" width={132} height={34} priority />
             </Link>
 
             <div className="hidden items-center gap-7 md:flex">
@@ -453,8 +452,7 @@ export default async function HomePage() {
             <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
               <div className="sm:col-span-2 lg:col-span-1">
                 <div className="flex items-center gap-2">
-                  <Image src="/chartix-icon.png" alt="Chartix logo" width={28} height={28} />
-                  <span className="text-sm font-bold text-emerald-900">Chartix</span>
+                  <Image src="/chartix-wordmark.png" alt="Chartix" width={109} height={28} />
                 </div>
                 <p className="mt-3 text-xs leading-6 text-zinc-400">
                   Purpose-built CMT exam prep for Level I, II, and III candidates. Not affiliated with, endorsed by, or sponsored by the CMT Association.

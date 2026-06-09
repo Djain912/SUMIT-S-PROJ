@@ -42,9 +42,8 @@ export default function ToolsIndexPage() {
       {/* Navbar */}
       <nav className="sticky top-0 z-50 border-b border-emerald-100 bg-white/95 backdrop-blur shadow-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8">
-          <Link href="/" className="flex items-center gap-2">
-            <Image src="/chartix-icon.png" alt="Chartix logo" width={34} height={34} priority />
-            <span className="text-base font-bold tracking-tight text-emerald-900">Chartix</span>
+          <Link href="/" className="flex items-center">
+            <Image src="/chartix-wordmark.png" alt="Chartix" width={132} height={34} priority />
           </Link>
           <div className="flex items-center gap-3">
             <Link href="/sign-in" className="hidden text-sm font-medium text-zinc-500 hover:text-emerald-700 transition sm:block">Log In</Link>
