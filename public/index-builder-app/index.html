@@ -297,7 +297,7 @@ function setWeight(mode){
     ? 'Up to 15 stocks. Each stock gets an equal weight — no share counts needed.'
     : 'Up to 15 stocks · shares in Crores. Pick from the list and shares auto-fill from Yahoo — edit any value if needed.';
 }
-const D = { tool:'cursor', shapes:[], dragging:false, temp:null, selected:-1 };
+const D = { tool:'cursor', shapes:[], dragging:false, temp:null, selected:-1, editing:null, justEdited:false };
 
 /* ── UI ── */
 function showMsg(text,kind){const m=document.getElementById('msg');m.textContent=text;m.className='msg '+(kind||'ok');}
@@ -766,8 +766,17 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')hideMenu();});
 document.addEventListener('mousedown',e=>{if(!document.getElementById('shapeMenu').contains(e.target)&&e.target.id!=='overlay')hideMenu();});
 
 /* ── CHART WRAP CLICK (cursor mode hit test) ── */
+// Show a grab/move cursor when hovering an editable shape (cursor mode only).
+document.getElementById('chartWrap').addEventListener('mousemove',e=>{
+  if(D.editing){document.getElementById('chartWrap').style.cursor='grabbing';return;}
+  if(D.tool!=='cursor'||!S.chart||!S.main){document.getElementById('chartWrap').style.cursor='';return;}
+  const rect=document.getElementById('chartWrap').getBoundingClientRect();
+  const h=hitHandle(e.clientX-rect.left,e.clientY-rect.top);
+  document.getElementById('chartWrap').style.cursor=h?(h.which==='move'?'move':'grab'):'';
+});
 document.getElementById('chartWrap').addEventListener('click',e=>{
   if(D.tool!=='cursor'||!S.chart||!S.main)return;
+  if(D.justEdited){D.justEdited=false;return;} // a readjust drag just happened — don't open the menu
   const rect=document.getElementById('chartWrap').getBoundingClientRect();
   const x=e.clientX-rect.left,y=e.clientY-rect.top;
   const idx=D.shapes.findIndex(sh=>hitTest(sh,x,y));
@@ -780,6 +789,39 @@ function evtPt(e){
   const r=cv.getBoundingClientRect();const x=e.clientX-r.left,y=e.clientY-r.top;
   return{x,y,logical:S.chart.timeScale().coordinateToLogical(x),price:S.main.coordinateToPrice(y)};
 }
+/* Detect whether the cursor is over a draggable handle/body of an existing shape,
+   so already-drawn shapes (trend lines, zones, fib, S/R) can be readjusted. */
+function hitHandle(x,y){
+  if(!S.main)return null;
+  for(let i=D.shapes.length-1;i>=0;i--){
+    const sh=D.shapes[i];
+    if(sh.type==='hline'){
+      const cy=S.main.priceToCoordinate(sh.a.price);
+      if(cy!=null&&Math.abs(y-cy)<8)return{idx:i,which:'line'};
+    }else if(sh.a&&sh.b){
+      const a=px(sh.a),b=px(sh.b);
+      if(a&&Math.hypot(x-a.x,y-a.y)<13)return{idx:i,which:'a'};
+      if(b&&Math.hypot(x-b.x,y-b.y)<13)return{idx:i,which:'b'};
+      if(hitTest(sh,x,y))return{idx:i,which:'move'};
+    }
+  }
+  return null;
+}
+/* In cursor mode, grabbing a handle/body starts an edit-drag. We flip the overlay
+   to capture mouse moves so the chart itself doesn't pan while you readjust. */
+document.getElementById('chartWrap').addEventListener('mousedown',e=>{
+  if(D.tool!=='cursor'||!S.chart||!S.main)return;
+  const rect=document.getElementById('chartWrap').getBoundingClientRect();
+  const x=e.clientX-rect.left,y=e.clientY-rect.top;
+  const h=hitHandle(x,y);
+  if(h){
+    D.editing={idx:h.idx,which:h.which,last:null};
+    D.justEdited=false;D.selected=h.idx;
+    cv.style.pointerEvents='auto';
+    e.preventDefault();
+    redrawOverlay();
+  }
+});
 cv.addEventListener('mousedown',e=>{
   if(D.tool==='cursor'||!S.chart||!S.main)return;
   const p=evtPt(e);if(p.logical==null||p.price==null)return;
@@ -790,11 +832,31 @@ cv.addEventListener('mousedown',e=>{
     color:D.tool==='fib'?'#d97706':'#2d7d52'};
 });
 cv.addEventListener('mousemove',e=>{
+  // Edit-drag of an existing shape (readjust endpoints / move / drag S-R line)
+  if(D.editing){
+    const sh=D.shapes[D.editing.idx];if(!sh)return;
+    const p=evtPt(e);if(p.price==null)return;
+    D.justEdited=true;
+    if(D.editing.which==='line'){sh.a.price=p.price;}
+    else if(D.editing.which==='a'){if(p.logical!=null)sh.a={logical:p.logical,price:p.price};}
+    else if(D.editing.which==='b'){if(p.logical!=null)sh.b={logical:p.logical,price:p.price};}
+    else if(D.editing.which==='move'){
+      if(D.editing.last&&p.logical!=null){
+        const dl=p.logical-D.editing.last.logical,dp=p.price-D.editing.last.price;
+        sh.a.logical+=dl;sh.a.price+=dp;sh.b.logical+=dl;sh.b.price+=dp;
+      }
+      D.editing.last={logical:p.logical,price:p.price};
+    }
+    redrawOverlay();return;
+  }
   if(!D.dragging||!D.temp)return;
   const p=evtPt(e);if(p.logical==null||p.price==null)return;
   D.temp.b={logical:p.logical,price:p.price};redrawOverlay();
 });
-window.addEventListener('mouseup',()=>{if(D.dragging&&D.temp){D.shapes.push(D.temp);D.temp=null;D.dragging=false;redrawOverlay();setTool('cursor');}});
+window.addEventListener('mouseup',()=>{
+  if(D.editing){D.editing=null;cv.style.pointerEvents=(D.tool==='cursor')?'none':'auto';redrawOverlay();return;}
+  if(D.dragging&&D.temp){D.shapes.push(D.temp);D.temp=null;D.dragging=false;redrawOverlay();setTool('cursor');}
+});
 
 function setTool(t){
   D.tool=t;
