@@ -19,6 +19,34 @@ const CHART_UPLOADS_PER_DAY = 15;
 // image costs extra input tokens, so this stays small.
 const MAX_NOTE_IMAGES_AS_VISION = 2;
 
+// Words too generic to indicate which diagram a question is about.
+const LABEL_STOPWORDS = new Set([
+  'the', 'and', 'for', 'with', 'what', 'how', 'why', 'can', 'you', 'show',
+  'pattern', 'patterns', 'chart', 'charts', 'please', 'explain', 'about',
+  'tell', 'give', 'this', 'that', 'are', 'does', 'mean', 'analysis',
+]);
+
+// Pick the note diagrams whose captions best match the student's question, so
+// the images attached as vision input are the ones the answer is actually
+// about (attaching unrelated diagrams confuses the model).
+function pickVisionImages(message: string, images: RagImage[]): RagImage[] {
+  const queryWords = (message.toLowerCase().match(/[a-z]{3,}/g) ?? []).filter(
+    (w) => !LABEL_STOPWORDS.has(w),
+  );
+  if (queryWords.length === 0) return [];
+  return images
+    .map((img) => {
+      const label = img.label.toLowerCase();
+      let score = 0;
+      for (const w of queryWords) if (label.includes(w)) score++;
+      return { img, score };
+    })
+    .filter((s) => s.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, MAX_NOTE_IMAGES_AS_VISION)
+    .map((s) => s.img);
+}
+
 export const dynamic = 'force-dynamic';
 
 const LEVEL_LABELS: Record<string, string> = {
@@ -34,6 +62,7 @@ function buildSystemPrompt(
   images: RagImage[] = [],
   memory: string | null = null,
   hasUploadedChart = false,
+  attachedLabels: string[] = [],
 ): string {
   const levelLabel = level ? LEVEL_LABELS[level] ?? level : 'all levels';
 
@@ -140,7 +169,8 @@ HOW TO CHOOSE A DIAGRAM (read carefully — showing the WRONG diagram is worse t
 - If NONE of the descriptions specifically match the concept asked about, do NOT include any image. Never show a loosely-related or unrelated diagram just to have one.
 - Use ONLY the exact URLs listed above — copy them character-for-character. NEVER invent, guess, shorten, or modify a URL, and never pair a description with a different image's URL.
 
-READING THE DIAGRAM (important): the first ${MAX_NOTE_IMAGES_AS_VISION} diagrams listed above are ALSO attached to the student's latest message as actual images — you can SEE their content. When you embed one in the DIAGRAM SLOT, the one-line explanation under it must describe what is VISIBLY on that specific image — point to the concrete features a student should look at (e.g. "Notice the two peaks near the same level and the neckline drawn under the trough between them — the pattern completes where price breaks below it on the right side of the chart"). Reference real visible details, not generic textbook descriptions. If the attached image is unclear, fall back to a careful general explanation rather than inventing details.
+${attachedLabels.length > 0 ? `
+READING THE DIAGRAM (important): these diagrams from the list are ALSO attached to the student's latest message as actual images — you can SEE their content: ${attachedLabels.map((l) => `"${l}"`).join(', ')}. When you embed one of THESE in the DIAGRAM SLOT, the one-line explanation under it must describe what is VISIBLY on that specific image — point to the concrete features a student should look at. Reference real visible details, not generic textbook descriptions. Diagrams NOT in this attached list can still be embedded by their URL — just describe them from their caption without claiming to see them. If an attached image is unclear, fall back to a careful general explanation rather than inventing details.` : ''}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
       : '';
 
@@ -254,6 +284,11 @@ export async function POST(request: Request) {
       getUserMemory(user.id),
     ]);
 
+    // Pick the note diagrams whose captions match the question — these get
+    // attached as actual images so GPT-4o can SEE them and describe what is
+    // really on the chart instead of answering from book knowledge alone.
+    const visionImages = uploadedImage ? [] : pickVisionImages(message, context.images);
+
     const systemPrompt = buildSystemPrompt(
       level,
       context.text,
@@ -261,17 +296,14 @@ export async function POST(request: Request) {
       context.images,
       memory,
       !!uploadedImage,
+      visionImages.map((img) => img.label),
     );
 
-    // Build the latest user message. Besides the text, attach actual images so
-    // GPT-4o can SEE them: the student's uploaded chart (if any), otherwise the
-    // top note diagrams found by RAG — letting the tutor describe what is
-    // really on the chart instead of answering from book knowledge alone.
     const userParts: ChatCompletionContentPart[] = [{ type: 'text', text: message }];
     if (uploadedImage) {
       userParts.push({ type: 'image_url', image_url: { url: uploadedImage, detail: 'high' } });
     } else {
-      for (const img of context.images.slice(0, MAX_NOTE_IMAGES_AS_VISION)) {
+      for (const img of visionImages) {
         userParts.push({ type: 'image_url', image_url: { url: img.url, detail: 'low' } });
       }
     }
