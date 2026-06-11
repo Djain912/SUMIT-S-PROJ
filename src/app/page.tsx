@@ -102,6 +102,7 @@ export default async function HomePage() {
                 { label: 'About', href: '/about' },
                 { label: 'Contact', href: '/contact' },
                 { label: 'Index Builder', href: '/tools/index-builder' },
+                { label: 'FII/DII Data', href: '/tools/fii-dii' },
                 { label: 'Free Tools', href: '/tools' },
               ].map((link) => (
                 <Link key={link.href} href={link.href} className="text-sm font-medium text-zinc-500 hover:text-emerald-700 transition">
