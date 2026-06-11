@@ -183,10 +183,11 @@ export function RecentAttempts({ attempts }: RecentAttemptsProps) {
 
 interface SubtopicRowProps {
   subtopic: SubtopicData;
+  chapterId: string;
   forceExpanded: boolean | null;
 }
 
-function SubtopicRow({ subtopic: st, forceExpanded }: SubtopicRowProps) {
+function SubtopicRow({ subtopic: st, chapterId, forceExpanded }: SubtopicRowProps) {
   const [localExpanded, setLocalExpanded] = useState(false);
   const hasNotes = st.notes.length > 0;
   const expanded = forceExpanded !== null ? forceExpanded : localExpanded;
@@ -217,7 +218,7 @@ function SubtopicRow({ subtopic: st, forceExpanded }: SubtopicRowProps) {
           )}
         </div>
         <div className="flex shrink-0 gap-1.5">
-          <Link href={`/user/notes?subtopic=${st.id}`} className="inline-flex items-center gap-1 rounded-md border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-500 transition hover:bg-zinc-50">
+          <Link href={st.notes[0]?.id ? `/user/notes?chapter=${chapterId}&note=${st.notes[0].id}` : `/user/notes?chapter=${chapterId}`} className="inline-flex items-center gap-1 rounded-md border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-500 transition hover:bg-zinc-50">
             <FileText className="h-3 w-3" />
             Notes
           </Link>
@@ -241,7 +242,7 @@ function SubtopicRow({ subtopic: st, forceExpanded }: SubtopicRowProps) {
               <div key={note.id} className="flex items-center justify-between py-0.5">
                 <span className="text-xs text-zinc-500">{note.title}</span>
                 {note.isPublished ? (
-                  <Link href={`/user/notes?note=${note.id}`} className="rounded border border-zinc-200 px-2 py-0.5 text-xs text-zinc-500 hover:bg-zinc-50 transition">
+                  <Link href={`/user/notes?chapter=${chapterId}&note=${note.id}`} className="rounded border border-zinc-200 px-2 py-0.5 text-xs text-zinc-500 hover:bg-zinc-50 transition">
                     Read
                   </Link>
                 ) : (
@@ -308,7 +309,7 @@ function ChapterRow({ chapter: ch, forceExpanded }: ChapterRowProps) {
       {hasSubtopics && expanded && (
         <div className="flex flex-col gap-2 bg-zinc-50/60 px-4 pb-4 pt-2">
           {ch.subtopics.map((st) => (
-            <SubtopicRow key={st.id} subtopic={st} forceExpanded={forceExpanded} />
+            <SubtopicRow key={st.id} subtopic={st} chapterId={ch.id} forceExpanded={forceExpanded} />
           ))}
         </div>
       )}

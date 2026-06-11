@@ -100,9 +100,10 @@ export function UserNotesClient() {
       const noteId = params.get('note');
 
       const searchParams = new URLSearchParams();
-      if (subtopicId) searchParams.set('subtopicId', subtopicId);
-      else if (chapterId) searchParams.set('chapterId', chapterId);
-      else if (noteId) searchParams.set('note', noteId);
+      // Prefer chapter context so the reader can flow across subtopics (Prev/Next).
+      if (chapterId) searchParams.set('chapterId', chapterId);
+      else if (subtopicId) searchParams.set('subtopicId', subtopicId);
+      if (noteId) searchParams.set('note', noteId);
 
       const response = await fetch(`/api/notes?${searchParams.toString()}`);
       const payload = await response.json() as ApiResponse<Note[]> & { _openNoteId?: string | null; locked?: boolean };
@@ -205,6 +206,14 @@ export function UserNotesClient() {
     const html = selectedNote?.contentHtml ?? extractTextFromRichJson(selectedNote?.contentJson);
     return normalizeNoteHtml(html);
   }, [selectedNote]);
+
+  const currentIndex = useMemo(() => notes.findIndex((n) => n.id === selectedNote?.id), [notes, selectedNote]);
+  const goTo = useCallback((idx: number) => {
+    if (idx < 0 || idx >= notes.length) return;
+    setSelectedNote(notes[idx]);
+    setShowReportForm(false);
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [notes]);
 
   const watermarkIdentity = useMemo(() => {
     const stamp = new Date().toLocaleDateString();
@@ -389,6 +398,15 @@ export function UserNotesClient() {
                   </button>
                 )}
 
+                <div className="relative z-20 mb-3 flex items-center justify-between gap-2 border-b border-zinc-100 pb-3">
+                  <Link href="/user" className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700 hover:text-emerald-900">
+                    ← Dashboard
+                  </Link>
+                  {notes.length > 1 && currentIndex >= 0 && (
+                    <span className="text-xs font-medium text-zinc-400">Note {currentIndex + 1} of {notes.length}</span>
+                  )}
+                </div>
+
                 <div className="flex min-w-0 items-start justify-between">
                   <div className="prose prose-zinc protected-content relative z-20 min-w-0 w-full max-w-none flex-1">
                     <h2 className="text-xl font-semibold text-zinc-900 break-words">{selectedNote.title}</h2>
@@ -400,6 +418,30 @@ export function UserNotesClient() {
                     />
                   </div>
                 </div>
+
+                {notes.length > 1 && currentIndex >= 0 && (
+                  <div className="relative z-20 mt-8 flex items-center justify-between gap-2 border-t border-zinc-200 pt-5">
+                    <button
+                      type="button"
+                      onClick={() => goTo(currentIndex - 1)}
+                      disabled={currentIndex <= 0}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      ← Previous
+                    </button>
+                    <Link href="/user" className="hidden text-xs font-medium text-zinc-400 hover:text-emerald-700 sm:inline">
+                      Dashboard
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => goTo(currentIndex + 1)}
+                      disabled={currentIndex >= notes.length - 1}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-emerald-600 bg-emerald-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Next →
+                    </button>
+                  </div>
+                )}
 
                 <div className="mt-6 border-t border-zinc-200 pt-4">
                   {!showReportForm ? (

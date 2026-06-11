@@ -186,9 +186,9 @@ button {
 }
 
 .prose .note-content table {
-  width: max-content !important;
-  min-width: 100% !important;
-  max-width: none !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  table-layout: auto;
 }
 
 .prose .note-content table th,
@@ -196,6 +196,7 @@ button {
   max-width: min(22rem, 72vw);
   overflow-wrap: anywhere;
   word-break: break-word;
+  white-space: normal;
 }
 
 .prose .note-content p,
