@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { MessageSquare, X, Send, Loader2, Bot, ChevronDown, Sparkles } from 'lucide-react';
+import { MessageSquare, X, Send, Loader2, Bot, ChevronDown, Sparkles, ImagePlus } from 'lucide-react';
 import { FeedbackButtons } from '@/components/chat/FeedbackButtons';
 import { cleanLatex } from '@/lib/clean-latex';
 
@@ -171,8 +171,41 @@ type Message = {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  image?: string; // data URL of a chart the student attached to this message
   isStreaming?: boolean;
 };
+
+// Shrink an uploaded chart before sending: caps the long side and re-encodes as
+// JPEG so the request stays small and the AI cost stays low. Charts remain
+// perfectly readable at this size.
+const MAX_UPLOAD_DIMENSION = 1280;
+
+async function resizeImageToDataUrl(file: File): Promise<string> {
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new window.Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error('Could not read image'));
+      el.src = objectUrl;
+    });
+    const scale = Math.min(1, MAX_UPLOAD_DIMENSION / Math.max(img.width, img.height));
+    const w = Math.max(1, Math.round(img.width * scale));
+    const h = Math.max(1, Math.round(img.height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Canvas not supported');
+    // White background so transparent PNGs don't turn black as JPEG
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(img, 0, 0, w, h);
+    return canvas.toDataURL('image/jpeg', 0.85);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
 
 type Props = {
   level?: string | null;
@@ -199,9 +232,35 @@ export function ChatWidget({ level }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [showCallout, setShowCallout] = useState(true);
+  const [pendingImage, setPendingImage] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  const handleFileSelected = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    // Allow re-selecting the same file later
+    e.target.value = '';
+    if (!file) return;
+    setUploadError(null);
+    if (!/^image\/(png|jpeg|webp)$/.test(file.type)) {
+      setUploadError('Please choose a PNG, JPEG or WebP image.');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError('Image too large — max 10MB.');
+      return;
+    }
+    try {
+      const dataUrl = await resizeImageToDataUrl(file);
+      setPendingImage(dataUrl);
+      inputRef.current?.focus();
+    } catch {
+      setUploadError('Could not read that image. Try a different one.');
+    }
+  }, []);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -226,11 +285,18 @@ export function ChatWidget({ level }: Props) {
 
   const sendMessage = useCallback(
     async (text: string) => {
-      const userText = text.trim();
-      if (!userText || isLoading) return;
+      const image = pendingImage;
+      let userText = text.trim();
+      if ((!userText && !image) || isLoading) return;
+      if (!userText && image) userText = 'Please analyse this chart for me.';
 
       setShowSuggestions(false);
-      const userMsg: Message = { id: crypto.randomUUID(), role: 'user', content: userText };
+      const userMsg: Message = {
+        id: crypto.randomUUID(),
+        role: 'user',
+        content: userText,
+        ...(image ? { image } : {}),
+      };
       const assistantId = crypto.randomUUID();
 
       setMessages((prev) => [
@@ -239,11 +305,17 @@ export function ChatWidget({ level }: Props) {
         { id: assistantId, role: 'assistant', content: '', isStreaming: true },
       ]);
       setInput('');
+      setPendingImage(null);
+      setUploadError(null);
       // Reset the textarea back to a single row after sending
       if (inputRef.current) inputRef.current.style.height = 'auto';
       setIsLoading(true);
 
-      const history = messages.slice(-8).map((m) => ({ role: m.role, content: m.content }));
+      // History stays text-only — images are analysed in the turn they're sent
+      const history = messages.slice(-8).map((m) => ({
+        role: m.role,
+        content: m.image ? `[Student uploaded a chart image] ${m.content}` : m.content,
+      }));
 
       abortRef.current = new AbortController();
 
@@ -251,7 +323,12 @@ export function ChatWidget({ level }: Props) {
         const res = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: userText, level: level ?? null, history }),
+          body: JSON.stringify({
+            message: userText,
+            level: level ?? null,
+            history,
+            ...(image ? { image } : {}),
+          }),
           signal: abortRef.current.signal,
         });
 
@@ -300,7 +377,7 @@ export function ChatWidget({ level }: Props) {
         setIsLoading(false);
       }
     },
-    [isLoading, level, messages],
+    [isLoading, level, messages, pendingImage],
   );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -393,7 +470,17 @@ export function ChatWidget({ level }: Props) {
                       }`}
                     >
                       {msg.role === 'user' ? (
-                        <span className="text-[13px]">{msg.content}</span>
+                        <div>
+                          {msg.image && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={msg.image}
+                              alt="Uploaded chart"
+                              className="mb-2 max-h-44 w-full rounded-lg border border-emerald-600 object-contain bg-white"
+                            />
+                          )}
+                          <span className="text-[13px]">{msg.content}</span>
+                        </div>
                       ) : msg.content ? (
                         <>
                           <MarkdownMessage content={msg.content} />
@@ -424,19 +511,59 @@ export function ChatWidget({ level }: Props) {
 
           {/* Input */}
           <div className="border-t border-zinc-100 bg-white px-3 py-3">
+            {/* Pending chart preview */}
+            {pendingImage && (
+              <div className="mb-2 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/60 p-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={pendingImage}
+                  alt="Chart to analyse"
+                  className="h-14 w-20 rounded-lg border border-zinc-200 bg-white object-contain"
+                />
+                <p className="flex-1 text-[11px] text-emerald-900">
+                  Chart attached — ask a question or just hit send
+                </p>
+                <button
+                  onClick={() => setPendingImage(null)}
+                  className="rounded-full p-1 text-zinc-400 transition hover:bg-white hover:text-zinc-700"
+                  aria-label="Remove chart"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+            {uploadError && (
+              <p className="mb-2 text-center text-[11px] text-red-500">{uploadError}</p>
+            )}
             <div className="flex items-end gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 shadow-sm transition focus-within:border-emerald-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-emerald-500/15">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={handleFileSelected}
+                className="hidden"
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isLoading}
+                title="Upload a chart to analyse"
+                aria-label="Upload a chart to analyse"
+                className="flex h-8 w-8 shrink-0 items-center justify-center self-center rounded-xl text-zinc-400 transition hover:bg-zinc-200/70 hover:text-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <ImagePlus className="h-[18px] w-[18px]" />
+              </button>
               <textarea
                 ref={inputRef}
                 value={input}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask about CMT concepts..."
+                placeholder={pendingImage ? 'Ask about this chart...' : 'Ask about CMT concepts...'}
                 rows={1}
                 className="flex-1 resize-none self-center max-h-[140px] overflow-y-auto bg-transparent text-[13px] leading-relaxed text-zinc-900 placeholder:text-zinc-400 focus:outline-none"
               />
               <button
                 onClick={() => sendMessage(input)}
-                disabled={!input.trim() || isLoading}
+                disabled={(!input.trim() && !pendingImage) || isLoading}
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-700 text-white shadow-sm transition hover:bg-emerald-600 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
               >
                 {isLoading ? (
