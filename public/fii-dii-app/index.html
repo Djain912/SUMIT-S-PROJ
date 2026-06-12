@@ -4047,7 +4047,16 @@ function renderDashboard() {
   // Render Flow Strength Meter
 // Wait 2 seconds for JS execution before doing the rest
   // ── Render F&O Data (if available in latest) ───────────────────────────────
-  const latestFno = dailyData.find(d => d.fii_idx_fut_long !== undefined) || latest;
+  // Pick the newest day that actually HAS F&O data: upstream sometimes writes
+  // a day's row with cash flows filled but every F&O field still 0 (NSE
+  // publishes participant-wise F&O data later than cash data). Skip such rows
+  // instead of rendering an all-zero panel — the "Data for:" badge shows the
+  // real F&O date.
+  const latestFno = dailyData.find(d => d.fii_idx_fut_long !== undefined &&
+      (Math.abs(d.fii_idx_fut_long || 0) + Math.abs(d.fii_idx_fut_short || 0) +
+       Math.abs(d.fii_stk_fut_long || 0) + Math.abs(d.fii_idx_call_long || 0) +
+       Math.abs(d.fii_idx_put_long || 0)) > 0) ||
+    dailyData.find(d => d.fii_idx_fut_long !== undefined) || latest;
 
   if (latestFno.fii_idx_fut_long !== undefined) {
     const fnl = n => n ? n.toLocaleString('en-IN') : '0';
@@ -4261,7 +4270,16 @@ function renderSectorTape() {
 function renderCommandCenter() {
   if (!dailyData || !dailyData.length) return;
   const latest = dailyData[0];
-  const latestFno = dailyData.find(d => d.fii_idx_fut_long !== undefined) || latest;
+  // Pick the newest day that actually HAS F&O data: upstream sometimes writes
+  // a day's row with cash flows filled but every F&O field still 0 (NSE
+  // publishes participant-wise F&O data later than cash data). Skip such rows
+  // instead of rendering an all-zero panel — the "Data for:" badge shows the
+  // real F&O date.
+  const latestFno = dailyData.find(d => d.fii_idx_fut_long !== undefined &&
+      (Math.abs(d.fii_idx_fut_long || 0) + Math.abs(d.fii_idx_fut_short || 0) +
+       Math.abs(d.fii_stk_fut_long || 0) + Math.abs(d.fii_idx_call_long || 0) +
+       Math.abs(d.fii_idx_put_long || 0)) > 0) ||
+    dailyData.find(d => d.fii_idx_fut_long !== undefined) || latest;
   const market = getFlowScore(dailyData, 5);
   const stock = getStockScore(dailyData);
   const fno = getFnoSentiment(latestFno);
@@ -6096,8 +6114,13 @@ function renderFnoHistoryChart(mode = _fnoHistoryMode) {
   const brandGreen = getVar('--green') || '#059669';
   const brandRed   = getVar('--red') || '#DC2626';
 
-  // Get up to 20 days of history
-  const slicedData = dailyData.filter(d => d.fii_idx_fut_long !== undefined).slice(0, 20).reverse();
+  // Get up to 20 days of history. Skip rows whose F&O fields are all 0 —
+  // upstream fills cash data first and F&O later, and an all-zero day would
+  // plot as a misleading crash to zero.
+  const slicedData = dailyData.filter(d => d.fii_idx_fut_long !== undefined &&
+    (Math.abs(d.fii_idx_fut_long || 0) + Math.abs(d.fii_idx_fut_short || 0) +
+     Math.abs(d.fii_idx_call_long || 0) + Math.abs(d.fii_idx_put_long || 0) +
+     Math.abs(d.dii_idx_fut_long || 0)) > 0).slice(0, 20).reverse();
   const labels = slicedData.map(d => {
     const p = d.d.split('-');
     return p.length >= 2 ? `${p[0]} ${p[1]}` : d.d;
