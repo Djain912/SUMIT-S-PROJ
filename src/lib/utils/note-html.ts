@@ -18,6 +18,23 @@ export function normalizeNoteHtml(html: string): string {
 
   const doc = new DOMParser().parseFromString(html, 'text/html');
 
+  // 0. Security: remove any active content that could have been pasted into
+  //    the editor — script/embed tags, inline event handlers (onclick, onerror
+  //    …) and javascript: URLs. Notes must be pure presentational HTML.
+  doc.body
+    .querySelectorAll('script, iframe, object, embed, form, link, meta, base')
+    .forEach((el) => el.remove());
+  doc.body.querySelectorAll('*').forEach((el) => {
+    [...el.attributes].forEach((attr) => {
+      const name = attr.name.toLowerCase();
+      if (name.startsWith('on')) el.removeAttribute(attr.name);
+      if ((name === 'href' || name === 'src' || name === 'xlink:href') &&
+          attr.value.trim().toLowerCase().startsWith('javascript:')) {
+        el.removeAttribute(attr.name);
+      }
+    });
+  });
+
   // Chartix note-theme utility classes we intentionally keep (styled in
   // globals.css). Everything else foreign is still stripped below.
   const KEEP_CLASSES = new Set(['formula', 'key', 'tip']);

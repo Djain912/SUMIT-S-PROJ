@@ -2,12 +2,34 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { decode } from 'next-auth/jwt';
 
 function applySecurityHeaders(res: NextResponse) {
-  res.headers.set('X-Frame-Options', 'DENY');
+  // SAMEORIGIN (not DENY): our own tools (index-builder, fii-dii) render in
+  // same-origin iframes; other sites still cannot embed Chartix pages.
+  res.headers.set('X-Frame-Options', 'SAMEORIGIN');
   res.headers.set('X-Content-Type-Options', 'nosniff');
   res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
   return res;
 }
+
+// AI/LLM crawlers and scraping tools — hard-blocked (robots.txt is only a
+// polite request; this actually refuses them). Search engines (Googlebot,
+// Bingbot) and link-preview bots (WhatsApp, Twitter, LinkedIn) stay allowed.
+const BLOCKED_UA_RE = new RegExp(
+  [
+    // AI training / answer-engine crawlers
+    'GPTBot', 'ChatGPT-User', 'OAI-SearchBot', 'ClaudeBot', 'Claude-Web',
+    'anthropic-ai', 'CCBot', 'Google-Extended', 'Applebot-Extended',
+    'PerplexityBot', 'Bytespider', 'Amazonbot', 'meta-externalagent',
+    'FacebookBot', 'Diffbot', 'omgili', 'ImagesiftBot', 'cohere-ai',
+    'Timpibot', 'YouBot', 'AI2Bot', 'PetalBot',
+    // Generic scraping libraries / headless tools
+    'Scrapy', 'python-requests', 'python-urllib', 'aiohttp', 'httpx',
+    'Go-http-client', 'Java/', 'libwww-perl', 'PhantomJS', 'HeadlessChrome',
+    'node-fetch', 'axios/', 'curl/', 'Wget',
+  ].join('|'),
+  'i',
+);
 
 function getSessionToken(request: NextRequest): string | undefined {
   const plain = request.cookies.get('authjs.session-token')?.value;
@@ -23,6 +45,12 @@ function getSessionToken(request: NextRequest): string | undefined {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Refuse known scrapers and AI crawlers on every route
+  const ua = request.headers.get('user-agent') ?? '';
+  if (BLOCKED_UA_RE.test(ua)) {
+    return new NextResponse('Access denied', { status: 403 });
+  }
 
   // /admin/login is public — always allow
   if (pathname === '/admin/login' || pathname.startsWith('/admin/login/')) {
@@ -70,10 +98,9 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
+  // Run on every page and API route (bot blocking + headers), skipping only
+  // Next.js internals and static assets.
   matcher: [
-    '/admin',
-    '/admin/:path*',
-    '/user',
-    '/user/:path*',
+    '/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:png|jpg|jpeg|svg|ico|webp|woff2?|css|js|map)$).*)',
   ],
 };

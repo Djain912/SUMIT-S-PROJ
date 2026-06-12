@@ -3,6 +3,7 @@ import Google from 'next-auth/providers/google';
 import Credentials from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db/prisma';
+import { enforceRateLimit } from '@/server/policies/rate-limit';
 
 function getSuperAdminEmail(): string | null {
   const raw =
@@ -44,10 +45,21 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         const email = (credentials?.email as string | undefined)?.trim().toLowerCase();
         const password = credentials?.password as string | undefined;
         if (!email || !password) return null;
+
+        // Throttle password guessing: per-IP and per-target-account
+        try {
+          const [byIp, byEmail] = await Promise.all([
+            enforceRateLimit({ request, key: 'auth-login-ip', maxRequests: 10, windowMs: 15 * 60 * 1000 }),
+            enforceRateLimit({ request, key: 'auth-login-email', maxRequests: 15, windowMs: 15 * 60 * 1000, identifier: email }),
+          ]);
+          if (!byIp.allowed || !byEmail.allowed) return null;
+        } catch {
+          // Rate limiter outage must not lock everyone out
+        }
 
         const user = await prisma.user.findUnique({
           where: { email },

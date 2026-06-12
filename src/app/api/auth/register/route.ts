@@ -1,18 +1,38 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db/prisma';
+import { enforceRateLimit } from '@/server/policies/rate-limit';
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 export async function POST(request: Request) {
   try {
+    // Stop mass automated account creation
+    const limit = await enforceRateLimit({
+      request,
+      key: 'auth-register',
+      maxRequests: 5,
+      windowMs: 60 * 60 * 1000,
+    });
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: { message: 'Too many sign-up attempts. Please try again later.' } },
+        { status: 429 },
+      );
+    }
+
     const body = await request.json() as { email?: string; password?: string; fullName?: string };
     const email = body.email?.trim().toLowerCase();
     const password = body.password;
-    const fullName = body.fullName?.trim() || null;
+    const fullName = body.fullName?.trim().slice(0, 120) || null;
 
     if (!email || !password) {
       return NextResponse.json({ error: { message: 'Email and password are required.' } }, { status: 400 });
     }
-    if (password.length < 8) {
+    if (email.length > 254 || !EMAIL_RE.test(email)) {
+      return NextResponse.json({ error: { message: 'Please enter a valid email address.' } }, { status: 400 });
+    }
+    if (password.length < 8 || password.length > 200) {
       return NextResponse.json({ error: { message: 'Password must be at least 8 characters.' } }, { status: 400 });
     }
 
