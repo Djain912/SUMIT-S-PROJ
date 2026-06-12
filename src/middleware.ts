@@ -31,16 +31,22 @@ const BLOCKED_UA_RE = new RegExp(
   'i',
 );
 
-function getSessionToken(request: NextRequest): string | undefined {
-  const plain = request.cookies.get('authjs.session-token')?.value;
-  if (plain) return plain;
-  const chunks: string[] = [];
-  for (let i = 0; i < 10; i++) {
-    const chunk = request.cookies.get(`authjs.session-token.${i}`)?.value;
-    if (!chunk) break;
-    chunks.push(chunk);
+// NextAuth names the session cookie "__Secure-authjs.session-token" on HTTPS
+// (production) and "authjs.session-token" on plain HTTP (localhost). The salt
+// used to decrypt the JWT must equal the cookie name, so return both.
+function getSessionToken(request: NextRequest): { token: string; salt: string } | null {
+  for (const name of ['__Secure-authjs.session-token', 'authjs.session-token']) {
+    const plain = request.cookies.get(name)?.value;
+    if (plain) return { token: plain, salt: name };
+    const chunks: string[] = [];
+    for (let i = 0; i < 10; i++) {
+      const chunk = request.cookies.get(`${name}.${i}`)?.value;
+      if (!chunk) break;
+      chunks.push(chunk);
+    }
+    if (chunks.length > 0) return { token: chunks.join(''), salt: name };
   }
-  return chunks.length > 0 ? chunks.join('') : undefined;
+  return null;
 }
 
 export async function middleware(request: NextRequest) {
@@ -65,14 +71,14 @@ export async function middleware(request: NextRequest) {
   }
 
   // Decode JWT — no DB call, pure cookie read
-  const rawToken = getSessionToken(request);
+  const session = getSessionToken(request);
   let token: { role?: string } | null = null;
-  if (rawToken) {
+  if (session) {
     try {
       token = await decode({
-        token: rawToken,
+        token: session.token,
         secret: process.env.AUTH_SECRET!,
-        salt: 'authjs.session-token',
+        salt: session.salt,
       }) as { role?: string };
     } catch {
       token = null;

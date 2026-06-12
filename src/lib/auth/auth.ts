@@ -53,7 +53,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         // Throttle password guessing: per-IP and per-target-account
         try {
           const [byIp, byEmail] = await Promise.all([
-            enforceRateLimit({ request, key: 'auth-login-ip', maxRequests: 10, windowMs: 15 * 60 * 1000 }),
+            // Generous per-IP cap: many students can share one network (campus
+            // wifi) — the per-email limit below is the precise brake.
+            enforceRateLimit({ request, key: 'auth-login-ip', maxRequests: 40, windowMs: 15 * 60 * 1000 }),
             enforceRateLimit({ request, key: 'auth-login-email', maxRequests: 15, windowMs: 15 * 60 * 1000, identifier: email }),
           ]);
           if (!byIp.allowed || !byEmail.allowed) return null;
