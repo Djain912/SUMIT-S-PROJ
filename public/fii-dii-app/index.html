@@ -5353,6 +5353,34 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
   }
 
+  // Overlay fresh participant-wise F&O OI straight from NSE (via our own API).
+  // The history feed publishes F&O a day or two late, so without this the F&O
+  // panel can sit on a stale date. We merge NSE's numbers onto matching days
+  // (or prepend brand-new days), keeping the long cash history from the feed.
+  try {
+      const fnoRes = await fetch('/api/fii-dii/fno', { signal: AbortSignal.timeout(12000) });
+      if (fnoRes.ok) {
+          const fno = await fnoRes.json();
+          if (Array.isArray(fno) && fno.length) {
+              const FNO_KEYS = ['fii_idx_fut_long','fii_idx_fut_short','fii_stk_fut_long','fii_stk_fut_short','fii_idx_call_long','fii_idx_call_short','fii_idx_put_long','fii_idx_put_short','dii_idx_fut_long','dii_idx_fut_short','dii_stk_fut_long','dii_stk_fut_short','dii_idx_call_long','dii_idx_call_short','dii_idx_put_long','dii_idx_put_short'];
+              fno.forEach(f => {
+                  const existing = dailyData.find(row => row.d === f.date);
+                  if (existing) {
+                      FNO_KEYS.forEach(k => { existing[k] = f[k]; });
+                  } else {
+                      // A trading day NSE has but the cash feed doesn't yet —
+                      // add it with F&O filled and cash left blank (0).
+                      dailyData.push({ d: f.date, fb:0, fs:0, fn:0, db:0, ds:0, dn:0, ...f });
+                  }
+              });
+              dailyData.sort((a,b) => new Date(b.d) - new Date(a.d));
+              console.log('[INIT] ✅ Overlaid live F&O OI from NSE for', fno.length, 'day(s)');
+          }
+      }
+  } catch (e) {
+      console.warn('[INIT] Live F&O overlay unavailable, using feed F&O', e);
+  }
+
   // Fetch Sector Data sequentially so UI is hydrated on click
   try {
       let secRes = null;
