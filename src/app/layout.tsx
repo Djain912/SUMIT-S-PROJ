@@ -1,11 +1,18 @@
 import type { Metadata } from 'next';
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
 import { Suspense } from 'react';
+import { Analytics } from '@vercel/analytics/next';
+import { GoogleAnalytics } from '@next/third-parties/google';
 import { Providers } from '@/components/providers';
 import { AppNavbar } from '@/components/shared/app-navbar';
 import { PageProgress } from '@/components/shared/page-progress';
 import { siteConfig } from '@/lib/site';
 import './globals.css';
+
+// Google Analytics 4 measurement ID. Defaults to the live Chartix property; a
+// GA ID is public (it ships in every page), so it's safe to hard-code. Can be
+// overridden per-environment via NEXT_PUBLIC_GA_ID without a code change.
+const GA_ID = process.env.NEXT_PUBLIC_GA_ID || 'G-GM1X54JGTL';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -76,6 +83,8 @@ export default async function RootLayout({
           <AppNavbar />
           {children}
         </Providers>
+        <Analytics />
+        {GA_ID && <GoogleAnalytics gaId={GA_ID} />}
       </body>
     </html>
   );
