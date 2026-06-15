@@ -59,7 +59,14 @@ export async function GET(request: Request) {
 
     const notes = await prisma.note.findMany({
       where,
-      orderBy: [{ orderIndex: 'asc' }, { title: 'asc' }],
+      // Group by the parent subtopic's curriculum order FIRST (so 4.1 notes,
+      // then 4.2, 4.3 …), then by each note's own order/title within a subtopic.
+      // Without the subtopic sort, notes from different subtopics interleave.
+      orderBy: [
+        { subtopic: { orderIndex: 'asc' } },
+        { orderIndex: 'asc' },
+        { title: 'asc' },
+      ],
       select: {
         id: true,
         subtopicId: true,
