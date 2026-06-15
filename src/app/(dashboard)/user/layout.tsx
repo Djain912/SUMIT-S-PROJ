@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { redirect } from 'next/navigation';
 import { requireAuthenticatedUser } from '@/server/policies/auth';
 import { hasAnyAccess } from '@/server/policies/access';
-import { ChatWidget } from '@/components/chat/ChatWidget';
+import { ChatWidgetGate } from '@/components/chat/ChatWidgetGate';
 
 export default async function UserLayout({ children }: { children: ReactNode }) {
   const user = await requireAuthenticatedUser();
@@ -18,7 +18,7 @@ export default async function UserLayout({ children }: { children: ReactNode }) 
   return (
     <>
       {children}
-      <ChatWidget level="LEVEL_1" />
+      <ChatWidgetGate level="LEVEL_1" />
     </>
   );
 }

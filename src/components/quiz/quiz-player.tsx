@@ -142,6 +142,7 @@ export function QuizPlayer() {
   const [navOpen, setNavOpen] = useState(false);
   const [deadline, setDeadline] = useState<number | null>(null);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const finishRef = useRef<null | (() => Promise<void>)>(null);
 
   useEffect(() => {
@@ -590,6 +591,11 @@ export function QuizPlayer() {
                 ? <><span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" /> Saving…</>
                 : isLastQuestion ? 'Submit' : 'Next'}
             </button>
+            {/* Submit/finish at any point — confirms if questions are still pending */}
+            <button type="button" onClick={() => setShowSubmitConfirm(true)} disabled={isSubmittingAnswer}
+              className="rounded-full border border-emerald-600 px-4 py-2 text-sm font-medium text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-40">
+              Submit test
+            </button>
           </div>
 
           <div className="flex items-center gap-1.5">
@@ -673,6 +679,34 @@ export function QuizPlayer() {
           </div>
         </div>
       </div>
+
+      {/* Submit confirmation — warns about pending questions before finishing */}
+      {showSubmitConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowSubmitConfirm(false)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-bold text-zinc-900">Submit your test?</h3>
+            {answered < attempt.items.length ? (
+              <p className="mt-2 text-sm text-zinc-600">
+                You still have <strong className="text-rose-600">{attempt.items.length - answered} unanswered question{attempt.items.length - answered !== 1 ? 's' : ''}</strong>. They&apos;ll be marked as not answered and you won&apos;t be able to change them.
+              </p>
+            ) : (
+              <p className="mt-2 text-sm text-zinc-600">You&apos;ve answered all questions. Once submitted, you can&apos;t change your answers.</p>
+            )}
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" onClick={() => setShowSubmitConfirm(false)}
+                className="rounded-full border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-600 transition hover:bg-zinc-50">
+                Keep going
+              </button>
+              <button type="button"
+                onClick={() => { setShowSubmitConfirm(false); void finishRef.current?.(); }}
+                disabled={isSubmittingAnswer}
+                className="rounded-full bg-emerald-700 px-5 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:opacity-60">
+                Submit now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
