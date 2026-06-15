@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import {
   Target, Clock, Zap, Award, AlertTriangle, CheckCircle2,
   BookOpen, BarChart3, TrendingUp, TrendingDown, ArrowRight,
-  Flame, ListChecks, Layers,
+  Flame, ListChecks, Layers, Sparkles, Send, Loader2,
 } from 'lucide-react';
 
 interface LevelSummary {
@@ -141,6 +141,205 @@ const tabs = [
 
 type Tab = typeof tabs[number]['id'];
 
+// ── AI Coach: summary + study plan ───────────────────────────────────────────
+interface CoachData {
+  headline: string;
+  summary: string;
+  focusTopic: { title: string; reason: string } | null;
+  plan: { step: string; detail: string }[];
+  encouragement: string;
+}
+
+function AICoachCard({ hasData }: { hasData: boolean }) {
+  const [coach, setCoach] = useState<CoachData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetch('/api/user/analytics/coach');
+        const payload = await res.json();
+        if (active && payload.success) setCoach(payload.data as CoachData);
+      } catch {
+        /* coaching is non-critical — silently skip on failure */
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+
+  return (
+    <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50/80 to-white p-6 shadow-sm">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-700">
+          <Sparkles className="h-4 w-4 text-white" />
+        </div>
+        <h3 className="text-sm font-semibold text-emerald-900">Your AI Study Coach</h3>
+      </div>
+
+      {loading ? (
+        <div className="animate-pulse space-y-3">
+          <div className="h-5 w-2/3 rounded bg-emerald-100" />
+          <div className="h-4 w-full rounded bg-emerald-50" />
+          <div className="h-4 w-5/6 rounded bg-emerald-50" />
+        </div>
+      ) : !coach ? (
+        <p className="text-sm text-zinc-500">Your coach is unavailable right now. Please try again later.</p>
+      ) : (
+        <div className="space-y-4">
+          <div>
+            <p className="text-base font-bold text-zinc-900">{coach.headline}</p>
+            <p className="mt-1.5 text-sm leading-relaxed text-zinc-700">{coach.summary}</p>
+          </div>
+
+          {coach.focusTopic && (
+            <div className="rounded-xl border border-emerald-200 bg-white px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Focus next</p>
+              <p className="mt-0.5 text-sm font-semibold text-zinc-900">{coach.focusTopic.title}</p>
+              <p className="text-xs text-zinc-500">{coach.focusTopic.reason}</p>
+            </div>
+          )}
+
+          {coach.plan.length > 0 && (
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">Your plan</p>
+              <ol className="space-y-2">
+                {coach.plan.map((p, i) => (
+                  <li key={i} className="flex gap-3">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-[11px] font-bold text-white">{i + 1}</span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-zinc-900">{p.step}</p>
+                      <p className="text-xs text-zinc-500">{p.detail}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+
+          {coach.encouragement && (
+            <p className="text-sm italic text-emerald-800">{coach.encouragement}</p>
+          )}
+        </div>
+      )}
+
+      {hasData && <CoachChat />}
+    </div>
+  );
+}
+
+// ── Ask-your-data chat ───────────────────────────────────────────────────────
+type ChatMsg = { role: 'user' | 'assistant'; content: string };
+
+const COACH_SUGGESTIONS = [
+  'Where am I losing the most marks?',
+  'What should I study next?',
+  'Which chapter is my weakest?',
+];
+
+function CoachChat() {
+  const [messages, setMessages] = useState<ChatMsg[]>([]);
+  const [input, setInput] = useState('');
+  const [busy, setBusy] = useState(false);
+  const endRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+
+  const send = useCallback(async (text: string) => {
+    const q = text.trim();
+    if (!q || busy) return;
+    const history = messages.slice(-6);
+    setMessages(prev => [...prev, { role: 'user', content: q }, { role: 'assistant', content: '' }]);
+    setInput('');
+    setBusy(true);
+    try {
+      const res = await fetch('/api/user/analytics/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: q, history }),
+      });
+      if (!res.ok || !res.body) {
+        const data = await res.json().catch(() => ({}));
+        const msg = data?.error?.message ?? 'Something went wrong.';
+        setMessages(prev => prev.map((m, i) => i === prev.length - 1 ? { ...m, content: msg } : m));
+        return;
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let acc = '';
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        acc += decoder.decode(value, { stream: true });
+        const snap = acc;
+        setMessages(prev => prev.map((m, i) => i === prev.length - 1 ? { ...m, content: snap } : m));
+      }
+    } catch {
+      setMessages(prev => prev.map((m, i) => i === prev.length - 1 ? { ...m, content: 'Connection error. Please try again.' } : m));
+    } finally {
+      setBusy(false);
+    }
+  }, [busy, messages]);
+
+  return (
+    <div className="mt-5 border-t border-emerald-100 pt-4">
+      <p className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-zinc-400">Ask about your performance</p>
+
+      {messages.length > 0 && (
+        <div className="mb-3 max-h-72 space-y-2.5 overflow-y-auto pr-1">
+          {messages.map((m, i) => (
+            <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-[88%] whitespace-pre-wrap rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed ${
+                m.role === 'user'
+                  ? 'rounded-br-md bg-emerald-700 text-white'
+                  : 'rounded-bl-md border border-zinc-200 bg-white text-zinc-800'
+              }`}>
+                {m.content || (busy ? <span className="inline-flex gap-1"><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-400" /><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-400 [animation-delay:-0.15s]" /><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-400 [animation-delay:-0.3s]" /></span> : '')}
+              </div>
+            </div>
+          ))}
+          <div ref={endRef} />
+        </div>
+      )}
+
+      {messages.length === 0 && (
+        <div className="mb-3 flex flex-wrap gap-2">
+          {COACH_SUGGESTIONS.map(s => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => send(s)}
+              className="rounded-full border border-emerald-200 bg-white px-3 py-1.5 text-xs text-emerald-800 transition hover:bg-emerald-50"
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/15">
+        <input
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); send(input); } }}
+          placeholder="Ask your coach a question…"
+          className="flex-1 bg-transparent text-[13px] text-zinc-900 placeholder:text-zinc-400 focus:outline-none"
+        />
+        <button
+          type="button"
+          onClick={() => send(input)}
+          disabled={!input.trim() || busy}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-700 text-white transition hover:bg-emerald-600 disabled:opacity-40"
+        >
+          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function UserAnalyticsClient() {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -236,6 +435,9 @@ export function UserAnalyticsClient() {
           );
         })}
       </div>
+
+      {/* AI study coach — summary, plan, and ask-your-data chat */}
+      <AICoachCard hasData={overallStats.totalAttempts > 0} />
 
       {/* Level performance + summary */}
       <div className="grid gap-4 lg:grid-cols-3">
