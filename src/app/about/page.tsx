@@ -282,7 +282,7 @@ export default function AboutPage() {
                   <Linkedin className="h-4 w-4" /> Connect on LinkedIn
                 </a>
                 <a
-                  href="mailto:chartix.in@gmail.com"
+                  href="mailto:contact@chartix.in"
                   className="inline-flex items-center gap-2 rounded-full border border-zinc-300 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-700 transition hover:border-emerald-400 hover:text-emerald-700"
                 >
                   <Mail className="h-4 w-4" /> Email Me
