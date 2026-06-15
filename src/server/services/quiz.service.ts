@@ -54,6 +54,7 @@ const DOMAIN_BY_UNIT: Record<number, CmtDomain> = {
   10: 'ADVANCED',     // Unit X: Comparative Market Analysis
   11: 'ADVANCED',     // Unit XI: Volatility
   12: 'ADVANCED',     // Unit XII: Systems & Quantitative Methods
+  13: 'ETHICS',       // Unit XIII: Ethics
 };
 
 // Picks ~132 question IDs for a full mock test, weighted by CMT domain. If a
