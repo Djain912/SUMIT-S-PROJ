@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback } from 'react';
-import { Flag, AlertTriangle, CircleX, ChevronDown, ChevronUp, CheckCircle2, XCircle } from 'lucide-react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import { Flag, AlertTriangle, CircleX, ChevronDown, ChevronUp, CheckCircle2, XCircle, Clock } from 'lucide-react';
 
 type Level = 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3';
 type QuizMode = 'SUBTOPIC' | 'CHAPTER' | 'CUSTOM' | 'FULL_TEST';
@@ -35,7 +35,27 @@ type QuizAttempt = {
   correctCount: number;
   scorePercentage: number | null;
   items: AttemptItem[];
+  selectionJson?: { timeLimitMinutes?: number; mode?: string } | null;
 };
+
+// Official CMT Level I exam format — shown on the Full Length Test setup screen.
+const FULL_TEST_QUESTIONS = 132;
+const FULL_TEST_MINUTES = 120;
+const CMT_DOMAINS = [
+  { label: 'Theory & History', pct: 38 },
+  { label: 'Classical Techniques', pct: 33 },
+  { label: 'Advanced Techniques', pct: 26 },
+  { label: 'Ethics', pct: 3 },
+];
+
+function formatClock(totalSeconds: number): string {
+  const s = Math.max(0, totalSeconds);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${pad(m)}:${pad(sec)}`;
+}
 
 type ApiResponse<T> = { success: boolean; data?: T; error?: { message?: string } };
 
@@ -120,6 +140,9 @@ export function QuizPlayer() {
   const [isReporting, setIsReporting] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
+  const [deadline, setDeadline] = useState<number | null>(null);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const finishRef = useRef<null | (() => Promise<void>)>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -137,6 +160,20 @@ export function QuizPlayer() {
   const currentQuestion = currentItem?.questionSnapshotJson ?? null;
 
   useEffect(() => { setReportReason(''); setReportOpen(false); }, [currentItem?.questionId]);
+
+  // Countdown for timed mock tests — ticks every second and auto-submits at 0.
+  useEffect(() => {
+    if (!deadline || isCompleted) return;
+    const id = setInterval(() => {
+      const left = Math.round((deadline - Date.now()) / 1000);
+      setTimeLeft(left > 0 ? left : 0);
+      if (left <= 0) {
+        clearInterval(id);
+        void finishRef.current?.();
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, [deadline, isCompleted]);
 
   const loadChapters = useCallback(async (lvl: Level) => {
     try {
@@ -181,6 +218,15 @@ export function QuizPlayer() {
       setCurrentIndex(0);
       setIsCompleted(false);
       setQuestionStartedAt(Date.now());
+      // Timed mock test: arm the countdown from the server-set limit.
+      const limitMin = started.selectionJson?.timeLimitMinutes ?? null;
+      if (limitMin) {
+        setDeadline(Date.now() + limitMin * 60_000);
+        setTimeLeft(limitMin * 60);
+      } else {
+        setDeadline(null);
+        setTimeLeft(null);
+      }
     } catch (e) {
       setErrorMessage(e instanceof Error ? e.message : 'Unable to start quiz');
     } finally {
@@ -293,8 +339,29 @@ export function QuizPlayer() {
     return opt ? extractText(opt.contentJson) || 'Answer unavailable' : 'Answer unavailable';
   }
 
+  // Latest completion routine, kept in a ref so the 1-second timer can call it
+  // without re-arming the interval (and without stale closures).
+  finishRef.current = async () => {
+    if (!attempt || isCompleted) return;
+    setIsSubmittingAnswer(true);
+    setErrorMessage('');
+    try {
+      if (currentItem?.selectedOptionId) {
+        try { await persistAnswer(currentItem); } catch { /* keep going to submit */ }
+      }
+      const completed = await apiJson<QuizAttempt>(`/api/quizzes/${attempt.id}/complete`, { method: 'POST' });
+      setAttempt(completed);
+      setIsCompleted(true);
+    } catch (e) {
+      setErrorMessage(e instanceof Error ? e.message : 'Unable to submit test');
+    } finally {
+      setIsSubmittingAnswer(false);
+    }
+  };
+
   const score = attempt ? Math.round(attempt.scorePercentage ?? 0) : 0;
   const isLastQuestion = attempt ? currentIndex >= attempt.items.length - 1 : false;
+  const isTimedOut = timeLeft !== null && timeLeft <= 0;
 
   /* ── SETUP ── */
   if (!attempt) {
@@ -318,12 +385,13 @@ export function QuizPlayer() {
                     <option value="SUBTOPIC">Subtopic</option>
                     <option value="CHAPTER">Chapter</option>
                     <option value="CUSTOM">Custom</option>
-                    <option value="FULL_TEST">Full test</option>
+                    <option value="FULL_TEST">Full Length Test</option>
                   </select>
                 )},
-                { label: 'Questions', field: (
+                // The full mock test is a fixed 132-question paper — no manual count.
+                ...(mode === 'FULL_TEST' ? [] : [{ label: 'Questions', field: (
                   <input type="number" min={5} max={100} value={questionCount} onChange={e => setQuestionCount(Number(e.target.value))} className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-300" />
-                )},
+                )}]),
               ].map(({ label, field }) => (
                 <div key={label}>
                   <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500">{label}</label>
@@ -331,6 +399,33 @@ export function QuizPlayer() {
                 </div>
               ))}
             </div>
+
+            {mode === 'FULL_TEST' && (
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-emerald-700" />
+                  <p className="text-sm font-semibold text-emerald-900">Official CMT Level I exam format</p>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm text-zinc-700">
+                  <span><strong>{FULL_TEST_QUESTIONS}</strong> questions</span>
+                  <span><strong>{Math.round(FULL_TEST_MINUTES / 60)} hours</strong> ({FULL_TEST_MINUTES} min)</span>
+                  <span>Auto-submits when time runs out</span>
+                </div>
+                <p className="mt-3 mb-1.5 text-xs font-semibold uppercase tracking-wide text-zinc-500">Questions weighted by knowledge domain</p>
+                <div className="space-y-1.5">
+                  {CMT_DOMAINS.map(d => (
+                    <div key={d.label} className="flex items-center gap-2">
+                      <span className="w-40 shrink-0 text-xs text-zinc-600">{d.label}</span>
+                      <div className="h-2 flex-1 overflow-hidden rounded-full bg-white">
+                        <div className="h-full rounded-full bg-emerald-500" style={{ width: `${d.pct}%` }} />
+                      </div>
+                      <span className="w-9 shrink-0 text-right text-xs font-semibold tabular-nums text-zinc-700">{d.pct}%</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-3 text-xs text-zinc-500">Ethics questions are being added — until then those slots are filled from the other domains so you still get a full {FULL_TEST_QUESTIONS}-question paper.</p>
+              </div>
+            )}
 
             {(mode === 'CHAPTER' || mode === 'SUBTOPIC' || mode === 'CUSTOM') && (
               <div>
@@ -378,7 +473,7 @@ export function QuizPlayer() {
               className="inline-flex items-center gap-2 rounded-full bg-emerald-700 px-7 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 disabled:opacity-60">
               {isLoading
                 ? <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> Starting…</>
-                : 'Start quiz'}
+                : mode === 'FULL_TEST' ? 'Start full length test' : 'Start quiz'}
             </button>
           </div>
         </div>
@@ -397,7 +492,7 @@ export function QuizPlayer() {
           <h2 className="text-xl font-bold text-zinc-950">Quiz complete</h2>
           <p className="mt-1 text-sm text-zinc-500">{attempt.correctCount} of {attempt.totalQuestions} correct</p>
           <button type="button"
-            onClick={() => { setAttempt(null); setCurrentIndex(0); setIsCompleted(false); }}
+            onClick={() => { setAttempt(null); setCurrentIndex(0); setIsCompleted(false); setDeadline(null); setTimeLeft(null); }}
             className="mt-5 inline-flex items-center gap-2 rounded-full bg-emerald-700 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-600">
             New quiz
           </button>
@@ -438,6 +533,16 @@ export function QuizPlayer() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
+      {/* Countdown (timed mock tests only) */}
+      {timeLeft !== null && (
+        <div className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold tabular-nums ${
+          timeLeft <= 300 ? 'border-rose-200 bg-rose-50 text-rose-700' : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+        }`}>
+          <Clock className="h-4 w-4" />
+          {isTimedOut ? 'Time up — submitting…' : `Time remaining: ${formatClock(timeLeft)}`}
+        </div>
+      )}
+
       {/* Progress */}
       <div className="flex items-center gap-3 text-xs text-zinc-500">
         <span className="shrink-0 font-semibold text-zinc-700">Q{currentIndex + 1} / {attempt.items.length}</span>

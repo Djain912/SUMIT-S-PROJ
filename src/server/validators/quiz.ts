@@ -10,6 +10,9 @@ export const quizSelectionSchema = z.object({
   selectedSubtopicIds: z.array(z.string().min(1)).default([]),
   questionCount: z.number().int().positive().max(200).default(10),
   randomizeOrder: z.boolean().default(true),
+  // Set server-side for FULL_TEST (official CMT exam timing); stored in the
+  // attempt's selectionJson and read by the client to run the countdown.
+  timeLimitMinutes: z.number().int().positive().max(600).optional(),
 });
 
 export const quizAnswerSchema = z.object({
