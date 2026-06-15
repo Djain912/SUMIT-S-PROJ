@@ -30,6 +30,14 @@ const DOMAIN_WEIGHTS: Record<CmtDomain, number> = {
   ETHICS: 0.03,
 };
 
+// Target difficulty mix WITHIN each domain's allocation (exam-realistic).
+type Difficulty = 'EASY' | 'MEDIUM' | 'HARD';
+const DIFFICULTY_WEIGHTS: Record<Difficulty, number> = {
+  EASY: 0.25,
+  MEDIUM: 0.50,
+  HARD: 0.25,
+};
+
 // Maps each unit (chapter.orderIndex) to its CMT knowledge domain. Adjust here
 // if the curriculum mapping changes. Units with no questions yet (e.g. XI
 // Volatility, and Ethics which has no unit) are simply backfilled from others.
@@ -74,34 +82,72 @@ async function pickFullTestQuestionIds(scope: ChapterScope): Promise<string[]> {
 
   const questions = await prisma.question.findMany({
     where,
-    select: { id: true, chapterId: true, subtopic: { select: { chapterId: true } } },
+    select: { id: true, chapterId: true, difficulty: true, subtopic: { select: { chapterId: true } } },
   });
 
-  // Bucket question IDs by domain (via their effective chapter).
-  const byDomain: Record<CmtDomain, string[]> = { THEORY: [], CLASSICAL: [], ADVANCED: [], ETHICS: [] };
+  // Bucket question IDs by domain → difficulty (via their effective chapter).
+  const emptyDiff = (): Record<Difficulty, string[]> => ({ EASY: [], MEDIUM: [], HARD: [] });
+  const byDomain: Record<CmtDomain, Record<Difficulty, string[]>> = {
+    THEORY: emptyDiff(), CLASSICAL: emptyDiff(), ADVANCED: emptyDiff(), ETHICS: emptyDiff(),
+  };
   for (const q of questions) {
     const chapterId = q.chapterId ?? q.subtopic?.chapterId ?? null;
     const domain = chapterId ? domainByChapter.get(chapterId) : undefined;
-    if (domain) byDomain[domain].push(q.id);
+    if (!domain) continue;
+    // Treat any unset difficulty as MEDIUM so it still gets used.
+    const diff: Difficulty = q.difficulty === 'EASY' || q.difficulty === 'HARD' ? q.difficulty : 'MEDIUM';
+    byDomain[domain][diff].push(q.id);
   }
-  for (const d of Object.keys(byDomain) as CmtDomain[]) byDomain[d] = shuffle(byDomain[d]);
+  for (const d of Object.keys(byDomain) as CmtDomain[]) {
+    for (const diff of Object.keys(DIFFICULTY_WEIGHTS) as Difficulty[]) {
+      byDomain[d][diff] = shuffle(byDomain[d][diff]);
+    }
+  }
 
-  // Take each domain's weighted share, capped by what's actually available.
-  const selected: string[] = [];
-  const leftover: string[] = [];
+  // Pull up to n IDs from a pool, skipping ones already chosen. Returns the
+  // shortfall (how many we still owe) so callers can backfill.
+  const selected = new Set<string>();
+  const pull = (pool: string[], n: number): number => {
+    for (const id of pool) {
+      if (n <= 0) break;
+      if (selected.has(id)) continue;
+      selected.add(id);
+      n -= 1;
+    }
+    return n;
+  };
+
+  // Domain weighting first, then the difficulty mix inside each domain.
   for (const d of Object.keys(DOMAIN_WEIGHTS) as CmtDomain[]) {
-    const target = Math.round(DOMAIN_WEIGHTS[d] * FULL_TEST_TOTAL);
-    const pool = byDomain[d];
-    selected.push(...pool.slice(0, target));
-    leftover.push(...pool.slice(target));
+    const domainTarget = Math.round(DOMAIN_WEIGHTS[d] * FULL_TEST_TOTAL);
+    const easyT = Math.round(DIFFICULTY_WEIGHTS.EASY * domainTarget);
+    const hardT = Math.round(DIFFICULTY_WEIGHTS.HARD * domainTarget);
+    const medT = domainTarget - easyT - hardT; // remainder → medium (the largest share)
+
+    let short = 0;
+    short += pull(byDomain[d].EASY, easyT);
+    short += pull(byDomain[d].MEDIUM, medT);
+    short += pull(byDomain[d].HARD, hardT);
+
+    // Backfill a difficulty shortfall from the SAME domain first (keeps the
+    // domain weighting intact even if one difficulty bucket runs dry).
+    if (short > 0) {
+      pull(shuffle([...byDomain[d].EASY, ...byDomain[d].MEDIUM, ...byDomain[d].HARD]), short);
+    }
   }
 
-  // Backfill any shortfall (e.g. empty Ethics) from the remaining pool.
-  if (selected.length < FULL_TEST_TOTAL) {
-    selected.push(...shuffle(leftover).slice(0, FULL_TEST_TOTAL - selected.length));
+  // Global backfill for any remaining shortfall (e.g. empty Ethics domain),
+  // drawn from everything not yet chosen so the paper still reaches 132.
+  if (selected.size < FULL_TEST_TOTAL) {
+    const everything = shuffle(
+      (Object.keys(byDomain) as CmtDomain[]).flatMap(d =>
+        [...byDomain[d].EASY, ...byDomain[d].MEDIUM, ...byDomain[d].HARD],
+      ),
+    );
+    pull(everything, FULL_TEST_TOTAL - selected.size);
   }
 
-  return shuffle(selected).slice(0, FULL_TEST_TOTAL);
+  return shuffle([...selected]).slice(0, FULL_TEST_TOTAL);
 }
 
 // Fetches full question data for a fixed set of IDs (used by the full test),
