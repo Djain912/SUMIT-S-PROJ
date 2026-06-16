@@ -31,6 +31,35 @@ model User {
   quizAttempts      QuizAttempt[]
   entitlements      Entitlement[]
   payments          Payment[]
+  indices           Index[]
+}
+
+// A user-saved custom stock index built in the Index Builder tool.
+model Index {
+  id            String         @id @default(cuid())
+  userId        String
+  name          String
+  weightingType IndexWeighting @default(MARKET_CAP)
+  constituents  Json           // string[] of stock symbols
+  customWeights Json?          // optional { symbol: weight }
+  description   String?
+  visibility    IndexVisibility @default(PRIVATE)
+  shareId       String?        @unique // set when made public, used in /indices/<shareId>
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, updatedAt])
+}
+
+enum IndexWeighting {
+  EQUAL
+  MARKET_CAP
+}
+
+enum IndexVisibility {
+  PRIVATE
+  PUBLIC
 }
 
 // A Razorpay payment record. Created when a checkout order is opened, then

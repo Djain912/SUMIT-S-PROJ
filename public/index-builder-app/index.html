@@ -900,5 +900,258 @@ new ResizeObserver(()=>{resizeOverlay();redrawOverlay();}).observe(document.getE
   srcChange();
 })();
 </script>
+
+<!-- ──────────────────────────────────────────────────────────────────────
+     CHARTIX CLOUD: login, ready-made indices, save & autosave (Phase 1)
+     Self-contained module. Talks to same-origin Next.js APIs:
+       /api/auth/session, /api/index-builder/indices[/id]
+     and loads /index-builder-app/data/sectorIndices.json
+─────────────────────────────────────────────────────────────────────── -->
+<style>
+  #cloudBox{border:1px solid var(--line,#e4e7ea);border-radius:12px;padding:10px;margin:0 0 12px;background:rgba(45,125,82,.04)}
+  #cloudAcct{display:flex;align-items:center;gap:8px;font-size:13px;min-height:30px}
+  #cloudAcct img{width:26px;height:26px;border-radius:50%}
+  #cloudAcct .nm{font-weight:600;color:var(--txt,#1a2b22);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #cloudAcct .gbtn{margin-left:auto;display:inline-flex;align-items:center;gap:6px;border:1px solid #dadce0;background:#fff;border-radius:8px;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer;color:#3c4043;text-decoration:none}
+  #cloudAcct .lnk{margin-left:auto;font-size:12px;color:var(--txt-mut,#6b7280);cursor:pointer;text-decoration:underline}
+  #cloudBtns{display:flex;gap:6px;margin-top:8px}
+  #cloudBtns .btn{flex:1;font-size:12.5px;padding:7px 6px}
+  #saveStatus{font-size:11px;color:var(--txt-mut,#6b7280);margin-top:6px;min-height:14px}
+  .cloud-modal{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:16px}
+  .cloud-modal.open{display:flex}
+  .cloud-card{background:#fff;border-radius:16px;width:100%;max-width:560px;max-height:84vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+  .cloud-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #eef0f2}
+  .cloud-head h3{margin:0;font-size:16px;font-weight:700;color:#0f3d2a}
+  .cloud-head .x{border:none;background:none;font-size:20px;cursor:pointer;color:#888;line-height:1}
+  .cloud-tools{display:flex;gap:8px;padding:12px 18px;border-bottom:1px solid #f1f3f4;flex-wrap:wrap}
+  .cloud-tools input,.cloud-tools select{border:1px solid #dadce0;border-radius:8px;padding:7px 10px;font-size:13px}
+  .cloud-tools input{flex:1;min-width:140px}
+  .cloud-body{overflow-y:auto;padding:12px 18px}
+  .ix-card{display:flex;align-items:flex-start;gap:10px;border:1px solid #eef0f2;border-radius:10px;padding:11px 12px;margin-bottom:8px}
+  .ix-card .meta{flex:1;min-width:0}
+  .ix-card .nm{font-weight:600;font-size:14px;color:#1a2b22}
+  .ix-card .ds{font-size:12px;color:#6b7280;margin-top:1px}
+  .ix-card .ct{font-size:11px;color:#2d7d52;font-weight:600;margin-top:3px}
+  .ix-card .acts{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+  .ix-card .mini{border:1px solid #dadce0;background:#fff;border-radius:7px;padding:5px 9px;font-size:12px;cursor:pointer;color:#3c4043}
+  .ix-card .mini.primary{background:#2d7d52;color:#fff;border-color:#2d7d52}
+  .ix-card .mini.danger{color:#c0392b;border-color:#f0c5c0}
+  .cloud-empty{text-align:center;color:#9aa0a6;font-size:13px;padding:28px 10px}
+</style>
+<div class="cloud-modal" id="rmModal"><div class="cloud-card">
+  <div class="cloud-head"><h3>Ready-made indices</h3><button class="x" data-close>×</button></div>
+  <div class="cloud-tools">
+    <input type="text" id="rmSearch" placeholder="Search indices…">
+    <select id="rmCat"><option value="">All categories</option></select>
+  </div>
+  <div class="cloud-body" id="rmList"></div>
+</div></div>
+<div class="cloud-modal" id="myModal"><div class="cloud-card">
+  <div class="cloud-head"><h3>My indices</h3><button class="x" data-close>×</button></div>
+  <div class="cloud-body" id="myList"></div>
+</div></div>
+
+<script>
+(function(){
+  var TOOL_URL='/index-builder-app/index.html';
+  var session=null, currentId=null, currentShareId=null, dirty=false, lastSaveText='';
+
+  function api(path,opts){ return fetch(path,Object.assign({credentials:'same-origin',headers:{'Content-Type':'application/json'}},opts||{})); }
+  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function setStatus(t){ lastSaveText=t; var el=document.getElementById('saveStatus'); if(el)el.textContent=t; }
+
+  // ── current builder state ↔ saved-index shape ──
+  function mapWeightToApi(){ return S.weightMode==='equal'?'EQUAL':'MARKET_CAP'; }
+  function getState(){
+    var rows=[].slice.call(document.querySelectorAll('#stockList [data-row]'));
+    var constituents=[], customWeights={};
+    rows.forEach(function(r){
+      var tk=r.querySelector('.sc-tk').value.trim().toUpperCase();
+      if(!tk)return;
+      constituents.push(tk);
+      var sh=parseFloat((r.querySelector('.sc-sh').value||'').replace(/,/g,''));
+      if(!isNaN(sh)&&sh>0)customWeights[tk]=sh;
+    });
+    return {
+      name:(document.getElementById('idxName').value.trim()||'Untitled index'),
+      weightingType:mapWeightToApi(),
+      constituents:constituents,
+      customWeights:Object.keys(customWeights).length?customWeights:null,
+      description:null
+    };
+  }
+  function applyState(ix){
+    document.getElementById('idxName').value=ix.name||'';
+    setWeight(ix.weightingType==='EQUAL'?'equal':'mcap');
+    var list=document.getElementById('stockList'); list.innerHTML='';
+    var cw=ix.customWeights||{};
+    (ix.constituents||[]).forEach(function(sym){ addStockRow(sym, cw[sym]!=null?cw[sym]:undefined); });
+    if(!(ix.constituents||[]).length){ addStockRow(); addStockRow(); }
+    updateStkCount();
+  }
+
+  // ── auth ──
+  function loginHref(){ return '/sign-in?next='+encodeURIComponent(TOOL_URL); }
+  function renderAccount(){
+    var el=document.getElementById('cloudAcct'); if(!el)return;
+    if(session&&session.user){
+      var u=session.user;
+      el.innerHTML=(u.image?'<img src="'+esc(u.image)+'" alt="">':'')+
+        '<span class="nm">'+esc(u.name||u.email||'You')+'</span>'+
+        '<span class="lnk" id="logoutLnk">Logout</span>';
+      var lo=document.getElementById('logoutLnk'); if(lo)lo.onclick=function(){ window.location.href='/api/auth/signout?callbackUrl='+encodeURIComponent(TOOL_URL); };
+    } else {
+      el.innerHTML='<span style="color:var(--txt-mut,#6b7280)">Save your work — sign in</span>'+
+        '<a class="gbtn" href="'+loginHref()+'">Continue with Google</a>';
+    }
+  }
+  function requireLogin(){ if(session&&session.user)return true; window.location.href=loginHref(); return false; }
+
+  // ── save / autosave ──
+  function markDirty(){ dirty=true; }
+  async function doSave(forceNew){
+    if(!(session&&session.user))return false;
+    var st=getState();
+    if(st.constituents.length<1){ return false; }
+    try{
+      var res, payload;
+      if(forceNew||!currentId){
+        res=await api('/api/index-builder/indices',{method:'POST',body:JSON.stringify(st)});
+      } else {
+        res=await api('/api/index-builder/indices/'+currentId,{method:'PATCH',body:JSON.stringify(st)});
+      }
+      if(res.status===401){ setStatus('Sign in to save'); return false; }
+      payload=await res.json();
+      if(!res.ok||!payload.success){ setStatus(payload&&payload.error?payload.error.message:'Save failed'); return false; }
+      currentId=payload.data.id; currentShareId=payload.data.shareId;
+      dirty=false; setStatus('Saved just now');
+      return true;
+    }catch(e){ setStatus('Save failed — check connection'); return false; }
+  }
+  // periodic + debounced autosave
+  setInterval(function(){ if(dirty&&session&&session.user&&currentId)doSave(false); },30000);
+  var debTimer=null;
+  function scheduleAutosave(){ markDirty(); if(!(session&&session.user))return; clearTimeout(debTimer); debTimer=setTimeout(function(){ if(currentId)doSave(false); },2500); }
+
+  // ── ready-made modal ──
+  var readyMade=null;
+  async function openReadyMade(){
+    var m=document.getElementById('rmModal'); m.classList.add('open');
+    if(!readyMade){
+      try{ var r=await fetch('/index-builder-app/data/sectorIndices.json'); readyMade=await r.json(); }
+      catch(e){ document.getElementById('rmList').innerHTML='<div class="cloud-empty">Could not load ready-made indices.</div>'; return; }
+      var cats=[]; Object.keys(readyMade).forEach(function(k){ var c=readyMade[k].category; if(cats.indexOf(c)<0)cats.push(c); });
+      cats.sort(); var sel=document.getElementById('rmCat');
+      cats.forEach(function(c){ var o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+    }
+    renderReadyMade();
+  }
+  function renderReadyMade(){
+    var q=(document.getElementById('rmSearch').value||'').toLowerCase();
+    var cat=document.getElementById('rmCat').value;
+    var list=document.getElementById('rmList'); var html='';
+    Object.keys(readyMade).forEach(function(k){
+      var x=readyMade[k];
+      if(cat&&x.category!==cat)return;
+      if(q&&x.name.toLowerCase().indexOf(q)<0&&x.description.toLowerCase().indexOf(q)<0)return;
+      html+='<div class="ix-card"><div class="meta"><div class="nm">'+esc(x.name)+'</div>'+
+        '<div class="ds">'+esc(x.description)+'</div>'+
+        '<div class="ct">'+esc(x.category)+' · '+x.constituents.length+' stocks</div></div>'+
+        '<div class="acts"><button class="mini primary" data-rm="'+esc(k)+'">Load</button></div></div>';
+    });
+    list.innerHTML=html||'<div class="cloud-empty">No indices match.</div>';
+    list.querySelectorAll('[data-rm]').forEach(function(b){ b.onclick=function(){ loadReadyMade(readyMade[b.getAttribute('data-rm')]); }; });
+  }
+  function loadReadyMade(x){
+    // Ready-made templates load as a fresh, equal-weighted starting point.
+    // Saving creates the user's OWN copy — the template is never modified.
+    currentId=null; currentShareId=null;
+    applyState({ name:x.name, weightingType:'EQUAL', constituents:x.constituents.slice(), customWeights:null });
+    document.getElementById('rmModal').classList.remove('open');
+    setStatus(session&&session.user?'Loaded — Save to keep your copy':'Loaded — sign in to save');
+    markDirty();
+  }
+
+  // ── my indices modal ──
+  async function openMyIndices(){
+    if(!requireLogin())return;
+    var m=document.getElementById('myModal'); m.classList.add('open');
+    var list=document.getElementById('myList'); list.innerHTML='<div class="cloud-empty">Loading…</div>';
+    try{
+      var res=await api('/api/index-builder/indices'); var p=await res.json();
+      if(!res.ok||!p.success){ list.innerHTML='<div class="cloud-empty">Could not load.</div>'; return; }
+      if(!p.data.length){ list.innerHTML='<div class="cloud-empty">No saved indices yet. Build one and hit Save.</div>'; return; }
+      list.innerHTML=p.data.map(function(ix){
+        return '<div class="ix-card" data-id="'+esc(ix.id)+'"><div class="meta">'+
+          '<div class="nm">'+esc(ix.name)+'</div>'+
+          '<div class="ct">'+(ix.weightingType==='EQUAL'?'Equal weight':'Market cap')+' · '+ix.constituents.length+' stocks'+(ix.visibility==='PUBLIC'?' · Public':'')+'</div></div>'+
+          '<div class="acts">'+
+            '<button class="mini primary" data-act="load">Load</button>'+
+            '<button class="mini" data-act="rename">Rename</button>'+
+            '<button class="mini" data-act="dup">Duplicate</button>'+
+            '<button class="mini danger" data-act="del">Delete</button>'+
+          '</div></div>';
+      }).join('');
+      var byId={}; p.data.forEach(function(ix){byId[ix.id]=ix;});
+      list.querySelectorAll('.ix-card').forEach(function(card){
+        var id=card.getAttribute('data-id'); var ix=byId[id];
+        card.querySelector('[data-act=load]').onclick=function(){ currentId=ix.id; currentShareId=ix.shareId; applyState(ix); document.getElementById('myModal').classList.remove('open'); setStatus('Loaded "'+ix.name+'"'); dirty=false; };
+        card.querySelector('[data-act=rename]').onclick=async function(){ var nn=prompt('Rename index',ix.name); if(!nn)return; await api('/api/index-builder/indices/'+id,{method:'PATCH',body:JSON.stringify({name:nn.trim()})}); openMyIndices(); };
+        card.querySelector('[data-act=dup]').onclick=async function(){ await api('/api/index-builder/indices',{method:'POST',body:JSON.stringify({name:ix.name+' (copy)',weightingType:ix.weightingType,constituents:ix.constituents,customWeights:ix.customWeights,description:ix.description})}); openMyIndices(); };
+        card.querySelector('[data-act=del]').onclick=async function(){ if(!confirm('Delete "'+ix.name+'"?'))return; await api('/api/index-builder/indices/'+id,{method:'DELETE'}); if(currentId===id){currentId=null;currentShareId=null;} openMyIndices(); };
+      });
+    }catch(e){ list.innerHTML='<div class="cloud-empty">Could not load.</div>'; }
+  }
+
+  // ── inject the cloud UI into the Build pane ──
+  function injectUI(){
+    var pane=document.getElementById('paneBuild'); if(!pane)return;
+    var box=document.createElement('div'); box.id='cloudBox';
+    box.innerHTML='<div id="cloudAcct"></div>'+
+      '<div id="cloudBtns">'+
+        '<button class="btn ghost" id="btnReady">📚 Ready-made</button>'+
+        '<button class="btn ghost" id="btnMine">💾 My indices</button>'+
+        '<button class="btn" id="btnSave">Save</button>'+
+      '</div>'+
+      '<div id="saveStatus"></div>';
+    pane.insertBefore(box, pane.firstChild);
+    renderAccount();
+    document.getElementById('btnReady').onclick=openReadyMade;
+    document.getElementById('btnMine').onclick=openMyIndices;
+    document.getElementById('btnSave').onclick=async function(){ if(!requireLogin())return; await doSave(false); };
+    // modal close handlers
+    document.querySelectorAll('.cloud-modal').forEach(function(m){
+      m.addEventListener('click',function(e){ if(e.target===m||e.target.hasAttribute('data-close'))m.classList.remove('open'); });
+    });
+    document.getElementById('rmSearch').addEventListener('input',renderReadyMade);
+    document.getElementById('rmCat').addEventListener('change',renderReadyMade);
+    // change detection for autosave
+    document.getElementById('idxName').addEventListener('input',scheduleAutosave);
+    document.getElementById('wMcap').addEventListener('click',scheduleAutosave);
+    document.getElementById('wEqual').addEventListener('click',scheduleAutosave);
+    var sl=document.getElementById('stockList');
+    new MutationObserver(scheduleAutosave).observe(sl,{childList:true});
+    sl.addEventListener('input',scheduleAutosave);
+  }
+
+  // ── restore last index on load (most recently updated) ──
+  async function restore(){
+    if(!(session&&session.user))return;
+    try{
+      var res=await api('/api/index-builder/indices'); var p=await res.json();
+      if(res.ok&&p.success&&p.data.length){ var ix=p.data[0]; currentId=ix.id; currentShareId=ix.shareId; applyState(ix); setStatus('Restored "'+ix.name+'"'); dirty=false; }
+    }catch(e){}
+  }
+
+  // ── boot ──
+  (async function(){
+    try{ var r=await api('/api/auth/session'); session=await r.json(); }catch(e){ session=null; }
+    if(session&&!session.user)session=null;
+    injectUI();
+    renderAccount();
+    await restore();
+  })();
+})();
+</script>
 </body>
 </html>
