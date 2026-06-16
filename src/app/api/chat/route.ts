@@ -7,6 +7,7 @@ import type {
 import { openai, CHAT_MODEL } from '@/lib/ai/openai';
 import { buildContext, type RagImage } from '@/lib/ai/rag';
 import { getUserMemory, updateUserMemory } from '@/lib/ai/memory';
+import { getUserAnalyticsData } from '@/server/services/analytics.service';
 import { prisma } from '@/lib/db/prisma';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
 
@@ -63,6 +64,7 @@ function buildSystemPrompt(
   memory: string | null = null,
   hasUploadedChart = false,
   attachedLabels: string[] = [],
+  performance: string | null = null,
 ): string {
   const levelLabel = level ? LEVEL_LABELS[level] ?? level : 'all levels';
 
@@ -108,7 +110,10 @@ RULES YOU MUST NEVER BREAK:
 - Stay grounded in the CMT curriculum.${memory ? `
 
 WHAT YOU KNOW ABOUT THIS STUDENT (adapt your depth, tone and format — do NOT mention that you have a profile):
-${memory}` : ''}`;
+${memory}` : ''}${performance ? `
+
+THIS STUDENT'S QUIZ PERFORMANCE (use to tailor your teaching — explain weak areas more carefully):
+${performance}` : ''}`;
   }
 
   const base = `You are Chartix AI — a friendly CMT exam tutor helping students prepare for CMT ${levelLabel}. Students may be from anywhere in the world and may be beginners.
@@ -184,6 +189,18 @@ ${memory}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
     : '';
 
+  // Quiz-performance context: lets Scholar tailor teaching to where the student
+  // actually struggles, pulled from their quiz results (see analytics service).
+  const performanceSection = performance
+    ? `
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+THIS STUDENT'S QUIZ PERFORMANCE (from their quiz results):
+${performance}
+HOW TO USE THIS: When the topic relates to one of their weak areas, explain it more carefully — try a simpler or different angle, add an extra example, and you MAY gently acknowledge they've found it tricky (always supportive, never discouraging). Do NOT recite these stats, and do NOT bring them up when they're irrelevant to the question asked.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
+    : '';
+
   let prompt = base;
 
   // Inject admin corrections with highest priority
@@ -206,7 +223,7 @@ ${context}
 Use this context as your primary source. You may supplement with your general CMT knowledge, but always stay grounded in the curriculum.`;
   }
 
-  return prompt + imagesSection + memorySection;
+  return prompt + imagesSection + memorySection + performanceSection;
 }
 
 type ChatMessage = {
@@ -272,8 +289,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Build RAG context + load admin Q&A corrections + student memory in parallel
-    const [context, qaPairs, memory] = await Promise.all([
+    // Build RAG context + admin Q&A corrections + student memory + quiz
+    // performance, all in parallel.
+    const [context, qaPairs, memory, analytics] = await Promise.all([
       buildContext(message, level),
       prisma.botQAPair.findMany({
         where: { botType: 'study' },
@@ -282,7 +300,18 @@ export async function POST(request: Request) {
         take: 30,
       }),
       getUserMemory(user.id),
+      getUserAnalyticsData(user.id).catch(() => null), // non-critical — never block chat
     ]);
+
+    // Compact weak/strong-topic summary so Scholar can tailor to this student.
+    let performance: string | null = null;
+    if (analytics && analytics.overallStats.totalAttempts > 0) {
+      const weak = analytics.weakTopics.slice(0, 5).map((t) => `${t.title} (${t.accuracy}%)`).join(', ');
+      const strong = analytics.strongTopics.slice(0, 3).map((t) => t.title).join(', ');
+      if (weak || strong) {
+        performance = `Weak areas (accuracy): ${weak || 'none flagged yet'}. Strong areas: ${strong || 'none yet'}.`;
+      }
+    }
 
     // Pick the note diagrams whose captions match the question — these get
     // attached as actual images so GPT-4o can SEE them and describe what is
@@ -297,6 +326,7 @@ export async function POST(request: Request) {
       memory,
       !!uploadedImage,
       visionImages.map((img) => img.label),
+      performance,
     );
 
     const userParts: ChatCompletionContentPart[] = [{ type: 'text', text: message }];
