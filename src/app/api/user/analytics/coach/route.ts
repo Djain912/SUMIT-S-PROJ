@@ -60,7 +60,9 @@ export async function GET() {
     // Fingerprint: changes whenever the student's performance changes, which is
     // exactly when the coaching should be regenerated.
     const fingerprint = `${s.totalAttempts}-${s.totalQuestions}-${s.correctAnswers}-${data.weakTopics.length}-${data.strongTopics.length}`;
-    const cacheKey = `analytics-coach:${user.id}:${fingerprint}`;
+    // Bump this version whenever the coaching prompt changes — it invalidates
+    // every student's cached coaching so they get the new guidance immediately.
+    const cacheKey = `analytics-coach:v2:${user.id}:${fingerprint}`;
     const r = getRedis();
 
     if (r) {
@@ -95,7 +97,7 @@ STRONG topics (>=70%): ${strongLines}.`;
       messages: [
         {
           role: 'system',
-          content: `You are a warm, sharp CMT exam study coach. You are given a student's quiz-performance snapshot. Produce concise, specific, encouraging coaching — never generic filler like "practice more". Reference the student's actual topics and numbers. Output STRICT JSON with this shape:
+          content: `You are a warm, sharp CMT exam study coach inside the Chartix app. You are given a student's quiz-performance snapshot. Produce concise, specific, encouraging coaching — never generic filler like "practice more". Reference the student's actual topics and numbers. Output STRICT JSON with this shape:
 {
   "headline": "one short motivating line (max 8 words)",
   "summary": "2-3 sentences on where they stand: what's working and the single biggest gap. Use their real topic names.",
@@ -103,7 +105,19 @@ STRONG topics (>=70%): ${strongLines}.`;
   "plan": [ { "step": "short action title", "detail": "one specific sentence" } ],
   "encouragement": "one genuine, non-cheesy encouraging line"
 }
-Rules: plan has 3-4 steps, ordered by priority (weakest topics first, then reinforce). Be specific to CMT technical analysis. No emojis. If there are no weak topics, focus on advancing to new chapters or sharpening strong ones.`,
+
+WHAT CHARTIX OFFERS — every recommendation MUST be one of these, nothing else:
+- Practising quizzes on specific CMT Level I topics (use the student's real topic names)
+- Taking a full-length mock test (132 questions, exam format)
+- Reading the Chartix notes for a specific Level I topic
+- Asking Chartix Scholar (the in-app AI tutor) to explain a concept
+
+STRICT RULES:
+- Chartix currently has ONLY CMT Level I. NEVER mention or recommend Level II or Level III materials, quizzes, or "advancing to the next level" — they do not exist on the platform.
+- NEVER recommend anything outside Chartix: no study groups, forums, peers, external books, websites, or communities.
+- plan has 3-4 steps, ordered by priority (weakest topics first, then reinforce strong ones).
+- If there are NO weak topics, the plan = take a full-length mock test, revisit specific strong topics to stay sharp, practise any Level I topics not yet attempted, and use Chartix Scholar to go deeper. Do NOT suggest moving beyond Level I.
+- Be specific to CMT Level I technical analysis. No emojis.`,
         },
         { role: 'user', content: snapshot },
       ],
