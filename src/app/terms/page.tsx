@@ -51,7 +51,7 @@ export default function TermsPage() {
           </ul>
 
           <h2>5. Intellectual Property</h2>
-          <p>All content on Chartix — including study notes, questions, explanations, UI design, and AI-generated content — is the intellectual property of Chartix or its licensors. You may not:</p>
+          <p>All content on Chartix — including study notes, questions, explanations, UI design, and Chartix Scholar responses — is the intellectual property of Chartix or its licensors. You may not:</p>
           <ul>
             <li>Copy, reproduce, or distribute platform content without written permission.</li>
             <li>Screenshot or export questions for redistribution.</li>
@@ -71,8 +71,8 @@ export default function TermsPage() {
           <h2>7. Content Accuracy</h2>
           <p>While we make every effort to ensure the accuracy of our CMT study content, Chartix does not guarantee that all content is error-free or up-to-date with the latest CMT curriculum. Always verify critical exam information with the official CMT Association website (cmtassociation.org).</p>
 
-          <h2>8. AI Features</h2>
-          <p>Chartix Scholar and our question generator are powered by OpenAI&apos;s GPT models. AI-generated content may occasionally contain inaccuracies. Do not rely solely on Chartix Scholar responses for exam preparation.</p>
+          <h2>8. AI Study Assistant</h2>
+          <p>Chartix Scholar, our AI study assistant, is powered by OpenAI&apos;s GPT models. Its responses are generated on demand and may occasionally contain inaccuracies, so always cross-reference them with the study notes and official sources. Our study notes are written and reviewed by our team.</p>
 
           <h2>9. Limitation of Liability</h2>
           <p>Chartix is provided &ldquo;as is&rdquo; without warranties of any kind. We are not liable for:</p>

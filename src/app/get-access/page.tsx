@@ -5,6 +5,7 @@ import { TrendingUp, CheckCircle, Lock, Clock } from 'lucide-react';
 import { auth } from '@/lib/auth/auth';
 import { hasAnyAccess } from '@/server/policies/access';
 import { CouponRedeemForm } from '@/components/get-access-client';
+import { BuyButton } from '@/components/payments/BuyButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -89,10 +90,8 @@ export default async function GetAccessPage() {
             ))}
           </ul>
 
-          {/* Payment coming soon */}
-          <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-center text-sm text-amber-800">
-            Online payments are launching soon. For now, access is by invite coupon only.
-          </div>
+          {/* Buy (shows live button once Razorpay keys are set, else a notice) */}
+          <BuyButton />
 
           {/* Coupon */}
           <div className="mt-5 border-t border-zinc-100 pt-5">

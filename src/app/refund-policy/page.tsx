@@ -76,7 +76,7 @@ export default function RefundPolicyPage() {
             <li>No refund will be issued, regardless of how much of the subscription period has been used.</li>
             <li>No refund will be issued for change of mind, dissatisfaction, or exam outcomes.</li>
             <li>No partial refunds will be issued for unused access time.</li>
-            <li>No refunds will be issued for Chartix Scholar responses or automatically generated content.</li>
+            <li>No refunds will be issued based on Chartix Scholar (AI assistant) responses.</li>
           </ul>
 
           <h2>3. Exceptions — When a Refund May Be Considered</h2>

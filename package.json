@@ -39,6 +39,7 @@
     "next-auth": "^5.0.0-beta.28",
     "openai": "^4.104.0",
     "pdf-parse": "^1.1.1",
+    "razorpay": "^2.9.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.73.1",

@@ -63,9 +63,9 @@ export default function DisclaimerPage() {
             All study notes, practice questions, explanations, and other learning materials published on Chartix are created independently by the Chartix team. They represent our own interpretation and presentation of technical analysis concepts and CMT curriculum topics. Any resemblance to official CMT Association materials is incidental and reflects the common body of knowledge in technical analysis.
           </p>
 
-          <h2>5. AI-Generated Content</h2>
+          <h2>5. Chartix Scholar (AI Study Assistant)</h2>
           <p>
-            Chartix Scholar is an AI-powered study assistant built on the CMT curriculum. Responses may occasionally contain errors, outdated information, or interpretations that differ from official CMT Association guidance. Always cross-reference Chartix Scholar responses with official sources before relying on them for exam preparation.
+            Our study notes are written and reviewed by our team. Chartix Scholar is a separate AI-powered study assistant that answers questions on demand — its responses may occasionally contain errors, outdated information, or interpretations that differ from official CMT Association guidance. Always cross-reference Chartix Scholar responses with the study notes and official sources before relying on them for exam preparation.
           </p>
 
           <h2>6. Not Financial or Investment Advice</h2>
