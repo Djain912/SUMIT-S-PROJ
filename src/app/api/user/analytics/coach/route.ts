@@ -3,6 +3,11 @@ import { Redis } from '@upstash/redis';
 import { AuthError, requireAuthenticatedUser } from '@/server/policies/auth';
 import { getUserAnalyticsData } from '@/server/services/analytics.service';
 import { openai, MEMORY_MODEL } from '@/lib/ai/openai';
+import { prisma } from '@/lib/db/prisma';
+
+// Below this many questions answered, the sample is too small to judge mastery —
+// the coach must push curriculum coverage, not declare the student "done".
+const LOW_COVERAGE_QUESTIONS = 40;
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -62,7 +67,7 @@ export async function GET() {
     const fingerprint = `${s.totalAttempts}-${s.totalQuestions}-${s.correctAnswers}-${data.weakTopics.length}-${data.strongTopics.length}`;
     // Bump this version whenever the coaching prompt changes — it invalidates
     // every student's cached coaching so they get the new guidance immediately.
-    const cacheKey = `analytics-coach:v2:${user.id}:${fingerprint}`;
+    const cacheKey = `analytics-coach:v3:${user.id}:${fingerprint}`;
     const r = getRedis();
 
     if (r) {
@@ -84,7 +89,18 @@ export async function GET() {
       .map(t => `${t.title} — ${t.accuracy}%`)
       .join('; ') || 'none yet';
 
-    const snapshot = `Overall: ${s.overallAccuracy}% accuracy, ${s.totalAttempts} quizzes, ${s.totalQuestions} questions, avg score ${s.averageScore}%. Current streak ${s.currentStreak} days (best ${s.longestStreak}).
+    // Coverage: how much of the Level I curriculum has actually been attempted.
+    // 100% accuracy on a handful of questions is NOT mastery — the coach needs
+    // this to avoid over-praising a student who has barely started.
+    const [chaptersTotal, subtopicsTotal] = await Promise.all([
+      prisma.chapter.count({ where: { level: 'LEVEL_1', isPublished: true, isDeleted: false } }),
+      prisma.subtopic.count({ where: { isPublished: true, isDeleted: false, chapter: { level: 'LEVEL_1', isPublished: true, isDeleted: false } } }),
+    ]);
+    const subtopicsAttempted = data.chapterAnalysis.reduce((n, ch) => n + ch.subtopics.length, 0);
+    const lowCoverage = s.totalQuestions < LOW_COVERAGE_QUESTIONS || subtopicsAttempted < Math.max(3, subtopicsTotal * 0.5);
+
+    const snapshot = `Overall: ${s.overallAccuracy}% accuracy, ${s.totalAttempts} quizzes, ${s.totalQuestions} questions answered, avg score ${s.averageScore}%. Current streak ${s.currentStreak} days (best ${s.longestStreak}).
+COVERAGE: attempted ${subtopicsAttempted} of ${subtopicsTotal} Level I topics across ${data.chapterAnalysis.length} of ${chaptersTotal} chapters. ${lowCoverage ? 'This is LOW coverage — the student has only sampled a small slice of the curriculum, so accuracy is NOT yet evidence of mastery.' : 'Coverage is reasonably broad.'}
 By level: ${levelLines || 'n/a'}.
 WEAK topics (<50%): ${weakLines}.
 STRONG topics (>=70%): ${strongLines}.`;
@@ -115,9 +131,10 @@ WHAT CHARTIX OFFERS — every recommendation MUST be one of these, nothing else:
 STRICT RULES:
 - Chartix currently has ONLY CMT Level I. NEVER mention or recommend Level II or Level III materials, quizzes, or "advancing to the next level" — they do not exist on the platform.
 - NEVER recommend anything outside Chartix: no study groups, forums, peers, external books, websites, or communities.
-- plan has 3-4 steps, ordered by priority (weakest topics first, then reinforce strong ones).
-- If there are NO weak topics, the plan = take a full-length mock test, revisit specific strong topics to stay sharp, practise any Level I topics not yet attempted, and use Chartix Scholar to go deeper. Do NOT suggest moving beyond Level I.
-- Be specific to CMT Level I technical analysis. No emojis.`,
+- COVERAGE BEFORE MASTERY: judge the student on coverage, not just accuracy. If the snapshot says coverage is LOW, do NOT congratulate them on "mastering all topics" or call it a "perfect streak across all topics" — they have only answered a few questions on a few topics. Be honest but encouraging: it's a strong start on a small sample. The plan must then focus on BREADTH — read the Chartix notes for topics not yet studied and take quizzes across the chapters they haven't attempted yet. Do NOT recommend a full-length mock test as the top priority when coverage is low (a mock test makes sense once they've studied most of the curriculum).
+- When coverage is broad and there are no weak topics, THEN it's appropriate to suggest a full-length mock test, revisiting strong topics, and using Chartix Scholar to go deeper.
+- plan has 3-4 steps, ordered by priority (close weak topics and gaps in coverage first).
+- Be specific to CMT Level I technical analysis. Reference the student's real topic names. No emojis.`,
         },
         { role: 'user', content: snapshot },
       ],
