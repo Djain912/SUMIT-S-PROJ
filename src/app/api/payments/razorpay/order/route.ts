@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     const order = await getRazorpay().orders.create({
       amount: LEVEL1_PRICE_PAISE,
       currency: 'INR',
-      receipt: `cmt1-${user.id.slice(0, 24)}-${Date.now()}`,
+      receipt: `cmt1_${user.id.slice(-10)}_${Date.now().toString(36)}`, // Razorpay caps receipt at 40 chars
       notes: { userId: user.id, level: PLAN_LEVEL },
     });
 
