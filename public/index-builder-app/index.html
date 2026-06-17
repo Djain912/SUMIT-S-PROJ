@@ -282,6 +282,11 @@ main{flex:1;display:flex;min-height:0}
         <button class="tbtn" id="iVOL" onclick="toggleInd('vol')">Vol</button>
       </div>
       <div class="lb-group">
+        <span class="lb-lbl">Compare</span>
+        <button class="tbtn" id="iRS50" onclick="toggleRS('^NSEI')" title="Relative Strength vs Nifty 50">vs N50</button>
+        <button class="tbtn" id="iRS500" onclick="toggleRS('^CRSLDX')" title="Relative Strength vs Nifty 500">vs N500</button>
+      </div>
+      <div class="lb-group">
         <span class="lb-lbl">Draw</span>
         <button class="tbtn draw" id="dCursor" onclick="setTool('cursor')" title="Cursor"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l7 16 2-7 7-2z"/></svg></button>
         <button class="tbtn draw" id="dTrend" onclick="setTool('trend')" title="Trend line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21L21 3"/></svg></button>
@@ -334,6 +339,7 @@ const S = {
   times:[], closes:[], ohlc:null, vol:null, chartType:'area',
   chart:null, main:null, ind:{},
   on:{sma1:false,sma2:false,ema:false,bb:false,rsi:false,macd:false,vol:false},
+  rs:{n50:false,n500:false,data:{}},
   matrix:null, title:'Custom Index', weightMode:'mcap',
 };
 function setWeight(mode){
@@ -517,6 +523,7 @@ async function fetchSeries(sym,start,end,field){
 }
 async function fetchAndBuild(){
   clearMsg();
+  S.rs.data={};  // date range may change — invalidate cached benchmark series
   const status=document.getElementById('fetchStatus');
   const start=document.getElementById('gStart').value,end=document.getElementById('gEnd').value;
   const field=document.getElementById('priceField').value;
@@ -672,6 +679,33 @@ function RSI(v,p){const o=Array(v.length).fill(null);if(v.length<=p)return o;let
 function MACD(v,f,sl,sig){const ef=EMA(v,f),es=EMA(v,sl);const mc=v.map((_,i)=>(ef[i]!=null&&es[i]!=null)?ef[i]-es[i]:null);const idx=mc.map((x,i)=>x!=null?i:-1).filter(i=>i>=0);const sc=EMA(idx.map(i=>mc[i]),sig);const sg=Array(v.length).fill(null);idx.forEach((gi,k)=>{if(sc[k]!=null)sg[gi]=sc[k];});return{macd:mc,signal:sg,hist:v.map((_,i)=>(mc[i]!=null&&sg[i]!=null)?mc[i]-sg[i]:null)};}
 function pack(arr){const o=[];for(let i=0;i<arr.length;i++){if(arr[i]!=null&&!isNaN(arr[i]))o.push({time:S.times[i],value:arr[i]});}return o;}
 function toggleInd(k){if(k==='vol'&&!S.vol)return;S.on[k]=!S.on[k];const m={sma1:'iSMA1',sma2:'iSMA2',ema:'iEMA',bb:'iBB',rsi:'iRSI',macd:'iMACD',vol:'iVOL'};document.getElementById(m[k]).classList.toggle('on',S.on[k]);if(S.chart)refreshIndicators();}
+async function toggleRS(sym){
+  if(!S.times.length){showMsg('Build an index first, then compare.','err');return;}
+  const key=sym==='^NSEI'?'n50':'n500';
+  const btnId=sym==='^NSEI'?'iRS50':'iRS500';
+  S.rs[key]=!S.rs[key];
+  document.getElementById(btnId).classList.toggle('on',S.rs[key]);
+  if(S.rs[key]&&!S.rs.data[sym]){
+    setStatus('Fetching benchmark…');
+    const start=S.times[0],end=S.times[S.times.length-1];
+    try{
+      const r=await fetch('/api/index-tools/history?symbol='+encodeURIComponent(sym)+'&start='+start+'&end='+end);
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      const j=await r.json();
+      const map={};
+      for(let i=0;i<(j.dates||[]).length;i++){if(j.close[i]!=null)map[j.dates[i]]=j.close[i];}
+      if(!Object.keys(map).length)throw new Error('no data returned');
+      S.rs.data[sym]=map;
+      setStatus('');
+    }catch(e){
+      showMsg('Could not fetch benchmark: '+e.message,'err');
+      S.rs[key]=false;
+      document.getElementById(btnId).classList.remove('on');
+      return;
+    }
+  }
+  if(S.chart)refreshIndicators();
+}
 function refreshIndicators(){
   if(!S.chart||!S.main)return;
   Object.values(S.ind).forEach(s=>{try{S.chart.removeSeries(s);}catch(e){}});S.ind={};
@@ -684,6 +718,30 @@ function refreshIndicators(){
   let pane=1;
   if(S.on.rsi){S.ind.rsi=S.chart.addSeries(LWC.LineSeries,{color:'#d97706',lineWidth:1,priceLineVisible:false,lastValueVisible:true},pane);S.ind.rsi.setData(pack(RSI(v,14)));try{S.ind.rsi.createPriceLine({price:70,color:'#dc2626',lineWidth:1,lineStyle:LWC.LineStyle.Dashed,axisLabelVisible:true,title:'70'});S.ind.rsi.createPriceLine({price:30,color:'#16a34a',lineWidth:1,lineStyle:LWC.LineStyle.Dashed,axisLabelVisible:true,title:'30'});}catch(e){}pane++;}
   if(S.on.macd){const m=MACD(v,12,26,9);S.ind.macdHist=S.chart.addSeries(LWC.HistogramSeries,{priceLineVisible:false,lastValueVisible:false},pane);const hd=[];for(let i=0;i<v.length;i++){if(m.hist[i]!=null)hd.push({time:S.times[i],value:m.hist[i],color:m.hist[i]>=0?'rgba(22,163,74,.6)':'rgba(220,38,38,.6)'});}S.ind.macdHist.setData(hd);S.ind.macdLine=S.chart.addSeries(LWC.LineSeries,{color:'#2d7d52',lineWidth:1,priceLineVisible:false,lastValueVisible:false},pane);S.ind.macdLine.setData(pack(m.macd));S.ind.macdSig=S.chart.addSeries(LWC.LineSeries,{color:'#d97706',lineWidth:1,priceLineVisible:false,lastValueVisible:false},pane);S.ind.macdSig.setData(pack(m.signal));pane++;}
+  // RS Line pane — both benchmarks share one sub-pane
+  const anyRS=S.rs.n50||S.rs.n500;
+  if(anyRS){
+    const benchCfg=[{sym:'^NSEI',key:'n50',color:'#7c3aed',label:'RS vs N50'},{sym:'^CRSLDX',key:'n500',color:'#0891b2',label:'RS vs N500'}];
+    let addedRS=false;
+    benchCfg.forEach(function(b){
+      if(!S.rs[b.key]||!S.rs.data[b.sym])return;
+      const bmap=S.rs.data[b.sym];
+      const bvals=[];let lastB=null;
+      S.times.forEach(function(t){if(bmap[t]!=null)lastB=bmap[t];bvals.push(lastB);});
+      let si2=-1,b0=null,c0=null;
+      for(let i=0;i<S.times.length;i++){if(bvals[i]!=null&&S.closes[i]!=null){si2=i;b0=bvals[i];c0=S.closes[i];break;}}
+      if(si2<0)return;
+      const rsData=[];
+      for(let i=si2;i<S.times.length;i++){if(bvals[i]!=null&&S.closes[i]!=null)rsData.push({time:S.times[i],value:(S.closes[i]/c0)/(bvals[i]/b0)*100});}
+      S.ind['rs_'+b.sym]=S.chart.addSeries(LWC.LineSeries,{color:b.color,lineWidth:2,priceLineVisible:false,lastValueVisible:true,title:b.label},pane);
+      S.ind['rs_'+b.sym].setData(rsData);
+      try{S.ind['rs_'+b.sym].createPriceLine({price:100,color:'#9ca3af',lineWidth:1,lineStyle:LWC.LineStyle.Dashed,axisLabelVisible:true,title:'100'});}catch(e){}
+      const rsMap={};rsData.forEach(function(d){rsMap[d.time]=d.value;});
+      S.indCache['rs_'+b.sym]=S.times.map(function(t){return rsMap[t]??null;});
+      addedRS=true;
+    });
+    if(addedRS)pane++;
+  }
   try{const ps=S.chart.panes();if(ps.length>1){const h=document.getElementById('chartWrap').clientHeight;const sub=Math.max(90,Math.min(150,Math.floor(h*.22)));for(let i=1;i<ps.length;i++)ps[i].setHeight(sub);}}catch(e){}
   // cache indicator value arrays so the legend can read them by date index
   S.indCache={};
@@ -717,6 +775,8 @@ function onCrosshair(param){
   if(S.on.rsi)add('RSI 14',C.rsi,'#d97706');
   if(S.on.macd&&C.macd){html+=`<div class="row"><span class="k" style="color:#2d7d52">MACD</span> <b>${fmt(C.macd[idx],2)}</b> <span class="k" style="color:#d97706">sig</span> ${fmt(C.macdSig[idx],2)} <span class="k">hist</span> ${fmt(C.macdHist[idx],2)}</div>`;}
   if(S.on.vol&&C.vol)add('VOL',C.vol,'#2d7d52');
+  if(S.rs.n50&&C['rs_^NSEI'])add('RS vs N50',C['rs_^NSEI'],'#7c3aed');
+  if(S.rs.n500&&C['rs_^CRSLDX'])add('RS vs N500',C['rs_^CRSLDX'],'#0891b2');
   lg.innerHTML=html;
 }
 
