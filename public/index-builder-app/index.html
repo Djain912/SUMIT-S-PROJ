@@ -683,10 +683,14 @@ async function toggleRS(sym){
   if(!S.times.length){showMsg('Build an index first, then compare.','err');return;}
   const key=sym==='^NSEI'?'n50':'n500';
   const btnId=sym==='^NSEI'?'iRS50':'iRS500';
+  const btn=document.getElementById(btnId);
   S.rs[key]=!S.rs[key];
-  document.getElementById(btnId).classList.toggle('on',S.rs[key]);
+  btn.classList.toggle('on',S.rs[key]);
   if(S.rs[key]&&!S.rs.data[sym]){
-    setStatus('Fetching benchmark…');
+    // Show loading state on button + status bar while fetching
+    const origText=btn.textContent;
+    btn.textContent='…';btn.disabled=true;btn.style.opacity='0.6';
+    document.getElementById('fetchStatus').textContent='Fetching benchmark data…';
     const start=S.times[0],end=S.times[S.times.length-1];
     try{
       const r=await fetch('/api/index-tools/history?symbol='+encodeURIComponent(sym)+'&start='+start+'&end='+end);
@@ -696,13 +700,16 @@ async function toggleRS(sym){
       for(let i=0;i<(j.dates||[]).length;i++){if(j.close[i]!=null)map[j.dates[i]]=j.close[i];}
       if(!Object.keys(map).length)throw new Error('no data returned');
       S.rs.data[sym]=map;
-      setStatus('');
+      document.getElementById('fetchStatus').textContent='';
     }catch(e){
       showMsg('Could not fetch benchmark: '+e.message,'err');
       S.rs[key]=false;
-      document.getElementById(btnId).classList.remove('on');
+      btn.classList.remove('on');
+      document.getElementById('fetchStatus').textContent='';
+      btn.textContent=origText;btn.disabled=false;btn.style.opacity='';
       return;
     }
+    btn.textContent=origText;btn.disabled=false;btn.style.opacity='';
   }
   if(S.chart)refreshIndicators();
 }
