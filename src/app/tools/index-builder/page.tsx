@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 };
 
 // The actual interactive tool (self-contained app served from /public).
-const APP_URL = '/index-builder-app/index.html?v=2';
+const APP_URL = '/index-builder-app/index.html?v=5';
 
 const features = [
   { icon: BookOpen, title: '4,900+ NSE/BSE stocks', desc: 'Search any listed Indian stock by name or symbol and add it to your index.' },
@@ -127,8 +127,8 @@ export default function IndexBuilderPage() {
             {features.map((f) => {
               const Icon = f.icon;
               return (
-                <div key={f.title} className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-6">
-                  <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600">
+                <div key={f.title} className="rounded-2xl border border-zinc-100 bg-white p-6 shadow-[0_1px_2px_rgba(16,40,30,.04),0_8px_24px_rgba(16,40,30,.06)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_32px_rgba(16,40,30,.10)]">
+                  <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-600 shadow-sm">
                     <Icon className="h-5 w-5 text-white" />
                   </div>
                   <h3 className="mt-4 text-sm font-bold text-emerald-900">{f.title}</h3>

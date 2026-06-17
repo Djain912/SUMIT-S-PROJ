@@ -11,28 +11,31 @@
 <script src="stocks.js"></script>
 <style>
 :root{
-  --bg:#f8fffe; --panel:#ffffff; --panel-2:#f0fdf7; --line:#d1fae5;
-  --line-soft:#e6f7ef; --txt:#111827; --txt-dim:#374151; --txt-mut:#6b7280;
-  --accent:#2d7d52; --accent-dim:#1a5c3a;
-  --up:#16a34a; --down:#dc2626; --idx:#2d7d52;
+  --bg:#eef2f1; --panel:#ffffff; --panel-2:#f3faf6; --line:#e6ecea;
+  --line-soft:#eef2f1; --txt:#0f172a; --txt-dim:#374151; --txt-mut:#6b7280;
+  --accent:#0f7b5a; --accent-dim:#0b6047;
+  --topbar:#0c3b29; --topbar-soft:rgba(255,255,255,.12);
+  --up:#16a34a; --down:#dc2626; --idx:#0f7b5a;
   --ma1:#d97706; --ma2:#7c3aed; --ema:#0891b2; --bb:#64748b;
   --grid:#f0fdf7; --chip:#f0fdf7;
-  --radius:10px; --radius-sm:6px;
+  --radius:16px; --radius-sm:11px;
+  --shadow:0 1px 2px rgba(16,40,30,.04), 0 4px 16px rgba(16,40,30,.06);
+  --shadow-lg:0 8px 30px rgba(16,40,30,.10);
 }
 *{box-sizing:border-box}
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--txt);font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:13px;line-height:1.45;-webkit-font-smoothing:antialiased;}
 .mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
 .app{display:flex;flex-direction:column;height:100vh;min-height:0}
-header.top{display:flex;align-items:center;gap:16px;padding:10px 18px;border-bottom:1px solid var(--line);background:var(--panel);box-shadow:0 1px 3px rgba(0,0,0,.06);}
+header.top{display:flex;align-items:center;gap:16px;padding:12px 20px;background:var(--topbar);box-shadow:0 2px 12px rgba(12,59,41,.18);position:relative;z-index:30}
 .brand{display:flex;align-items:baseline;gap:10px}
-.brand .glyph{font-family:"Sora";font-weight:700;font-size:18px;letter-spacing:-.5px;color:var(--accent)}
-.brand .glyph::before{content:"◧ ";color:var(--accent)}
-.brand .sub{font-size:11px;color:var(--txt-mut);letter-spacing:.4px;text-transform:uppercase}
+.brand .glyph{font-family:"Sora";font-weight:700;font-size:18px;letter-spacing:-.5px;color:#fff}
+.brand .glyph::before{content:"◧ ";color:#5fe3a8}
+.brand .sub{font-size:11px;color:rgba(255,255,255,.6);letter-spacing:.4px;text-transform:uppercase}
 .top .spacer{flex:1}
-.tagchip{font-size:10.5px;color:var(--txt-dim);border:1px solid var(--line);padding:3px 8px;border-radius:20px;letter-spacing:.3px;background:var(--panel-2)}
+.tagchip{font-size:10.5px;color:rgba(255,255,255,.85);border:1px solid var(--topbar-soft);padding:4px 10px;border-radius:20px;letter-spacing:.3px;background:var(--topbar-soft)}
 main{flex:1;display:flex;min-height:0}
-aside{width:330px;flex:none;border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0}
+aside{width:340px;flex:none;border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0;box-shadow:2px 0 16px rgba(16,40,30,.05);z-index:10}
 .tabs{display:flex;border-bottom:1px solid var(--line)}
 .tabs button{flex:1;background:none;border:none;color:var(--txt-mut);font-family:"Sora";font-weight:600;font-size:12px;padding:12px 8px;cursor:pointer;border-bottom:2px solid transparent;letter-spacing:.2px}
 .tabs button.active{color:var(--accent);border-bottom-color:var(--accent)}
@@ -83,8 +86,8 @@ textarea{font-family:"JetBrains Mono",monospace;font-size:11.5px;line-height:1.5
 .stat .v{font-family:"JetBrains Mono";font-weight:600;font-size:14px;color:var(--txt);margin-top:1px}
 .stat .v.pos{color:var(--up)}.stat .v.neg{color:var(--down)}
 @media(max-width:880px){aside{position:absolute;z-index:20;height:100%;box-shadow:4px 0 20px rgba(0,0,0,.12)}}
-.menu-toggle{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--line);color:var(--txt-dim);border-radius:20px;padding:6px 12px;cursor:pointer;font-family:"Sora";font-weight:600;font-size:11.5px}
-.menu-toggle:hover{border-color:var(--accent);color:var(--accent)}
+.menu-toggle{display:inline-flex;align-items:center;gap:6px;background:var(--topbar-soft);border:1px solid var(--topbar-soft);color:#fff;border-radius:20px;padding:7px 13px;cursor:pointer;font-family:"Sora";font-weight:600;font-size:11.5px}
+.menu-toggle:hover{background:rgba(255,255,255,.2)}
 aside.collapsed{display:none!important}
 input[type=date]{width:100%;background:#fff;border:1px solid var(--line);color:var(--txt);border-radius:var(--radius-sm);padding:7px 8px;font-size:12px;font-family:inherit;outline:none}
 input[type=date]:focus{border-color:var(--accent)}
@@ -94,7 +97,7 @@ input[type=date]::-webkit-calendar-picker-indicator{opacity:.6}
 .subtabs button.active{background:#fff;color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 /* stock card */
-.stock-card{background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:8px;margin-bottom:8px;position:relative}
+.stock-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius-sm);padding:9px;margin-bottom:8px;position:relative;box-shadow:var(--shadow)}
 .sc-top{display:flex;gap:6px;align-items:center}
 .sc-top .sc-tk{flex:1.6;text-transform:uppercase}
 .sc-top .sc-sh{flex:1}
@@ -124,132 +127,177 @@ input[type=date]::-webkit-calendar-picker-indicator{opacity:.6}
 .sm-col.picked{border-color:#111827}
 #smDelete{width:100%;background:#fff;border:1px solid rgba(220,38,38,.35);color:#dc2626;border-radius:6px;padding:7px;font-size:12px;font-family:"Sora";font-weight:600;cursor:pointer}
 #smDelete:hover{background:rgba(220,38,38,.06)}
+
+/* ── TradingView-style command bar + controls (overhaul) ── */
+.app{display:flex;flex-direction:column;height:100vh;min-height:0}
+header.cmd{display:flex;align-items:center;gap:14px;padding:0 16px;height:56px;background:var(--topbar);box-shadow:0 2px 12px rgba(12,59,41,.18);position:relative;z-index:40;flex:none}
+.cmd .brand{display:flex;align-items:baseline;gap:7px}
+.cmd .brand .glyph{font-family:"Sora";font-weight:800;font-size:17px;letter-spacing:-.5px;color:#fff}
+.cmd .brand .glyph::before{content:"◧ ";color:#5fe3a8}
+.cmd .brand .brand-sub{font-size:12px;color:rgba(255,255,255,.6);font-weight:600}
+.cmd-search{position:relative;flex:1;max-width:420px}
+.cmd-search input{width:100%;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);color:#fff;border-radius:10px;padding:9px 14px;font-size:13px;font-family:inherit;outline:none}
+.cmd-search input::placeholder{color:rgba(255,255,255,.6)}
+.cmd-search input:focus{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.4)}
+#topAcDrop{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:90;background:#fff;border:1px solid var(--line);border-radius:11px;box-shadow:var(--shadow-lg);max-height:300px;overflow-y:auto;display:none}
+#topAcDrop.open{display:block}
+#topAcDrop .ac-item{padding:9px 13px;cursor:pointer;font-size:13px;color:var(--txt);display:flex;justify-content:space-between;gap:8px}
+#topAcDrop .ac-item:hover,#topAcDrop .ac-item.hi{background:var(--panel-2);color:var(--accent)}
+#topAcDrop .ac-sym{font-weight:700}#topAcDrop .ac-name{color:var(--txt-mut);font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmd-actions{margin-left:auto;display:flex;align-items:center;gap:8px}
+.cmd-btn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);color:#fff;border-radius:9px;padding:8px 13px;font-size:13px;font-weight:600;font-family:"Sora";cursor:pointer;white-space:nowrap}
+.cmd-btn:hover{background:rgba(255,255,255,.22)}
+.cmd-btn.solid{background:#16a86c;border-color:#16a86c}
+.cmd-btn.solid:hover{background:#129a5f}
+#saveStatus{font-size:11px;color:rgba(255,255,255,.7);min-width:0;white-space:nowrap}
+.cmd #cloudAcct{display:flex;align-items:center;gap:7px;font-size:13px;color:#fff}
+.cmd #cloudAcct img{width:26px;height:26px;border-radius:50%}
+.cmd #cloudAcct .nm{font-weight:600;color:#fff;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmd #cloudAcct .lnk{font-size:12px;color:rgba(255,255,255,.7);cursor:pointer;text-decoration:underline}
+.cmd #cloudAcct .gbtn{display:inline-flex;align-items:center;gap:6px;background:#fff;color:#1f2937;border:none;border-radius:9px;padding:8px 13px;font-size:13px;font-weight:600;text-decoration:none;cursor:pointer}
+.controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);position:relative;z-index:30;flex:none}
+.ctrl-name{width:200px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:13px;font-weight:600;font-family:inherit;outline:none}
+.ctrl-name:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(15,123,90,.12)}
+.controls .subtabs{display:flex;gap:4px;margin:0;background:var(--panel-2);padding:3px;border-radius:10px;border:1px solid var(--line)}
+.controls .subtabs button{background:none;border:none;color:var(--txt-mut);font-family:"Sora";font-weight:600;font-size:12.5px;padding:6px 12px;border-radius:7px;cursor:pointer}
+.controls .subtabs button.active{background:#fff;color:var(--accent);box-shadow:var(--shadow)}
+.range{display:flex;gap:3px;background:var(--panel-2);padding:3px;border-radius:10px;border:1px solid var(--line)}
+.range button{background:none;border:none;color:var(--txt-mut);font-family:"Sora";font-weight:600;font-size:12.5px;padding:6px 11px;border-radius:7px;cursor:pointer}
+.range button.on{background:#fff;color:var(--accent);box-shadow:var(--shadow)}
+.gear{background:#fff;border:1px solid var(--line);border-radius:10px;width:38px;height:38px;font-size:16px;cursor:pointer;color:var(--txt-dim)}
+.gear:hover{border-color:var(--accent);color:var(--accent)}
+.btn-build{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:9px 22px;font-family:"Sora";font-weight:700;font-size:13px;cursor:pointer;box-shadow:0 2px 8px rgba(15,123,90,.25)}
+.btn-build:hover{background:var(--accent-dim)}
+.controls .hint{margin:0;font-size:11.5px}
+.pop{position:absolute;top:calc(100% + 6px);left:16px;z-index:60;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow-lg);padding:14px 16px;width:280px;display:none}
+.pop.open{display:block}
+.pop .fld{margin:10px 0 4px}.pop .fld:first-child{margin-top:0}
+.chips{display:flex;align-items:center;gap:7px;padding:9px 16px;background:var(--panel);border-bottom:1px solid var(--line);overflow-x:auto;flex:none;min-height:44px}
+.chips:empty::before{content:"Add stocks above, or load a ready-made index →";color:var(--txt-mut);font-size:12px}
+.chip{display:inline-flex;align-items:center;gap:7px;background:var(--panel-2);border:1px solid var(--line);border-radius:20px;padding:6px 8px 6px 13px;font-size:12.5px;font-weight:600;color:var(--txt-dim);white-space:nowrap;box-shadow:var(--shadow)}
+.chip .cx{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,.06);color:var(--txt-mut);cursor:pointer;font-size:12px;border:none}
+.chip .cx:hover{background:var(--down);color:#fff}
+main{flex:1;display:flex;min-height:0}
+/* chart-type segmented control in the controls strip */
+.ctype{display:flex;gap:3px;background:var(--panel-2);padding:3px;border-radius:10px;border:1px solid var(--line)}
+.ctype .tbtn{border:none;background:none;border-radius:7px;padding:6px 12px;margin:0;color:var(--txt-mut);font-family:"Sora";font-weight:600;font-size:12.5px}
+.ctype .tbtn:hover{color:var(--accent)}
+.ctype .tbtn.on{background:#fff;color:var(--accent);box-shadow:var(--shadow)}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.grid3 .miniinp{width:100%}
+/* left vertical toolbar */
+.leftbar{flex:none;width:74px;background:var(--panel);border-right:1px solid var(--line);box-shadow:2px 0 12px rgba(16,40,30,.04);display:flex;flex-direction:column;gap:10px;padding:12px 8px;overflow-y:auto;z-index:10}
+.lb-group{display:flex;flex-direction:column;gap:6px;padding-bottom:10px;border-bottom:1px solid var(--line-soft)}
+.lb-group:last-child{border-bottom:none}
+.lb-lbl{font-size:9px;color:var(--txt-mut);text-transform:uppercase;letter-spacing:.5px;text-align:center;font-weight:700;margin-bottom:1px}
+.leftbar .tbtn{width:100%;margin:0;justify-content:center;padding:8px 4px;font-size:11px;font-weight:600;font-family:"Sora"}
+.leftbar .tbtn.draw{padding:9px 4px}
+.leftbar .tbtn.draw svg{width:16px;height:16px}
+.lb-actions .tbtn{font-size:15px;padding:7px 4px}
 </style>
 </head>
 <body>
 <div class="app">
-  <header class="top">
-    <button class="menu-toggle" id="menuToggle" title="Show / hide the Build panel">☰ Hide panel</button>
-    <div class="brand">
-      <span class="glyph">CHARTIX INDEX BUILDER</span>
-      <span class="sub">Build &amp; chart custom indices · chartix.in</span>
+  <!-- ── COMMAND BAR (dark) ── -->
+  <header class="cmd">
+    <div class="brand"><span class="glyph">CHARTIX</span><span class="brand-sub">Index Builder</span></div>
+    <div class="cmd-search">
+      <input type="text" id="topSearch" placeholder="Add a stock to your index…" autocomplete="off">
+      <div class="ac-drop" id="topAcDrop"></div>
     </div>
-    <div class="spacer"></div>
-    <span class="tagchip" id="srcChip">No data loaded</span>
+    <div class="cmd-actions">
+      <button class="cmd-btn" id="btnReady">Ready-made ▾</button>
+      <button class="cmd-btn" id="btnMine">My indices ▾</button>
+      <button class="cmd-btn solid" id="btnSave">Save</button>
+      <span id="saveStatus"></span>
+      <div id="cloudAcct"></div>
+      <span class="tagchip" id="srcChip" style="display:none">No data loaded</span>
+    </div>
   </header>
 
+  <!-- ── CONTROLS STRIP (light) ── -->
+  <div class="controls">
+    <input type="text" id="idxName" class="ctrl-name" value="My Custom Index" placeholder="Index name">
+    <div class="subtabs" id="weightTabs">
+      <button id="wMcap" class="active" onclick="setWeight('mcap')">Market-cap</button>
+      <button id="wEqual" onclick="setWeight('equal')">Equal</button>
+    </div>
+    <div class="range" id="rangePresets">
+      <button data-yrs="1">1Y</button><button data-yrs="2" class="on">2Y</button><button data-yrs="5">5Y</button><button data-yrs="10">Max</button>
+    </div>
+    <div class="ctype">
+      <button class="tbtn on" id="btnArea" onclick="setChartType('area')">Area</button>
+      <button class="tbtn" id="btnLine" onclick="setChartType('line')">Line</button>
+      <button class="tbtn" id="btnCandle" onclick="setChartType('candle')">Candles</button>
+    </div>
+    <button class="gear" id="btnSettings" title="More settings">⚙</button>
+    <button class="btn-build" onclick="fetchAndBuild()">Build →</button>
+    <span id="fetchStatus" class="hint"></span>
+    <!-- settings popover -->
+    <div class="pop" id="settingsPop">
+      <label class="fld">Exchange</label>
+      <select id="exch"><option value=".NS">NSE (.NS)</option><option value=".BO">BSE (.BO)</option><option value="">US / as-typed</option></select>
+      <label class="fld">Price field</label>
+      <select id="priceField"><option value="close">Close (split-adj)</option><option value="adjclose">Adjusted close</option></select>
+      <label class="fld">Index base value</label>
+      <input type="number" id="baseValF" value="100" step="any">
+      <label class="fld">Custom dates</label>
+      <div class="grid2"><input type="date" id="gStart"><input type="date" id="gEnd"></div>
+      <label class="fld">Indicator periods (SMA · SMA · EMA)</label>
+      <div class="grid3">
+        <input class="miniinp" id="pSMA1" value="20" onchange="refreshIndicators()">
+        <input class="miniinp" id="pSMA2" value="50" onchange="refreshIndicators()">
+        <input class="miniinp" id="pEMA" value="21" onchange="refreshIndicators()">
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CONSTITUENT CHIPS ── -->
+  <div class="chips" id="chipStrip"></div>
+
+  <!-- ── hidden data store (the JS reads constituents from #stockList) ── -->
+  <div style="display:none">
+    <select id="srcSel"><option value="local" selected>local</option></select>
+    <input type="text" id="serverUrl" value="/api/index-tools">
+    <input type="text" id="proxyUrl" value="">
+    <div id="stockList"></div>
+    <span id="stkCount"></span>
+    <div id="constHint"></div>
+    <button id="addStockBtn" onclick="addStockRow()"></button>
+    <button id="menuToggle"></button>
+    <div class="msg" id="msg"></div>
+  </div>
+
   <main>
-    <aside id="sidebar">
-      <div class="tabs">
-        <button id="tabBuild" class="active">Build Index</button>
+    <!-- ── LEFT VERTICAL TOOLBAR (TradingView-style) ── -->
+    <div class="leftbar">
+      <div class="lb-group">
+        <span class="lb-lbl">Studies</span>
+        <button class="tbtn" id="iSMA1" onclick="toggleInd('sma1')">SMA 20</button>
+        <button class="tbtn" id="iSMA2" onclick="toggleInd('sma2')">SMA 50</button>
+        <button class="tbtn" id="iEMA" onclick="toggleInd('ema')">EMA 21</button>
+        <button class="tbtn" id="iBB" onclick="toggleInd('bb')">BB</button>
+        <button class="tbtn" id="iRSI" onclick="toggleInd('rsi')">RSI</button>
+        <button class="tbtn" id="iMACD" onclick="toggleInd('macd')">MACD</button>
+        <button class="tbtn" id="iVOL" onclick="toggleInd('vol')">Vol</button>
       </div>
-      <div class="scroll">
-
-        <!-- BUILD PANE -->
-        <div class="pane active" id="paneBuild">
-          <div class="hint" style="margin:0 0 14px;padding:9px 11px;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius-sm)">
-            <b>Build your own stock index — free.</b><br>① Name it · ② pick a date range · ③ add 2+ stocks · ④ hit <b>Build</b>.
-          </div>
-          <!-- Data source = same-origin Chartix API. Hidden from users. -->
-          <div style="display:none">
-            <select id="srcSel"><option value="local" selected>local</option></select>
-            <input type="text" id="serverUrl" value="/api/index-tools">
-            <input type="text" id="proxyUrl" value="">
-          </div>
-          <p class="section-title">Index identity</p>
-          <label class="fld">Index name</label>
-          <input type="text" id="idxName" value="My Custom Index" placeholder="e.g. Top 5 Midcap Index">
-
-          <div class="divider"></div>
-          <p class="section-title">Date range &amp; exchange</p>
-          <div class="grid2">
-            <div><label class="fld">Exchange</label>
-              <select id="exch">
-                <option value=".NS">NSE (.NS)</option>
-                <option value=".BO">BSE (.BO)</option>
-                <option value="">US / as-typed</option>
-              </select>
-            </div>
-            <div><label class="fld">Price field</label>
-              <select id="priceField">
-                <option value="close">Close (split-adj)</option>
-                <option value="adjclose">Adjusted close</option>
-              </select>
-            </div>
-          </div>
-          <div class="grid2">
-            <div><label class="fld">Start date</label><input type="date" id="gStart"></div>
-            <div><label class="fld">End date</label><input type="date" id="gEnd"></div>
-          </div>
-
-          <div class="divider"></div>
-          <p class="section-title">Weighting method</p>
-          <div class="subtabs" id="weightTabs">
-            <button id="wMcap" class="active" onclick="setWeight('mcap')">Market-cap</button>
-            <button id="wEqual" onclick="setWeight('equal')">Equal weight</button>
-          </div>
-
-          <p class="section-title">Constituents <span id="stkCount" class="mono" style="color:var(--txt-mut)"></span></p>
-          <div class="hint" id="constHint" style="margin:2px 0 8px">Up to 15 stocks · shares in Crores. Pick from the list and shares auto-fill from Yahoo — edit any value if needed.</div>
-          <div id="stockList"></div>
-          <button class="btn ghost" id="addStockBtn" onclick="addStockRow()">+ Add stock</button>
-          <button class="btn ghost" onclick="loadSample()" style="margin-top:8px">↻ Try a sample (RELIANCE · TCS · HDFCBANK)</button>
-
-          <label class="fld">Index base value</label>
-          <input type="number" id="baseValF" value="100" step="any">
-          <button class="btn" onclick="fetchAndBuild()">Fetch &amp; build index →</button>
-          <div id="fetchStatus" class="hint" style="margin-top:10px"></div>
-        </div>
-
-        <div class="msg" id="msg"></div>
+      <div class="lb-group">
+        <span class="lb-lbl">Draw</span>
+        <button class="tbtn draw" id="dCursor" onclick="setTool('cursor')" title="Cursor"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l7 16 2-7 7-2z"/></svg></button>
+        <button class="tbtn draw" id="dTrend" onclick="setTool('trend')" title="Trend line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21L21 3"/></svg></button>
+        <button class="tbtn draw" id="dHline" onclick="setTool('hline')" title="Support / Resistance"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18"/></svg></button>
+        <button class="tbtn draw" id="dRect" onclick="setTool('rect')" title="Zone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="12"/></svg></button>
+        <button class="tbtn draw" id="dFib" onclick="setTool('fib')" title="Fibonacci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h18M3 10h18M3 14h18M3 19h18"/></svg></button>
       </div>
-    </aside>
+      <div class="lb-group lb-actions">
+        <button class="tbtn" onclick="undoDraw()" title="Undo">↶</button>
+        <button class="tbtn" onclick="clearDraw()" title="Clear drawings">⌫</button>
+        <button class="tbtn" onclick="fitChart()" title="Fit to screen">⤢</button>
+        <button class="tbtn" onclick="exportPNG()" title="Download PNG">⭳</button>
+      </div>
+    </div>
 
     <div class="workspace">
-      <div class="toolbar">
-        <div class="tgroup">
-          <span class="lbl">Type</span>
-          <button class="tbtn on" id="btnArea" onclick="setChartType('area')">Area</button>
-          <button class="tbtn" id="btnLine" onclick="setChartType('line')">Line</button>
-          <button class="tbtn" id="btnCandle" onclick="setChartType('candle')">Candles</button>
-        </div>
-        <div class="tgroup">
-          <span class="lbl">Overlays</span>
-          <button class="tbtn" id="iSMA1" onclick="toggleInd('sma1')">SMA</button>
-          <input class="miniinp" id="pSMA1" value="20" onchange="refreshIndicators()">
-          <button class="tbtn" id="iSMA2" onclick="toggleInd('sma2')">SMA</button>
-          <input class="miniinp" id="pSMA2" value="50" onchange="refreshIndicators()">
-          <button class="tbtn" id="iEMA" onclick="toggleInd('ema')">EMA</button>
-          <input class="miniinp" id="pEMA" value="21" onchange="refreshIndicators()">
-          <button class="tbtn" id="iBB" onclick="toggleInd('bb')">Bollinger</button>
-        </div>
-        <div class="tgroup">
-          <span class="lbl">Panes</span>
-          <button class="tbtn" id="iRSI" onclick="toggleInd('rsi')">RSI</button>
-          <button class="tbtn" id="iMACD" onclick="toggleInd('macd')">MACD</button>
-          <button class="tbtn" id="iVOL" onclick="toggleInd('vol')">Volume</button>
-        </div>
-        <div class="tgroup">
-          <span class="lbl">Draw</span>
-          <button class="tbtn draw" id="dCursor" onclick="setTool('cursor')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l7 16 2-7 7-2z"/></svg>Cursor</button>
-          <button class="tbtn draw" id="dTrend" onclick="setTool('trend')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21L21 3"/></svg>Trend</button>
-          <button class="tbtn draw" id="dHline" onclick="setTool('hline')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18"/></svg>S/R</button>
-          <button class="tbtn draw" id="dRect" onclick="setTool('rect')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="12"/></svg>Zone</button>
-          <button class="tbtn draw" id="dFib" onclick="setTool('fib')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h18M3 10h18M3 14h18M3 19h18"/></svg>Fib</button>
-        </div>
-        <div class="tgroup">
-          <button class="tbtn" onclick="undoDraw()">↶ Undo</button>
-          <button class="tbtn" onclick="clearDraw()">⌫ Clear</button>
-          <button class="tbtn" onclick="fitChart()">⤢ Fit</button>
-          <button class="tbtn" onclick="exportPNG()">⭳ PNG</button>
-        </div>
-      </div>
-
       <div class="chart-wrap" id="chartWrap">
         <div id="chart"></div>
         <!-- Chartix watermark: faint centered brand + corner tag (advertises on screenshots) -->
@@ -896,7 +944,7 @@ new ResizeObserver(()=>{resizeOverlay();redrawOverlay();}).observe(document.getE
   const today=new Date(),back=new Date();back.setFullYear(today.getFullYear()-2);
   document.getElementById('gStart').value=toKey(back);
   document.getElementById('gEnd').value=toKey(today);
-  addStockRow();addStockRow();  // start with empty rows — user types their own stocks
+  // Chips start empty — users add stocks from the top search bar.
   srcChange();
 })();
 </script>
@@ -1063,12 +1111,23 @@ new ResizeObserver(()=>{resizeOverlay();redrawOverlay();}).observe(document.getE
     list.querySelectorAll('[data-rm]').forEach(function(b){ b.onclick=function(){ loadReadyMade(readyMade[b.getAttribute('data-rm')]); }; });
   }
   function loadReadyMade(x){
-    // Ready-made templates load as a fresh, equal-weighted starting point.
+    // Ready-made templates load market-cap weighted by default (like real
+    // indices) — shares auto-fetch from Yahoo. Equal weight is one toggle away.
     // Saving creates the user's OWN copy — the template is never modified.
     currentId=null; currentShareId=null;
-    applyState({ name:x.name, weightingType:'EQUAL', constituents:x.constituents.slice(), customWeights:null });
+    document.getElementById('idxName').value=x.name||'';
+    setWeight('mcap');
+    var list=document.getElementById('stockList'); list.innerHTML='';
+    x.constituents.forEach(function(sym){ addStockRow(sym); });
+    // auto-fetch outstanding shares for each constituent (market-cap weighting)
+    [].slice.call(document.querySelectorAll('#stockList [data-row]')).forEach(function(card){
+      var tk=(card.querySelector('.sc-tk').value||'').trim();
+      if(tk && typeof fetchShares==='function'){ try{ fetchShares(card, (typeof ySym==='function'?ySym(tk):tk)); }catch(e){} }
+    });
+    if(typeof updateStkCount==='function')updateStkCount();
+    renderChips();
     document.getElementById('rmModal').classList.remove('open');
-    setStatus(session&&session.user?'Loaded — Save to keep your copy':'Loaded — sign in to save');
+    setStatus(session&&session.user?'Loaded (market-cap) — Save to keep your copy':'Loaded — sign in to save');
     markDirty();
   }
 
@@ -1104,34 +1163,92 @@ new ResizeObserver(()=>{resizeOverlay();redrawOverlay();}).observe(document.getE
   }
 
   // ── inject the cloud UI into the Build pane ──
+  // ── constituent chips (visible mirror of the hidden #stockList rows) ──
+  function renderChips(){
+    var strip=document.getElementById('chipStrip'); if(!strip)return;
+    var rows=[].slice.call(document.querySelectorAll('#stockList [data-row]'));
+    strip.innerHTML='';
+    rows.forEach(function(r,i){
+      var tk=(r.querySelector('.sc-tk').value||'').trim().toUpperCase();
+      if(!tk)return;
+      var chip=document.createElement('span'); chip.className='chip';
+      chip.innerHTML=esc(tk)+'<button class="cx" title="Remove">×</button>';
+      chip.querySelector('.cx').onclick=function(){ r.remove(); if(typeof updateStkCount==='function')updateStkCount(); renderChips(); scheduleAutosave(); };
+      strip.appendChild(chip);
+    });
+  }
+  // add a stock (from the top search) → hidden row + chip; auto-fetch shares for market-cap
+  function addStock(sym){
+    sym=(sym||'').trim().toUpperCase(); if(!sym)return;
+    var existing=[].slice.call(document.querySelectorAll('#stockList .sc-tk')).map(function(i){return (i.value||'').trim().toUpperCase();});
+    if(existing.indexOf(sym)>=0)return; // no duplicates
+    addStockRow(sym);
+    var card=document.querySelector('#stockList [data-row]:last-child');
+    if(card&&S.weightMode!=='equal'&&typeof fetchShares==='function'){ try{ fetchShares(card, (typeof ySym==='function'?ySym(sym):sym)); }catch(e){} }
+    renderChips();
+  }
+  // ── top search autocomplete ──
+  function initTopSearch(){
+    var inp=document.getElementById('topSearch'), drop=document.getElementById('topAcDrop'); if(!inp)return;
+    var hi=-1;
+    function render(q){
+      var res=(typeof acSearch==='function')?acSearch(q):[]; hi=-1;
+      if(!res.length){drop.classList.remove('open');return;}
+      drop.innerHTML=res.map(function(r){return '<div class="ac-item" data-sym="'+esc(r[0])+'"><span class="ac-sym">'+esc(r[0])+'</span><span class="ac-name">'+esc(r[1])+'</span></div>';}).join('');
+      drop.querySelectorAll('.ac-item').forEach(function(el){ el.addEventListener('mousedown',function(e){e.preventDefault();pick(el.dataset.sym);}); });
+      drop.classList.add('open');
+    }
+    function pick(sym){ addStock(sym); inp.value=''; drop.classList.remove('open'); inp.focus(); }
+    inp.addEventListener('input',function(){render(inp.value);});
+    inp.addEventListener('keydown',function(e){
+      var items=drop.querySelectorAll('.ac-item');
+      if(e.key==='ArrowDown'){e.preventDefault();hi=Math.min(hi+1,items.length-1);items.forEach(function(el,i){el.classList.toggle('hi',i===hi);});}
+      else if(e.key==='ArrowUp'){e.preventDefault();hi=Math.max(hi-1,-1);items.forEach(function(el,i){el.classList.toggle('hi',i===hi);});}
+      else if(e.key==='Enter'){e.preventDefault();if(hi>=0)pick(items[hi].dataset.sym);else if(items.length===1)pick(items[0].dataset.sym);}
+      else if(e.key==='Escape')drop.classList.remove('open');
+    });
+    inp.addEventListener('blur',function(){setTimeout(function(){drop.classList.remove('open');},160);});
+  }
+  // ── date-range presets ──
+  function initRange(){
+    var box=document.getElementById('rangePresets'); if(!box)return;
+    box.querySelectorAll('button').forEach(function(b){
+      b.onclick=function(){
+        box.querySelectorAll('button').forEach(function(x){x.classList.remove('on');}); b.classList.add('on');
+        var yrs=parseInt(b.getAttribute('data-yrs'),10)||2;
+        var end=new Date(), start=new Date(); start.setFullYear(end.getFullYear()-yrs);
+        if(typeof toKey==='function'){ document.getElementById('gStart').value=toKey(start); document.getElementById('gEnd').value=toKey(end); }
+        scheduleAutosave();
+      };
+    });
+  }
+  // ── settings popover ──
+  function initSettings(){
+    var btn=document.getElementById('btnSettings'), pop=document.getElementById('settingsPop'); if(!btn)return;
+    btn.onclick=function(e){ e.stopPropagation(); pop.classList.toggle('open'); };
+    document.addEventListener('click',function(e){ if(pop.classList.contains('open')&&!pop.contains(e.target)&&e.target!==btn)pop.classList.remove('open'); });
+  }
+
   function injectUI(){
-    var pane=document.getElementById('paneBuild'); if(!pane)return;
-    var box=document.createElement('div'); box.id='cloudBox';
-    box.innerHTML='<div id="cloudAcct"></div>'+
-      '<div id="cloudBtns">'+
-        '<button class="btn ghost" id="btnReady">📚 Ready-made</button>'+
-        '<button class="btn ghost" id="btnMine">💾 My indices</button>'+
-        '<button class="btn" id="btnSave">Save</button>'+
-      '</div>'+
-      '<div id="saveStatus"></div>';
-    pane.insertBefore(box, pane.firstChild);
     renderAccount();
-    document.getElementById('btnReady').onclick=openReadyMade;
-    document.getElementById('btnMine').onclick=openMyIndices;
-    document.getElementById('btnSave').onclick=async function(){ if(!requireLogin())return; await doSave(false); };
+    var bR=document.getElementById('btnReady'); if(bR)bR.onclick=openReadyMade;
+    var bM=document.getElementById('btnMine'); if(bM)bM.onclick=openMyIndices;
+    var bS=document.getElementById('btnSave'); if(bS)bS.onclick=async function(){ if(!requireLogin())return; await doSave(false); };
     // modal close handlers
     document.querySelectorAll('.cloud-modal').forEach(function(m){
       m.addEventListener('click',function(e){ if(e.target===m||e.target.hasAttribute('data-close'))m.classList.remove('open'); });
     });
     document.getElementById('rmSearch').addEventListener('input',renderReadyMade);
     document.getElementById('rmCat').addEventListener('change',renderReadyMade);
-    // change detection for autosave
+    initTopSearch(); initRange(); initSettings();
+    // change detection for autosave + keep chips in sync with the hidden row store
     document.getElementById('idxName').addEventListener('input',scheduleAutosave);
     document.getElementById('wMcap').addEventListener('click',scheduleAutosave);
     document.getElementById('wEqual').addEventListener('click',scheduleAutosave);
     var sl=document.getElementById('stockList');
-    new MutationObserver(scheduleAutosave).observe(sl,{childList:true});
+    new MutationObserver(function(){ renderChips(); scheduleAutosave(); }).observe(sl,{childList:true});
     sl.addEventListener('input',scheduleAutosave);
+    renderChips();
   }
 
   // ── restore last index on load (most recently updated) ──
