@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 };
 
 // The actual interactive tool (self-contained app served from /public).
-const APP_URL = '/index-builder-app/index.html?v=5';
+const APP_URL = '/index-builder-app/index.html?v=6';
 
 const features = [
   { icon: BookOpen, title: '4,900+ NSE/BSE stocks', desc: 'Search any listed Indian stock by name or symbol and add it to your index.' },

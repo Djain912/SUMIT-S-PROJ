@@ -558,13 +558,17 @@ function assembleAndBuild(stocks,priceMap,baseVal,gStart,gEnd,equal){
     if(dates.length<2){showMsg('Not enough trading days.','err');return;}
     function ff(field){const out={};stocks.forEach(s=>{const m=priceMap[s.key][field]||{};let last=NaN;const a=[];for(const d of dates){if(m[d]!=null&&!isNaN(m[d]))last=m[d];a.push(last);}out[s.key]=a;});return out;}
     const C=ff('close'),O=ff('open'),H=ff('high'),L=ff('low');
-    let si=-1;for(let i=0;i<dates.length;i++){if(stocks.every(s=>!isNaN(C[s.key][i]))){si=i;break;}}
+    // Start at earliest date where ≥50% of stocks (min 2) have data — allows
+    // recently-listed stocks to join later without truncating the whole history.
+    const minSi=Math.max(2,Math.ceil(stocks.length/2));
+    let si=-1;for(let i=0;i<dates.length;i++){if(stocks.filter(s=>!isNaN(C[s.key][i])).length>=minSi){si=i;break;}}
     if(si<0){showMsg('No date with full pricing found.','err');return;}
     const recs=[];
 
     if(equal){
-      // Equal weight: each stock normalized to its base-date close, then averaged.
-      const baseC={};stocks.forEach(s=>baseC[s.key]=C[s.key][si]);
+      // Each stock normalized to its own first-available price so late joiners
+      // enter at neutral (1.0) — no index-level jump on entry.
+      const baseC={};stocks.forEach(s=>{const a=C[s.key];for(let j=0;j<a.length;j++){if(!isNaN(a[j])){baseC[s.key]=a[j];break;}}});
       function avg(F,i){let sum=0,cnt=0;stocks.forEach(s=>{const p=F[s.key][i],b=baseC[s.key];if(!isNaN(p)&&!isNaN(b)&&b>0){sum+=p/b;cnt++;}});return cnt?sum/cnt:NaN;}
       for(let i=si;i<dates.length;i++){
         const c=avg(C,i);if(isNaN(c))continue;
@@ -572,14 +576,24 @@ function assembleAndBuild(stocks,priceMap,baseVal,gStart,gEnd,equal){
         recs.push({key:dates[i],value:c*baseVal,o:ok?o*baseVal:NaN,h:ok?h*baseVal:NaN,l:ok?l*baseVal:NaN,c:c*baseVal});
       }
     }else{
-      // Market-cap weight: Σ price × shares.
-      let bm=0;stocks.forEach(s=>{bm+=C[s.key][si]*s.sharesCr*1e7;});
+      // Market-cap weight with divisor adjustment (Nifty / S&P methodology).
+      // When a new stock enters the index, the divisor is recalculated so the
+      // index level stays perfectly continuous — no jump on entry.
+      function sumMC(F,i,keys){let t=0;stocks.forEach(s=>{if(keys&&!keys.has(s.key))return;const p=F[s.key][i];if(!isNaN(p)&&s.sharesCr>0)t+=p*s.sharesCr*1e7;});return t;}
+      let bm=sumMC(C,si,null);
       if(bm<=0){showMsg('Base market cap is zero.','err');return;}
-      function mc(F,i){let t=0;stocks.forEach(s=>{const p=F[s.key][i];if(!isNaN(p)&&s.sharesCr>0)t+=p*s.sharesCr*1e7;});return t;}
+      let divisor=bm/baseVal,prevLevel=baseVal;
+      let prevPresent=new Set(stocks.filter(s=>!isNaN(C[s.key][si])).map(s=>s.key));
       for(let i=si;i<dates.length;i++){
-        const c=mc(C,i);if(c<=0)continue;
-        const o=mc(O,i),h=mc(H,i),l=mc(L,i),ok=o>0&&h>0&&l>0;
-        recs.push({key:dates[i],value:c/bm*baseVal,o:ok?o/bm*baseVal:NaN,h:ok?h/bm*baseVal:NaN,l:ok?l/bm*baseVal:NaN,c:c/bm*baseVal});
+        const curPresent=new Set(stocks.filter(s=>!isNaN(C[s.key][i])).map(s=>s.key));
+        const totMC=sumMC(C,i,null);
+        if(totMC<=0){prevPresent=curPresent;continue;}
+        // Divisor adjustment: any new joiner → recalc divisor so level is unchanged.
+        if(i>si&&[...curPresent].some(k=>!prevPresent.has(k)))divisor=totMC/prevLevel;
+        const level=totMC/divisor;
+        const omc=sumMC(O,i,null),hmc=sumMC(H,i,null),lmc=sumMC(L,i,null),ok=omc>0&&hmc>0&&lmc>0;
+        recs.push({key:dates[i],value:level,o:ok?omc/divisor:NaN,h:ok?hmc/divisor:NaN,l:ok?lmc/divisor:NaN,c:level});
+        prevLevel=level;prevPresent=curPresent;
       }
     }
     finalizeData(recs,recs.some(r=>!isNaN(r.o)),false);
