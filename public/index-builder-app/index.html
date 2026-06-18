@@ -1124,6 +1124,19 @@ new ResizeObserver(()=>{resizeOverlay();redrawOverlay();}).observe(document.getE
   #saveStatus{font-size:11px;color:var(--txt-mut,#6b7280);white-space:nowrap;flex:none}
   .cloud-modal{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:16px}
   .cloud-modal.open{display:flex}
+  /* load-options mini-dialog */
+  .lopt-card{background:#fff;border-radius:18px;padding:24px 26px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+  .lopt-title{font-family:"Sora",sans-serif;font-weight:700;font-size:16px;color:#0f3d2a;margin-bottom:2px}
+  .lopt-sub{font-size:12px;color:#6b7280;margin-bottom:20px}
+  .lopt-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;margin-bottom:8px}
+  .lopt-pills{display:flex;gap:6px;margin-bottom:18px}
+  .lopt-pill{flex:1;background:#f3faf6;border:1.5px solid #e6ecea;color:#374151;border-radius:10px;padding:9px 6px;font-family:"Sora",sans-serif;font-size:12.5px;font-weight:600;cursor:pointer;text-align:center}
+  .lopt-pill:hover{border-color:#0f7b5a;color:#0f7b5a}
+  .lopt-pill.on{background:#0f7b5a;border-color:#0f7b5a;color:#fff}
+  .lopt-go{width:100%;background:#0f7b5a;color:#fff;border:none;border-radius:12px;padding:13px;font-family:"Sora",sans-serif;font-weight:700;font-size:14px;cursor:pointer;margin-top:4px}
+  .lopt-go:hover{background:#0b6047}
+  .lopt-cancel{display:block;width:100%;background:none;border:none;color:#9ca3af;font-size:12px;cursor:pointer;padding:10px 0 0;text-align:center}
+  .lopt-cancel:hover{color:#374151}
   .cloud-card{background:#fff;border-radius:16px;width:100%;max-width:560px;max-height:84vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25)}
   .cloud-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #eef0f2}
   .cloud-head h3{margin:0;font-size:16px;font-weight:700;color:#0f3d2a}
@@ -1155,6 +1168,28 @@ new ResizeObserver(()=>{resizeOverlay();redrawOverlay();}).observe(document.getE
   <div class="cloud-head"><h3>My indices</h3><button class="x" data-close>×</button></div>
   <div class="cloud-body" id="myList"></div>
 </div></div>
+
+<!-- Load options dialog -->
+<div class="cloud-modal" id="loadOptModal">
+  <div class="lopt-card">
+    <div class="lopt-title" id="loptName">Sugar Index</div>
+    <div class="lopt-sub" id="loptSub">12 stocks</div>
+    <div class="lopt-lbl">Weighting</div>
+    <div class="lopt-pills" id="loptWeight">
+      <button class="lopt-pill on" data-w="mcap">Market-cap</button>
+      <button class="lopt-pill" data-w="equal">Equal weight</button>
+    </div>
+    <div class="lopt-lbl">Time period</div>
+    <div class="lopt-pills" id="loptPeriod">
+      <button class="lopt-pill" data-p="1">1 Year</button>
+      <button class="lopt-pill on" data-p="2">2 Years</button>
+      <button class="lopt-pill" data-p="5">5 Years</button>
+      <button class="lopt-pill" data-p="10">Max</button>
+    </div>
+    <button class="lopt-go" id="loptGo">Load &amp; Build →</button>
+    <button class="lopt-cancel" id="loptCancel">Cancel</button>
+  </div>
+</div>
 
 <script>
 (function(){
@@ -1266,25 +1301,38 @@ new ResizeObserver(()=>{resizeOverlay();redrawOverlay();}).observe(document.getE
     list.innerHTML=html||'<div class="cloud-empty">No indices match.</div>';
     list.querySelectorAll('[data-rm]').forEach(function(b){ b.onclick=function(){ loadReadyMade(readyMade[b.getAttribute('data-rm')]); }; });
   }
+  var _pendingRM=null;
   function loadReadyMade(x){
-    // Ready-made templates load market-cap weighted by default (like real
-    // indices) — shares auto-fetch from Yahoo. Equal weight is one toggle away.
-    // Saving creates the user's OWN copy — the template is never modified.
+    // Show the load-options dialog instead of loading immediately
+    _pendingRM=x;
+    document.getElementById('loptName').textContent=x.name||'Index';
+    document.getElementById('loptSub').textContent=(x.constituents?x.constituents.length:0)+' stocks · '+esc(x.category||'');
+    // reset pills to defaults
+    document.querySelectorAll('#loptWeight .lopt-pill').forEach(function(b){b.classList.toggle('on',b.dataset.w==='mcap');});
+    document.querySelectorAll('#loptPeriod .lopt-pill').forEach(function(b){b.classList.toggle('on',b.dataset.p==='2');});
+    document.getElementById('rmModal').classList.remove('open');
+    document.getElementById('loadOptModal').classList.add('open');
+  }
+  function applyReadyMade(x, weight, years){
     currentId=null; currentShareId=null;
     document.getElementById('idxName').value=x.name||'';
-    setWeight('mcap');
+    setWeight(weight);
     var list=document.getElementById('stockList'); list.innerHTML='';
     x.constituents.forEach(function(sym){ addStockRow(sym); });
-    // auto-fetch outstanding shares for each constituent (market-cap weighting)
-    [].slice.call(document.querySelectorAll('#stockList [data-row]')).forEach(function(card){
-      var tk=(card.querySelector('.sc-tk').value||'').trim();
-      if(tk && typeof fetchShares==='function'){ try{ fetchShares(card, (typeof ySym==='function'?ySym(tk):tk)); }catch(e){} }
-    });
+    if(weight==='mcap'){
+      [].slice.call(document.querySelectorAll('#stockList [data-row]')).forEach(function(card){
+        var tk=(card.querySelector('.sc-tk').value||'').trim();
+        if(tk && typeof fetchShares==='function'){ try{ fetchShares(card,(typeof ySym==='function'?ySym(tk):tk)); }catch(e){} }
+      });
+    }
+    // set date range
+    var rangeBtn=document.querySelector('#rangePresets [data-yrs="'+years+'"]');
+    if(rangeBtn){ document.querySelectorAll('#rangePresets button').forEach(function(b){b.classList.remove('on');}); rangeBtn.classList.add('on'); rangeBtn.click(); }
     if(typeof updateStkCount==='function')updateStkCount();
     renderChips();
-    document.getElementById('rmModal').classList.remove('open');
-    setStatus(session&&session.user?'Loaded (market-cap) — Save to keep your copy':'Loaded — sign in to save');
+    setStatus(session&&session.user?'Loaded — Save to keep your copy':'Loaded — sign in to save');
     markDirty();
+    fetchAndBuild();
   }
 
   // ── my indices modal ──
@@ -1394,6 +1442,27 @@ new ResizeObserver(()=>{resizeOverlay();redrawOverlay();}).observe(document.getE
     document.querySelectorAll('.cloud-modal').forEach(function(m){
       m.addEventListener('click',function(e){ if(e.target===m||e.target.hasAttribute('data-close'))m.classList.remove('open'); });
     });
+    // load-options dialog
+    document.querySelectorAll('#loptWeight .lopt-pill').forEach(function(b){
+      b.onclick=function(){ document.querySelectorAll('#loptWeight .lopt-pill').forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); };
+    });
+    document.querySelectorAll('#loptPeriod .lopt-pill').forEach(function(b){
+      b.onclick=function(){ document.querySelectorAll('#loptPeriod .lopt-pill').forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); };
+    });
+    document.getElementById('loptGo').onclick=function(){
+      if(!_pendingRM)return;
+      var w=document.querySelector('#loptWeight .lopt-pill.on');
+      var p=document.querySelector('#loptPeriod .lopt-pill.on');
+      var weight=w?w.dataset.w:'mcap';
+      var years=p?parseInt(p.dataset.p,10):2;
+      document.getElementById('loadOptModal').classList.remove('open');
+      applyReadyMade(_pendingRM, weight, years);
+      _pendingRM=null;
+    };
+    document.getElementById('loptCancel').onclick=function(){
+      document.getElementById('loadOptModal').classList.remove('open');
+      _pendingRM=null;
+    };
     document.getElementById('rmSearch').addEventListener('input',renderReadyMade);
     document.getElementById('rmCat').addEventListener('change',renderReadyMade);
     initTopSearch(); initRange(); initSettings();
