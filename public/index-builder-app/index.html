@@ -230,6 +230,11 @@ main{flex:1;display:flex;min-height:0}
       <button class="tbtn" id="btnLine" onclick="setChartType('line')">Line</button>
       <button class="tbtn" id="btnCandle" onclick="setChartType('candle')">Candles</button>
     </div>
+    <div class="ctype">
+      <button class="tbtn on" id="tfD" onclick="setTimeframe('D')">D</button>
+      <button class="tbtn" id="tfW" onclick="setTimeframe('W')">W</button>
+      <button class="tbtn" id="tfM" onclick="setTimeframe('M')">M</button>
+    </div>
     <button class="gear" id="btnSettings" title="More settings">⚙</button>
     <button class="btn-build" onclick="fetchAndBuild()">Build →</button>
     <span id="fetchStatus" class="hint"></span>
@@ -340,6 +345,7 @@ const S = {
   chart:null, main:null, ind:{},
   on:{sma1:false,sma2:false,ema:false,bb:false,rsi:false,macd:false,vol:false},
   rs:{n50:false,n500:false,data:{}},
+  tf:'D', raw:null,
   matrix:null, title:'Custom Index', weightMode:'mcap',
 };
 function setWeight(mode){
@@ -523,7 +529,7 @@ async function fetchSeries(sym,start,end,field){
 }
 async function fetchAndBuild(){
   clearMsg();
-  S.rs.data={};  // date range may change — invalidate cached benchmark series
+  S.rs.data={};S.raw=null;S.tf='D';  // new build — reset benchmark cache + timeframe
   const status=document.getElementById('fetchStatus');
   const start=document.getElementById('gStart').value,end=document.getElementById('gEnd').value;
   const field=document.getElementById('priceField').value;
@@ -621,6 +627,9 @@ function finalizeData(recs,hasOHLC,hasVol){
   }
   if(!hasOHLC)S.ohlc=null;if(!S.vol?.length)S.vol=null;
   S.timeIdx={};S.times.forEach((t,i)=>S.timeIdx[t]=i);
+  // Store raw daily snapshot for D/W/M switching
+  S.raw={times:[...S.times],closes:[...S.closes],ohlc:S.ohlc?[...S.ohlc]:null};
+  S.tf='D';['D','W','M'].forEach(t=>document.getElementById('tf'+t).classList.toggle('on',t==='D'));
   document.getElementById('btnCandle').style.opacity=S.ohlc?1:.4;
   document.getElementById('btnCandle').style.pointerEvents=S.ohlc?'auto':'none';
   document.getElementById('iVOL').style.opacity=S.vol?1:.4;
@@ -670,6 +679,52 @@ function addMainSeries(){
 function ld(){return S.times.map((t,i)=>({time:t,value:S.closes[i]}));}
 function setChartType(t){if(t==='candle'&&!S.ohlc)return;S.chartType=t;['Area','Line','Candle'].forEach(x=>document.getElementById('btn'+x).classList.toggle('on',x.toLowerCase()===t));if(S.chart)buildChart();}
 function fitChart(){if(S.chart)S.chart.timeScale().fitContent();}
+
+/* ── TIMEFRAME RESAMPLING (D / W / M) ── */
+function resampleToTF(tf){
+  // tf: 'W' or 'M' — mutates S.times, S.closes, S.ohlc from S.raw
+  const {times,closes,ohlc}=S.raw;
+  function weekKey(ds){
+    const d=new Date(ds+'T00:00:00Z'),day=d.getUTCDay(),diff=day===0?-6:1-day;
+    d.setUTCDate(d.getUTCDate()+diff);return d.toISOString().slice(0,10);
+  }
+  function monthKey(ds){return ds.slice(0,7)+'-01';}
+  const getKey=tf==='W'?weekKey:monthKey;
+  const groups=new Map();
+  for(let i=0;i<times.length;i++){
+    const k=getKey(times[i]);
+    if(!groups.has(k)){
+      const o=ohlc?ohlc[i].open:closes[i];
+      const h=ohlc?ohlc[i].high:closes[i];
+      const l=ohlc?ohlc[i].low:closes[i];
+      groups.set(k,{time:times[i],open:o,high:h,low:l,close:closes[i],closeVal:closes[i]});
+    }else{
+      const g=groups.get(k);
+      const h=ohlc?ohlc[i].high:closes[i],l=ohlc?ohlc[i].low:closes[i];
+      if(h>g.high)g.high=h;if(l<g.low)g.low=l;
+      g.close=ohlc?ohlc[i].close:closes[i];g.closeVal=closes[i];
+    }
+  }
+  S.times=[];S.closes=[];S.ohlc=ohlc?[]:null;
+  for(const g of groups.values()){
+    S.times.push(g.time);S.closes.push(g.closeVal);
+    if(S.ohlc)S.ohlc.push({time:g.time,open:g.open,high:g.high,low:g.low,close:g.close});
+  }
+  S.timeIdx={};S.times.forEach((t,i)=>S.timeIdx[t]=i);
+}
+function setTimeframe(tf){
+  if(!S.raw)return;
+  S.tf=tf;
+  ['D','W','M'].forEach(t=>document.getElementById('tf'+t).classList.toggle('on',t===tf));
+  S.times=[...S.raw.times];S.closes=[...S.raw.closes];S.ohlc=S.raw.ohlc?[...S.raw.ohlc]:null;
+  if(tf!=='D')resampleToTF(tf);
+  S.timeIdx={};S.times.forEach((t,i)=>S.timeIdx[t]=i);
+  document.getElementById('btnCandle').style.opacity=S.ohlc?1:.4;
+  document.getElementById('btnCandle').style.pointerEvents=S.ohlc?'auto':'none';
+  if(!S.ohlc&&S.chartType==='candle'){S.chartType='area';document.getElementById('btnArea').classList.add('on');document.getElementById('btnCandle').classList.remove('on');}
+  document.getElementById('srcChip').textContent=S.title+' · '+S.times.length+' bars';
+  if(S.chart)buildChart();computeStats();
+}
 
 /* ── INDICATORS ── */
 function SMA(v,p){const o=Array(v.length).fill(null);let s=0;for(let i=0;i<v.length;i++){s+=v[i];if(i>=p)s-=v[i-p];if(i>=p-1)o[i]=s/p;}return o;}
