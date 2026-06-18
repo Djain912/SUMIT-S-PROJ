@@ -52,10 +52,10 @@ export default async function BlogPage() {
           Blog
         </span>
         <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-emerald-900 sm:text-4xl">
-          CMT Exam Insights
+          Technical Analysis Insights
         </h1>
         <p className="mt-3 mx-auto max-w-lg text-base text-zinc-500">
-          Study strategies, technical analysis breakdowns, and exam tips — written by a CMT Level 3 passer.
+          Charts, patterns, indicators, and market concepts — explained clearly.
         </p>
       </section>
 
