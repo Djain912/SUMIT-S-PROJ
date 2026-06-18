@@ -228,6 +228,96 @@ main{flex:1;display:flex;min-height:0}
 .ctrl-acct .lnk{font-size:12px;color:var(--txt-mut);cursor:pointer;text-decoration:underline}
 .ctrl-acct .gbtn{display:inline-flex;align-items:center;gap:6px;background:#fff;color:#1f2937;border:1px solid var(--line);border-radius:9px;padding:7px 12px;font-size:12.5px;font-weight:600;text-decoration:none;cursor:pointer;font-family:"Sora"}
 .ctrl-acct .gbtn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ════════ TradingView-style overhaul ════════ */
+/* Indicators button in controls */
+.ctrl-btn.ind{display:inline-flex;align-items:center;gap:6px}
+.ctrl-btn.ind svg{width:14px;height:14px}
+
+/* Active-indicator pills bar (above chart) */
+.ind-pills{display:none;align-items:center;gap:7px;padding:7px 12px;background:var(--panel);border-bottom:1px solid var(--line-soft);overflow-x:auto;flex:none;scrollbar-width:thin}
+.ind-pills.has{display:flex}
+.ind-pills::-webkit-scrollbar{height:6px}
+.ind-pills::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px}
+.ind-pills .pl-lbl{font-size:9.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--txt-mut);flex:none;margin-right:1px}
+.ipill{display:inline-flex;align-items:center;gap:6px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:4px 5px 4px 9px;font-size:12px;font-weight:600;color:var(--txt-dim);white-space:nowrap;flex:none}
+.ipill-dot{width:9px;height:9px;border-radius:2px;flex:none}
+.ipill-name{font-family:"JetBrains Mono",monospace;font-size:11.5px}
+.ipill-btn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:5px;border:none;background:transparent;color:var(--txt-mut);cursor:pointer;font-size:12px;line-height:1}
+.ipill-btn:hover{background:rgba(0,0,0,.07);color:var(--txt)}
+.ipill-btn[data-act=del]:hover{background:var(--down);color:#fff}
+
+/* Indicator picker modal (reuses cloud-modal backdrop) */
+.ind-card{background:#fff;border-radius:16px;width:100%;max-width:480px;max-height:78vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.ind-head{display:flex;align-items:center;justify-content:space-between;padding:15px 18px 12px}
+.ind-head h3{margin:0;font-size:16px;font-weight:700;color:#0f3d2a;font-family:"Sora"}
+.ind-head .x{border:none;background:none;font-size:22px;cursor:pointer;color:#9ca3af;line-height:1}
+.ind-search{padding:0 18px 12px}
+.ind-search input{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 13px;font-size:13.5px;font-family:inherit;outline:none}
+.ind-search input:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(15,123,90,.1)}
+.ind-list{overflow-y:auto;padding:0 10px 12px}
+.ind-cat{font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--txt-mut);padding:10px 8px 5px}
+.ind-row{display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:9px;cursor:pointer}
+.ind-row:hover{background:var(--panel-2)}
+.ind-row .ic{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:"Sora";font-weight:800;font-size:11px;color:#fff;flex:none}
+.ind-row .meta{flex:1;min-width:0}
+.ind-row .nm{font-weight:600;font-size:13.5px;color:var(--txt)}
+.ind-row .ds{font-size:11.5px;color:var(--txt-mut)}
+.ind-row .plus{color:var(--accent);font-size:18px;font-weight:700;opacity:0;transition:.12s}
+.ind-row:hover .plus{opacity:1}
+
+/* Indicator settings popover */
+.ind-set{position:fixed;z-index:10000;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 16px 48px rgba(0,0,0,.22);width:268px;padding:14px 16px;display:none}
+.ind-set.open{display:block}
+.ind-set .ish{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.ind-set .ish .t{font-family:"Sora";font-weight:700;font-size:13.5px;color:#0f3d2a}
+.ind-set .ish .x{border:none;background:none;font-size:18px;cursor:pointer;color:#9ca3af;line-height:1}
+.ind-set .fl{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:9px 0}
+.ind-set .fl label{font-size:11.5px;color:var(--txt-dim);font-weight:500}
+.ind-set .fl input[type=number],.ind-set .fl select{width:96px;border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:12px;font-family:inherit;outline:none}
+.ind-set .fl input[type=number]:focus,.ind-set .fl select:focus{border-color:var(--accent)}
+.ind-set .fl input[type=color]{width:36px;height:28px;border:1px solid var(--line);border-radius:7px;padding:1px;cursor:pointer;background:#fff}
+.ind-set .fl input[type=range]{width:96px;accent-color:var(--accent)}
+.ind-set .sect{font-size:9.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--txt-mut);margin:13px 0 2px;border-top:1px solid var(--line-soft);padding-top:11px}
+.ind-set .sect:first-child{border-top:none;padding-top:0;margin-top:0}
+.ind-set .rmbtn{width:100%;margin-top:13px;background:#fff;border:1px solid rgba(220,38,38,.35);color:var(--down);border-radius:9px;padding:8px;font-family:"Sora";font-weight:600;font-size:12.5px;cursor:pointer}
+.ind-set .rmbtn:hover{background:rgba(220,38,38,.06)}
+
+/* Floating, collapsible drawing toolbar */
+.leftbar{flex:none;width:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:3px;padding:7px;margin:10px 0 10px 10px;overflow-y:auto;z-index:12;align-self:flex-start;max-height:calc(100% - 20px)}
+.leftbar .lb-tool{display:flex;align-items:center;gap:9px;width:100%;background:none;border:none;border-radius:9px;padding:8px;cursor:pointer;color:var(--txt-dim);font-family:"Sora";font-weight:600;font-size:12.5px;white-space:nowrap;text-align:left}
+.leftbar .lb-tool svg{width:17px;height:17px;flex:none}
+.leftbar .lb-tool .tl-txt{display:none}
+.leftbar.expanded .lb-tool .tl-txt{display:inline}
+.leftbar .lb-tool:hover{background:var(--panel-2);color:var(--accent)}
+.leftbar .lb-tool.on{background:rgba(15,123,90,.1);color:var(--accent)}
+.leftbar .lb-sep{height:1px;background:var(--line-soft);margin:4px 2px}
+.lb-collapse{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:none;border:none;border-radius:9px;padding:7px;cursor:pointer;color:var(--txt-mut)}
+.lb-collapse:hover{background:var(--panel-2);color:var(--txt)}
+.lb-collapse svg{width:15px;height:15px;transition:transform .2s}
+.leftbar.expanded .lb-collapse svg{transform:rotate(180deg)}
+
+main{flex:1;display:flex;min-height:0}
+.chart-wrap{flex:1;position:relative;min-height:0;background:#fff}
+/* tighter stats row to give chart more room */
+.stats .stat{padding:7px 14px}
+.stat .v{font-size:13px}
+
+/* ── Mobile responsive ── */
+@media(max-width:760px){
+  .controls{gap:6px;padding:7px 10px}
+  .ctrl-search{width:140px}
+  .ctrl-name{width:130px}
+  main{flex-direction:column}
+  .leftbar{flex-direction:row;width:auto;max-height:none;margin:8px;padding:5px;gap:2px;overflow-x:auto;overflow-y:hidden;align-self:stretch}
+  .leftbar .lb-tool{flex:none;width:auto;padding:8px 9px}
+  .leftbar.expanded .lb-tool .tl-txt{display:none}
+  .leftbar .lb-sep{width:1px;height:auto;margin:2px 3px}
+  .lb-collapse{display:none}
+  .ind-set{width:calc(100vw - 28px);max-width:300px}
+  .stats{font-size:11px}
+  .stats .stat{padding:6px 11px}
+}
 </style>
 </head>
 <body>
@@ -268,6 +358,10 @@ main{flex:1;display:flex;min-height:0}
       <button class="tbtn" id="tfW" onclick="setTimeframe('W')">W</button>
       <button class="tbtn" id="tfM" onclick="setTimeframe('M')">M</button>
     </div>
+    <button class="ctrl-btn ind" id="btnIndicators" title="Add indicators">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-6 4 4 6-8"/><path d="M3 21h18"/></svg>
+      Indicators
+    </button>
     <button class="gear" id="btnSettings" title="More settings">⚙</button>
     <button class="btn-build" onclick="fetchAndBuild()">Build →</button>
     <span id="fetchStatus" class="hint"></span>
@@ -283,14 +377,11 @@ main{flex:1;display:flex;min-height:0}
       <input type="number" id="baseValF" value="100" step="any">
       <label class="fld">Custom dates</label>
       <div class="grid2"><input type="date" id="gStart"><input type="date" id="gEnd"></div>
-      <label class="fld">Indicator periods (SMA · SMA · EMA)</label>
-      <div class="grid3">
-        <input class="miniinp" id="pSMA1" value="20" onchange="refreshIndicators()">
-        <input class="miniinp" id="pSMA2" value="50" onchange="refreshIndicators()">
-        <input class="miniinp" id="pEMA" value="21" onchange="refreshIndicators()">
-      </div>
     </div>
   </div>
+
+  <!-- ── ACTIVE INDICATOR PILLS ── -->
+  <div class="ind-pills" id="indPills"></div>
 
   <!-- ── CONSTITUENT CHIPS ── -->
   <div class="chips" id="chipStrip"></div>
@@ -310,37 +401,25 @@ main{flex:1;display:flex;min-height:0}
   </div>
 
   <main>
-    <!-- ── LEFT VERTICAL TOOLBAR (TradingView-style) ── -->
-    <div class="leftbar">
-      <div class="lb-group">
-        <span class="lb-lbl">Studies</span>
-        <button class="tbtn" id="iSMA1" onclick="toggleInd('sma1')">SMA 20</button>
-        <button class="tbtn" id="iSMA2" onclick="toggleInd('sma2')">SMA 50</button>
-        <button class="tbtn" id="iEMA" onclick="toggleInd('ema')">EMA 21</button>
-        <button class="tbtn" id="iBB" onclick="toggleInd('bb')">BB</button>
-        <button class="tbtn" id="iRSI" onclick="toggleInd('rsi')">RSI</button>
-        <button class="tbtn" id="iMACD" onclick="toggleInd('macd')">MACD</button>
-        <button class="tbtn" id="iVOL" onclick="toggleInd('vol')">Vol</button>
-      </div>
-      <div class="lb-group">
-        <span class="lb-lbl">Compare</span>
-        <button class="tbtn" id="iRS50" onclick="toggleRS('^NSEI')" title="Relative Strength vs Nifty 50">vs N50</button>
-        <button class="tbtn" id="iRS500" onclick="toggleRS('^CRSLDX')" title="Relative Strength vs Nifty 500">vs N500</button>
-      </div>
-      <div class="lb-group">
-        <span class="lb-lbl">Draw</span>
-        <button class="tbtn draw" id="dCursor" onclick="setTool('cursor')" title="Cursor"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l7 16 2-7 7-2z"/></svg></button>
-        <button class="tbtn draw" id="dTrend" onclick="setTool('trend')" title="Trend line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21L21 3"/></svg></button>
-        <button class="tbtn draw" id="dHline" onclick="setTool('hline')" title="Support / Resistance"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18"/></svg></button>
-        <button class="tbtn draw" id="dRect" onclick="setTool('rect')" title="Zone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="12"/></svg></button>
-        <button class="tbtn draw" id="dFib" onclick="setTool('fib')" title="Fibonacci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h18M3 10h18M3 14h18M3 19h18"/></svg></button>
-      </div>
-      <div class="lb-group lb-actions">
-        <button class="tbtn" onclick="undoDraw()" title="Undo">↶</button>
-        <button class="tbtn" onclick="clearDraw()" title="Clear drawings">⌫</button>
-        <button class="tbtn" onclick="fitChart()" title="Fit to screen">⤢</button>
-        <button class="tbtn" onclick="exportPNG()" title="Download PNG">⭳</button>
-      </div>
+    <!-- ── FLOATING DRAWING TOOLBAR (collapsible) ── -->
+    <div class="leftbar" id="leftbar">
+      <button class="lb-tool on" id="dCursor" onclick="setTool('cursor')" title="Cursor"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 4l7 16 2-7 7-2z"/></svg><span class="tl-txt">Cursor</span></button>
+      <button class="lb-tool" id="dCrosshair" onclick="setTool('crosshair')" title="Crosshair (magnet)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="2.5"/></svg><span class="tl-txt">Crosshair</span></button>
+      <div class="lb-sep"></div>
+      <button class="lb-tool" id="dTrend" onclick="setTool('trend')" title="Trend line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 21L21 3"/><circle cx="4" cy="20" r="1.6" fill="currentColor"/><circle cx="20" cy="4" r="1.6" fill="currentColor"/></svg><span class="tl-txt">Trend line</span></button>
+      <button class="lb-tool" id="dHline" onclick="setTool('hline')" title="Horizontal line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h18"/></svg><span class="tl-txt">Horizontal</span></button>
+      <button class="lb-tool" id="dVline" onclick="setTool('vline')" title="Vertical line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v18"/></svg><span class="tl-txt">Vertical</span></button>
+      <button class="lb-tool" id="dRect" onclick="setTool('rect')" title="Rectangle / zone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="12" rx="1"/></svg><span class="tl-txt">Rectangle</span></button>
+      <button class="lb-tool" id="dFib" onclick="setTool('fib')" title="Fibonacci retracement"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 5h18M3 10h18M3 14h18M3 19h18"/></svg><span class="tl-txt">Fibonacci</span></button>
+      <button class="lb-tool" id="dText" onclick="setTool('text')" title="Text label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 5h14M12 5v14"/></svg><span class="tl-txt">Text</span></button>
+      <button class="lb-tool" id="dMeasure" onclick="setTool('measure')" title="Measure"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 8h18v8H3z"/><path d="M7 8v3M11 8v4M15 8v3M19 8v4"/></svg><span class="tl-txt">Measure</span></button>
+      <div class="lb-sep"></div>
+      <button class="lb-tool" onclick="undoDraw()" title="Undo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10H9"/></svg><span class="tl-txt">Undo</span></button>
+      <button class="lb-tool" onclick="clearDraw()" title="Delete all drawings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg><span class="tl-txt">Delete all</span></button>
+      <button class="lb-tool" onclick="fitChart()" title="Fit to screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="tl-txt">Fit</span></button>
+      <button class="lb-tool" onclick="exportPNG()" title="Download PNG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg><span class="tl-txt">Export</span></button>
+      <div class="lb-sep"></div>
+      <button class="lb-collapse" id="lbCollapse" title="Expand / collapse"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg><span class="tl-txt">Collapse</span></button>
     </div>
 
     <div class="workspace">
@@ -376,6 +455,22 @@ main{flex:1;display:flex;min-height:0}
   <button id="smDelete">🗑 Delete shape</button>
 </div>
 
+<!-- Indicator picker modal -->
+<div class="cloud-modal" id="indModal">
+  <div class="ind-card">
+    <div class="ind-head"><h3>Indicators</h3><button class="x" id="indClose">×</button></div>
+    <div class="ind-search"><input type="text" id="indSearch" placeholder="Search indicators…" autocomplete="off"></div>
+    <div class="ind-list" id="indList"></div>
+  </div>
+</div>
+
+<!-- Indicator settings popover -->
+<div class="ind-set" id="indSet">
+  <div class="ish"><span class="t" id="indSetTitle">Settings</span><button class="x" id="indSetClose">×</button></div>
+  <div id="indSetBody"></div>
+  <button class="rmbtn" id="indSetRemove">Remove indicator</button>
+</div>
+
 <script>
 "use strict";
 const LWC = window.LightweightCharts;
@@ -383,9 +478,10 @@ const LWC = window.LightweightCharts;
 /* ── STATE ── */
 const S = {
   times:[], closes:[], ohlc:null, vol:null, chartType:'area',
-  chart:null, main:null, ind:{},
-  on:{sma1:false,sma2:false,ema:false,bb:false,rsi:false,macd:false,vol:false},
-  rs:{n50:false,n500:false,data:{}},
+  chart:null, main:null,
+  indicators:[],            // TradingView-style instances (see IND_DEFS)
+  rs:{data:{}},             // benchmark price cache for comparison indicators
+  indCache:{},
   tf:'D', raw:null,
   matrix:null, title:'Custom Index', weightMode:'mcap',
 };
@@ -684,8 +780,6 @@ function finalizeData(recs,hasOHLC,hasVol){
   S.tf='D';['D','W','M'].forEach(t=>document.getElementById('tf'+t).classList.toggle('on',t==='D'));
   document.getElementById('btnCandle').style.opacity=S.ohlc?1:.4;
   document.getElementById('btnCandle').style.pointerEvents=S.ohlc?'auto':'none';
-  document.getElementById('iVOL').style.opacity=S.vol?1:.4;
-  document.getElementById('iVOL').style.pointerEvents=S.vol?'auto':'none';
   if(!S.ohlc&&S.chartType==='candle')S.chartType='area';
   document.getElementById('srcChip').textContent=S.title+' · '+S.times.length+' bars';
   document.getElementById('empty').style.display='none';
@@ -698,7 +792,7 @@ function finalizeData(recs,hasOHLC,hasVol){
 }
 
 /* ── CHART ── */
-function disposeChart(){if(S.chart){try{S.chart.remove();}catch(e){}S.chart=null;S.main=null;S.ind={};}}
+function disposeChart(){if(S.chart){try{S.chart.remove();}catch(e){}S.chart=null;S.main=null;S.indicators.forEach(i=>i._series=[]);}}
 function buildChart(){
   disposeChart();
   const chart=LWC.createChart(document.getElementById('chart'),{
@@ -786,88 +880,163 @@ function STD(v,p){const o=Array(v.length).fill(null);for(let i=p-1;i<v.length;i+
 function RSI(v,p){const o=Array(v.length).fill(null);if(v.length<=p)return o;let g=0,l=0;for(let i=1;i<=p;i++){const d=v[i]-v[i-1];d>=0?g+=d:l-=d;}let ag=g/p,al=l/p;o[p]=al===0?100:100-100/(1+ag/al);for(let i=p+1;i<v.length;i++){const d=v[i]-v[i-1];const gd=d>0?d:0,ld=d<0?-d:0;ag=(ag*(p-1)+gd)/p;al=(al*(p-1)+ld)/p;o[i]=al===0?100:100-100/(1+ag/al);}return o;}
 function MACD(v,f,sl,sig){const ef=EMA(v,f),es=EMA(v,sl);const mc=v.map((_,i)=>(ef[i]!=null&&es[i]!=null)?ef[i]-es[i]:null);const idx=mc.map((x,i)=>x!=null?i:-1).filter(i=>i>=0);const sc=EMA(idx.map(i=>mc[i]),sig);const sg=Array(v.length).fill(null);idx.forEach((gi,k)=>{if(sc[k]!=null)sg[gi]=sc[k];});return{macd:mc,signal:sg,hist:v.map((_,i)=>(mc[i]!=null&&sg[i]!=null)?mc[i]-sg[i]:null)};}
 function pack(arr){const o=[];for(let i=0;i<arr.length;i++){if(arr[i]!=null&&!isNaN(arr[i]))o.push({time:S.times[i],value:arr[i]});}return o;}
-function toggleInd(k){if(k==='vol'&&!S.vol)return;S.on[k]=!S.on[k];const m={sma1:'iSMA1',sma2:'iSMA2',ema:'iEMA',bb:'iBB',rsi:'iRSI',macd:'iMACD',vol:'iVOL'};document.getElementById(m[k]).classList.toggle('on',S.on[k]);if(S.chart)refreshIndicators();}
-async function toggleRS(sym){
-  if(!S.times.length){showMsg('Build an index first, then compare.','err');return;}
-  const key=sym==='^NSEI'?'n50':'n500';
-  const btnId=sym==='^NSEI'?'iRS50':'iRS500';
-  const btn=document.getElementById(btnId);
-  S.rs[key]=!S.rs[key];
-  btn.classList.toggle('on',S.rs[key]);
-  if(S.rs[key]&&!S.rs.data[sym]){
-    // Show loading state on button + status bar while fetching
-    const origText=btn.textContent;
-    btn.textContent='…';btn.disabled=true;btn.style.opacity='0.6';
-    document.getElementById('fetchStatus').textContent='Fetching benchmark data…';
-    const start=S.times[0],end=S.times[S.times.length-1];
-    try{
-      const r=await fetch('/api/index-tools/history?symbol='+encodeURIComponent(sym)+'&start='+start+'&end='+end);
-      if(!r.ok)throw new Error('HTTP '+r.status);
-      const j=await r.json();
-      const map={};
-      for(let i=0;i<(j.dates||[]).length;i++){if(j.close[i]!=null)map[j.dates[i]]=j.close[i];}
-      if(!Object.keys(map).length)throw new Error('no data returned');
-      S.rs.data[sym]=map;
-      document.getElementById('fetchStatus').textContent='';
-    }catch(e){
-      showMsg('Could not fetch benchmark: '+e.message,'err');
-      S.rs[key]=false;
-      btn.classList.remove('on');
-      document.getElementById('fetchStatus').textContent='';
-      btn.textContent=origText;btn.disabled=false;btn.style.opacity='';
-      return;
-    }
-    btn.textContent=origText;btn.disabled=false;btn.style.opacity='';
-  }
-  if(S.chart)refreshIndicators();
+/* ════════ INDICATOR INSTANCE ENGINE (TradingView-style) ════════ */
+// Each indicator the user adds is an *instance* with its own params + style.
+const IND_DEFS={
+  sma:{name:'Moving Average (SMA)',short:'SMA',cat:'Moving Averages',overlay:true,color:'#d97706',
+       params:[{k:'length',label:'Length',def:20,min:1,max:400}],source:true},
+  ema:{name:'Exp. Moving Average (EMA)',short:'EMA',cat:'Moving Averages',overlay:true,color:'#0891b2',
+       params:[{k:'length',label:'Length',def:21,min:1,max:400}],source:true},
+  bb:{name:'Bollinger Bands',short:'BB',cat:'Volatility',overlay:true,color:'#64748b',
+      params:[{k:'length',label:'Length',def:20,min:2,max:400},{k:'mult',label:'StdDev',def:2,min:0.5,max:5,step:0.1}],source:true},
+  vol:{name:'Volume',short:'VOL',cat:'Volume',overlay:true,color:'#2d7d52',params:[],needsVol:true},
+  rsi:{name:'Relative Strength Index',short:'RSI',cat:'Oscillators',overlay:false,color:'#d97706',
+       params:[{k:'length',label:'Length',def:14,min:2,max:200}]},
+  macd:{name:'MACD',short:'MACD',cat:'Oscillators',overlay:false,color:'#2d7d52',
+        params:[{k:'fast',label:'Fast',def:12,min:1,max:200},{k:'slow',label:'Slow',def:26,min:1,max:400},{k:'signal',label:'Signal',def:9,min:1,max:200}]},
+  rsN50:{name:'Compare vs Nifty 50',short:'RS·N50',cat:'Comparison',overlay:false,color:'#7c3aed',sym:'^NSEI',params:[]},
+  rsN500:{name:'Compare vs Nifty 500',short:'RS·N500',cat:'Comparison',overlay:false,color:'#0891b2',sym:'^CRSLDX',params:[]},
+};
+let _indSeq=1;
+function srcArr(src){
+  if(src==='open'&&S.ohlc)return S.ohlc.map(b=>b.open);
+  if(src==='high'&&S.ohlc)return S.ohlc.map(b=>b.high);
+  if(src==='low'&&S.ohlc)return S.ohlc.map(b=>b.low);
+  return S.closes;
 }
-function refreshIndicators(){
-  if(!S.chart||!S.main)return;
-  Object.values(S.ind).forEach(s=>{try{S.chart.removeSeries(s);}catch(e){}});S.ind={};
-  const v=S.closes;
-  if(S.on.sma1){const p=+document.getElementById('pSMA1').value||20;S.ind.sma1=S.chart.addSeries(LWC.LineSeries,{color:'#d97706',lineWidth:1,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false},0);S.ind.sma1.setData(pack(SMA(v,p)));}
-  if(S.on.sma2){const p=+document.getElementById('pSMA2').value||50;S.ind.sma2=S.chart.addSeries(LWC.LineSeries,{color:'#7c3aed',lineWidth:1,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false},0);S.ind.sma2.setData(pack(SMA(v,p)));}
-  if(S.on.ema){const p=+document.getElementById('pEMA').value||21;S.ind.ema=S.chart.addSeries(LWC.LineSeries,{color:'#0891b2',lineWidth:1,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false},0);S.ind.ema.setData(pack(EMA(v,p)));}
-  if(S.on.bb){const p=20,mult=2;const mid=SMA(v,p),sd=STD(v,p);const up=v.map((_,i)=>mid[i]!=null?mid[i]+mult*sd[i]:null),lo=v.map((_,i)=>mid[i]!=null?mid[i]-mult*sd[i]:null);const st={color:'#64748b',lineWidth:1,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false,lineStyle:LWC.LineStyle.Dotted};S.ind.bbU=S.chart.addSeries(LWC.LineSeries,st,0);S.ind.bbU.setData(pack(up));S.ind.bbL=S.chart.addSeries(LWC.LineSeries,st,0);S.ind.bbL.setData(pack(lo));S.ind.bbM=S.chart.addSeries(LWC.LineSeries,{color:'#64748b',lineWidth:1,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false},0);S.ind.bbM.setData(pack(mid));}
-  if(S.on.vol&&S.vol){S.ind.vol=S.chart.addSeries(LWC.HistogramSeries,{priceScaleId:'vol',priceFormat:{type:'volume'},color:'rgba(45,125,82,.3)'},0);S.ind.vol.priceScale().applyOptions({scaleMargins:{top:0.82,bottom:0}});S.ind.vol.setData(S.vol);}
-  let pane=1;
-  if(S.on.rsi){S.ind.rsi=S.chart.addSeries(LWC.LineSeries,{color:'#d97706',lineWidth:1,priceLineVisible:false,lastValueVisible:true},pane);S.ind.rsi.setData(pack(RSI(v,14)));try{S.ind.rsi.createPriceLine({price:70,color:'#dc2626',lineWidth:1,lineStyle:LWC.LineStyle.Dashed,axisLabelVisible:true,title:'70'});S.ind.rsi.createPriceLine({price:30,color:'#16a34a',lineWidth:1,lineStyle:LWC.LineStyle.Dashed,axisLabelVisible:true,title:'30'});}catch(e){}pane++;}
-  if(S.on.macd){const m=MACD(v,12,26,9);S.ind.macdHist=S.chart.addSeries(LWC.HistogramSeries,{priceLineVisible:false,lastValueVisible:false},pane);const hd=[];for(let i=0;i<v.length;i++){if(m.hist[i]!=null)hd.push({time:S.times[i],value:m.hist[i],color:m.hist[i]>=0?'rgba(22,163,74,.6)':'rgba(220,38,38,.6)'});}S.ind.macdHist.setData(hd);S.ind.macdLine=S.chart.addSeries(LWC.LineSeries,{color:'#2d7d52',lineWidth:1,priceLineVisible:false,lastValueVisible:false},pane);S.ind.macdLine.setData(pack(m.macd));S.ind.macdSig=S.chart.addSeries(LWC.LineSeries,{color:'#d97706',lineWidth:1,priceLineVisible:false,lastValueVisible:false},pane);S.ind.macdSig.setData(pack(m.signal));pane++;}
-  // RS Line pane — both benchmarks share one sub-pane
-  const anyRS=S.rs.n50||S.rs.n500;
-  if(anyRS){
-    const benchCfg=[{sym:'^NSEI',key:'n50',color:'#7c3aed',label:'RS vs N50'},{sym:'^CRSLDX',key:'n500',color:'#0891b2',label:'RS vs N500'}];
-    let addedRS=false;
-    benchCfg.forEach(function(b){
-      if(!S.rs[b.key]||!S.rs.data[b.sym])return;
-      const bmap=S.rs.data[b.sym];
-      const bvals=[];let lastB=null;
-      S.times.forEach(function(t){if(bmap[t]!=null)lastB=bmap[t];bvals.push(lastB);});
-      let si2=-1,b0=null,c0=null;
-      for(let i=0;i<S.times.length;i++){if(bvals[i]!=null&&S.closes[i]!=null){si2=i;b0=bvals[i];c0=S.closes[i];break;}}
-      if(si2<0)return;
-      const rsData=[];
-      for(let i=si2;i<S.times.length;i++){if(bvals[i]!=null&&S.closes[i]!=null)rsData.push({time:S.times[i],value:(S.closes[i]/c0)/(bvals[i]/b0)*100});}
-      S.ind['rs_'+b.sym]=S.chart.addSeries(LWC.LineSeries,{color:b.color,lineWidth:2,priceLineVisible:false,lastValueVisible:true,title:b.label},pane);
-      S.ind['rs_'+b.sym].setData(rsData);
-      try{S.ind['rs_'+b.sym].createPriceLine({price:100,color:'#9ca3af',lineWidth:1,lineStyle:LWC.LineStyle.Dashed,axisLabelVisible:true,title:'100'});}catch(e){}
-      const rsMap={};rsData.forEach(function(d){rsMap[d.time]=d.value;});
-      S.indCache['rs_'+b.sym]=S.times.map(function(t){return rsMap[t]??null;});
-      addedRS=true;
-    });
-    if(addedRS)pane++;
-  }
-  try{const ps=S.chart.panes();if(ps.length>1){const h=document.getElementById('chartWrap').clientHeight;const sub=Math.max(90,Math.min(150,Math.floor(h*.22)));for(let i=1;i<ps.length;i++)ps[i].setHeight(sub);}}catch(e){}
-  // cache indicator value arrays so the legend can read them by date index
+function lwStyle(s){return s==='dashed'?LWC.LineStyle.Dashed:s==='dotted'?LWC.LineStyle.Dotted:LWC.LineStyle.Solid;}
+function applyAlpha(hex,a){
+  if(a==null||a>=1)return hex;
+  const h=hex.replace('#','');if(h.length<6)return hex;
+  const r=parseInt(h.substr(0,2),16),g=parseInt(h.substr(2,2),16),b=parseInt(h.substr(4,2),16);
+  return 'rgba('+r+','+g+','+b+','+a+')';
+}
+function pillLabel(inst){
+  const d=IND_DEFS[inst.type];
+  if(inst.type==='sma'||inst.type==='ema'||inst.type==='rsi')return d.short+' '+inst.params.length;
+  if(inst.type==='bb')return 'BB '+inst.params.length;
+  if(inst.type==='macd')return 'MACD '+inst.params.fast+','+inst.params.slow+','+inst.params.signal;
+  return d.short;
+}
+async function fetchBenchmark(sym){
+  if(S.rs.data[sym])return true;
+  document.getElementById('fetchStatus').textContent='Fetching benchmark data…';
+  try{
+    const start=S.times[0],end=S.times[S.times.length-1];
+    const r=await fetch('/api/index-tools/history?symbol='+encodeURIComponent(sym)+'&start='+start+'&end='+end);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const j=await r.json();const map={};
+    for(let i=0;i<(j.dates||[]).length;i++){if(j.close[i]!=null)map[j.dates[i]]=j.close[i];}
+    if(!Object.keys(map).length)throw new Error('no data');
+    S.rs.data[sym]=map;document.getElementById('fetchStatus').textContent='';return true;
+  }catch(e){showMsg('Could not fetch benchmark: '+e.message,'err');document.getElementById('fetchStatus').textContent='';return false;}
+}
+async function addIndicator(type){
+  const d=IND_DEFS[type];if(!d)return;
+  if(!S.times.length){showMsg('Build an index first, then add indicators.','err');return;}
+  if(d.needsVol&&!S.vol){showMsg('Volume data isn’t available for this index.','err');return;}
+  if(d.sym){const ok=await fetchBenchmark(d.sym);if(!ok)return;}
+  const params={};d.params.forEach(p=>params[p.k]=p.def);
+  const inst={id:_indSeq++,type,params,source:'close',
+    style:{color:d.color,lineWidth:2,opacity:1,lineStyle:'solid'},_series:[]};
+  S.indicators.push(inst);
+  if(S.chart)renderIndicators();
+}
+function removeIndicator(id){
+  const i=S.indicators.findIndex(x=>x.id===id);if(i<0)return;
+  (S.indicators[i]._series||[]).forEach(s=>{try{S.chart.removeSeries(s);}catch(e){}});
+  S.indicators.splice(i,1);
+  if(document.getElementById('indSet').dataset.id==String(id))closeIndSettings();
+  if(S.chart)renderIndicators();else renderPills();
+}
+function updateIndicator(id,patchParams,patchStyle,patchSource){
+  const inst=S.indicators.find(x=>x.id===id);if(!inst)return;
+  if(patchParams)Object.assign(inst.params,patchParams);
+  if(patchStyle)Object.assign(inst.style,patchStyle);
+  if(patchSource!=null)inst.source=patchSource;
+  if(S.chart)renderIndicators();
+}
+function renderIndicators(){
+  if(!S.chart||!S.main){renderPills();return;}
+  // tear down existing series
+  S.indicators.forEach(inst=>{(inst._series||[]).forEach(s=>{try{S.chart.removeSeries(s);}catch(e){}});inst._series=[];});
   S.indCache={};
-  if(S.on.sma1)S.indCache.sma1=SMA(v,+document.getElementById('pSMA1').value||20);
-  if(S.on.sma2)S.indCache.sma2=SMA(v,+document.getElementById('pSMA2').value||50);
-  if(S.on.ema)S.indCache.ema=EMA(v,+document.getElementById('pEMA').value||21);
-  if(S.on.bb){const p=20,mid=SMA(v,p),sd=STD(v,p);S.indCache.bbU=v.map((_,i)=>mid[i]!=null?mid[i]+2*sd[i]:null);S.indCache.bbM=mid;S.indCache.bbL=v.map((_,i)=>mid[i]!=null?mid[i]-2*sd[i]:null);}
-  if(S.on.rsi)S.indCache.rsi=RSI(v,14);
-  if(S.on.macd){const m=MACD(v,12,26,9);S.indCache.macd=m.macd;S.indCache.macdSig=m.signal;S.indCache.macdHist=m.hist;}
-  if(S.on.vol&&S.vol){const vm={};S.vol.forEach(x=>vm[x.time]=x.value);S.indCache.vol=S.times.map(t=>vm[t]??null);}
+  const v=S.closes;
+  let pane=1;
+  S.indicators.forEach(inst=>{
+    const d=IND_DEFS[inst.type],st=inst.style;
+    const col=applyAlpha(st.color,st.opacity);
+    const baseLine={color:col,lineWidth:st.lineWidth,lineStyle:lwStyle(st.lineStyle),priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false};
+    if(inst.type==='sma'||inst.type==='ema'){
+      const arr=(inst.type==='sma'?SMA:EMA)(srcArr(inst.source),inst.params.length);
+      const s=S.chart.addSeries(LWC.LineSeries,baseLine,0);s.setData(pack(arr));inst._series=[s];
+      S.indCache[inst.id]={arr};
+    }else if(inst.type==='bb'){
+      const src=srcArr(inst.source),p=inst.params.length,mult=inst.params.mult;
+      const mid=SMA(src,p),sd=STD(src,p);
+      const up=src.map((_,i)=>mid[i]!=null?mid[i]+mult*sd[i]:null),lo=src.map((_,i)=>mid[i]!=null?mid[i]-mult*sd[i]:null);
+      const band={color:col,lineWidth:1,lineStyle:LWC.LineStyle.Dotted,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false};
+      const su=S.chart.addSeries(LWC.LineSeries,band,0);su.setData(pack(up));
+      const sl=S.chart.addSeries(LWC.LineSeries,band,0);sl.setData(pack(lo));
+      const sm=S.chart.addSeries(LWC.LineSeries,baseLine,0);sm.setData(pack(mid));
+      inst._series=[su,sl,sm];S.indCache[inst.id]={up,mid,lo};
+    }else if(inst.type==='vol'){
+      if(!S.vol)return;
+      const s=S.chart.addSeries(LWC.HistogramSeries,{priceScaleId:'vol',priceFormat:{type:'volume'},color:col},0);
+      s.priceScale().applyOptions({scaleMargins:{top:0.82,bottom:0}});s.setData(S.vol);inst._series=[s];
+      const vm={};S.vol.forEach(x=>vm[x.time]=x.value);S.indCache[inst.id]={arr:S.times.map(t=>vm[t]??null)};
+    }else if(inst.type==='rsi'){
+      const arr=RSI(v,inst.params.length);
+      const s=S.chart.addSeries(LWC.LineSeries,{color:col,lineWidth:st.lineWidth,lineStyle:lwStyle(st.lineStyle),priceLineVisible:false,lastValueVisible:true},pane);
+      s.setData(pack(arr));
+      try{s.createPriceLine({price:70,color:'#dc2626',lineWidth:1,lineStyle:LWC.LineStyle.Dashed,axisLabelVisible:true,title:'70'});s.createPriceLine({price:30,color:'#16a34a',lineWidth:1,lineStyle:LWC.LineStyle.Dashed,axisLabelVisible:true,title:'30'});}catch(e){}
+      inst._series=[s];inst._pane=pane;pane++;S.indCache[inst.id]={arr};
+    }else if(inst.type==='macd'){
+      const m=MACD(v,inst.params.fast,inst.params.slow,inst.params.signal);
+      const sh=S.chart.addSeries(LWC.HistogramSeries,{priceLineVisible:false,lastValueVisible:false},pane);
+      const hd=[];for(let i=0;i<v.length;i++){if(m.hist[i]!=null)hd.push({time:S.times[i],value:m.hist[i],color:m.hist[i]>=0?'rgba(22,163,74,.6)':'rgba(220,38,38,.6)'});}
+      sh.setData(hd);
+      const sl=S.chart.addSeries(LWC.LineSeries,{color:col,lineWidth:st.lineWidth,priceLineVisible:false,lastValueVisible:false},pane);sl.setData(pack(m.macd));
+      const ss=S.chart.addSeries(LWC.LineSeries,{color:'#d97706',lineWidth:1,priceLineVisible:false,lastValueVisible:false},pane);ss.setData(pack(m.signal));
+      inst._series=[sh,sl,ss];inst._pane=pane;pane++;S.indCache[inst.id]={macd:m.macd,signal:m.signal,hist:m.hist};
+    }else if(inst.type==='rsN50'||inst.type==='rsN500'){
+      const bmap=S.rs.data[d.sym];if(!bmap)return;
+      const bvals=[];let lastB=null;S.times.forEach(t=>{if(bmap[t]!=null)lastB=bmap[t];bvals.push(lastB);});
+      let si2=-1,b0=null,c0=null;for(let i=0;i<S.times.length;i++){if(bvals[i]!=null&&S.closes[i]!=null){si2=i;b0=bvals[i];c0=S.closes[i];break;}}
+      if(si2<0)return;
+      const rsData=[],arr=S.times.map(()=>null);
+      for(let i=si2;i<S.times.length;i++){if(bvals[i]!=null&&S.closes[i]!=null){const val=(S.closes[i]/c0)/(bvals[i]/b0)*100;rsData.push({time:S.times[i],value:val});arr[i]=val;}}
+      const s=S.chart.addSeries(LWC.LineSeries,{color:col,lineWidth:st.lineWidth,lineStyle:lwStyle(st.lineStyle),priceLineVisible:false,lastValueVisible:true},pane);
+      s.setData(rsData);
+      try{s.createPriceLine({price:100,color:'#9ca3af',lineWidth:1,lineStyle:LWC.LineStyle.Dashed,axisLabelVisible:true,title:'100'});}catch(e){}
+      inst._series=[s];inst._pane=pane;pane++;S.indCache[inst.id]={arr};
+    }
+  });
+  try{const ps=S.chart.panes();if(ps.length>1){const h=document.getElementById('chartWrap').clientHeight;const sub=Math.max(90,Math.min(150,Math.floor(h*.22)));for(let i=1;i<ps.length;i++)ps[i].setHeight(sub);}}catch(e){}
+  renderPills();
   redrawOverlay();
+}
+// legacy callers (buildChart/setTimeframe/setChartType) still call refreshIndicators
+function refreshIndicators(){renderIndicators();}
+
+/* ── ACTIVE INDICATOR PILLS ── */
+function renderPills(){
+  const bar=document.getElementById('indPills');if(!bar)return;
+  if(!S.indicators.length){bar.innerHTML='';bar.classList.remove('has');return;}
+  bar.classList.add('has');
+  let html='<span class="pl-lbl">Indicators</span>';
+  S.indicators.forEach(inst=>{
+    html+='<span class="ipill" data-id="'+inst.id+'"><span class="ipill-dot" style="background:'+inst.style.color+'"></span>'+
+      '<span class="ipill-name">'+pillLabel(inst)+'</span>'+
+      '<button class="ipill-btn" data-act="cfg" title="Settings">⚙</button>'+
+      '<button class="ipill-btn" data-act="del" title="Remove">×</button></span>';
+  });
+  bar.innerHTML=html;
+  bar.querySelectorAll('.ipill').forEach(p=>{
+    const id=+p.dataset.id;
+    p.querySelector('[data-act=cfg]').onclick=e=>{e.stopPropagation();openIndSettings(id,p);};
+    p.querySelector('[data-act=del]').onclick=e=>{e.stopPropagation();removeIndicator(id);};
+  });
 }
 
 /* ── LEGEND ── */
@@ -882,16 +1051,13 @@ function onCrosshair(param){
   if(S.ohlc){const b=S.ohlc[idx];main=`O ${fmt(b.open,2)}  H ${fmt(b.high,2)}  L ${fmt(b.low,2)}  C ${fmt(b.close,2)}`;}
   else main=`<b style="color:#111827">${fmt(S.closes[idx],2)}</b>`;
   let html=`<div class="ttl">${S.title}</div><div class="row"><span class="k">${date}</span> &nbsp; ${main}</div>`;
-  const add=(lbl,arr,col)=>{if(!arr)return;const x=arr[idx];html+=`<div class="row"><span class="k" style="color:${col}">${lbl}</span> <b>${fmt(x,2)}</b></div>`;};
-  if(S.on.sma1)add('SMA '+document.getElementById('pSMA1').value,C.sma1,'#d97706');
-  if(S.on.sma2)add('SMA '+document.getElementById('pSMA2').value,C.sma2,'#7c3aed');
-  if(S.on.ema)add('EMA '+document.getElementById('pEMA').value,C.ema,'#0891b2');
-  if(S.on.bb&&C.bbU){html+=`<div class="row"><span class="k" style="color:#64748b">BOLL 20</span> <b>${fmt(C.bbU[idx],2)} / ${fmt(C.bbM[idx],2)} / ${fmt(C.bbL[idx],2)}</b></div>`;}
-  if(S.on.rsi)add('RSI 14',C.rsi,'#d97706');
-  if(S.on.macd&&C.macd){html+=`<div class="row"><span class="k" style="color:#2d7d52">MACD</span> <b>${fmt(C.macd[idx],2)}</b> <span class="k" style="color:#d97706">sig</span> ${fmt(C.macdSig[idx],2)} <span class="k">hist</span> ${fmt(C.macdHist[idx],2)}</div>`;}
-  if(S.on.vol&&C.vol)add('VOL',C.vol,'#2d7d52');
-  if(S.rs.n50&&C['rs_^NSEI'])add('RS vs N50',C['rs_^NSEI'],'#7c3aed');
-  if(S.rs.n500&&C['rs_^CRSLDX'])add('RS vs N500',C['rs_^CRSLDX'],'#0891b2');
+  const add=(lbl,x,col)=>{html+=`<div class="row"><span class="k" style="color:${col}">${lbl}</span> <b>${fmt(x,2)}</b></div>`;};
+  S.indicators.forEach(inst=>{
+    const c=C[inst.id];if(!c)return;const col=inst.style.color;
+    if(inst.type==='bb'&&c.up){html+=`<div class="row"><span class="k" style="color:${col}">${pillLabel(inst)}</span> <b>${fmt(c.up[idx],2)} / ${fmt(c.mid[idx],2)} / ${fmt(c.lo[idx],2)}</b></div>`;}
+    else if(inst.type==='macd'&&c.macd){html+=`<div class="row"><span class="k" style="color:${col}">MACD</span> <b>${fmt(c.macd[idx],2)}</b> <span class="k" style="color:#d97706">sig</span> ${fmt(c.signal[idx],2)} <span class="k">hist</span> ${fmt(c.hist[idx],2)}</div>`;}
+    else if(c.arr)add(pillLabel(inst),c.arr[idx],col);
+  });
   lg.innerHTML=html;
 }
 
@@ -959,6 +1125,23 @@ function drawShape(ctx,sh,sel){
     ctx.font='10px JetBrains Mono';
     lvs.forEach(([lv,c])=>{const p=hi-(hi-lo)*lv;const y=S.main.priceToCoordinate(p);if(y==null)return;ctx.strokeStyle=c;ctx.globalAlpha=.85;ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x1,y);ctx.stroke();ctx.globalAlpha=1;ctx.fillStyle=c;ctx.fillText((lv*100).toFixed(1)+'%  '+fmt(p,2),x0+4,y-3);});
     dot(ctx,a,col);dot(ctx,b,col);
+  }else if(sh.type==='vline'){
+    const x=S.chart.timeScale().logicalToCoordinate(sh.a.logical);if(x==null){ctx.restore();return;}
+    ctx.strokeStyle=col;ctx.setLineDash([7,4]);ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,pricePaneH());ctx.stroke();ctx.setLineDash([]);
+  }else if(sh.type==='text'){
+    const a=px(sh.a);if(!a){ctx.restore();return;}
+    ctx.font='600 13px Sora, sans-serif';const txt=sh.text||'Text';const w=ctx.measureText(txt).width+10;
+    ctx.fillStyle='rgba(255,255,255,.92)';ctx.fillRect(a.x,a.y-11,w,20);
+    ctx.fillStyle=col;ctx.fillText(txt,a.x+5,a.y+3);
+    if(sel)dot(ctx,a,col);
+  }else if(sh.type==='measure'){
+    const a=px(sh.a),b=sh.b&&px(sh.b);if(!a||!b){ctx.restore();return;}
+    const x=Math.min(a.x,b.x),y=Math.min(a.y,b.y),w=Math.abs(b.x-a.x),h=Math.abs(b.y-a.y);
+    const up=sh.b.price>=sh.a.price;const fill=up?'rgba(22,163,74,.12)':'rgba(220,38,38,.12)';const line=up?'#16a34a':'#dc2626';
+    ctx.fillStyle=fill;ctx.fillRect(x,y,w,h);ctx.strokeStyle=line;ctx.setLineDash([4,3]);ctx.strokeRect(x,y,w,h);ctx.setLineDash([]);
+    const pct=sh.a.price?((sh.b.price-sh.a.price)/sh.a.price*100):0;
+    const bars=Math.round(Math.abs(sh.b.logical-sh.a.logical));
+    lbl(ctx,x+w/2-44,y-4,(pct>=0?'+':'')+fmt(pct,2)+'%  ·  '+bars+' bars',line);
   }
   ctx.restore();
 }
@@ -971,9 +1154,11 @@ function dseg(p,a,b){const dx=b.x-a.x,dy=b.y-a.y,l2=dx*dx+dy*dy;if(!l2)return dp
 function hitTest(sh,x,y){
   if(!S.main)return false;
   if(sh.type==='hline'){const cy=S.main.priceToCoordinate(sh.a.price);return cy!=null&&Math.abs(y-cy)<9;}
+  if(sh.type==='vline'){const cx=S.chart.timeScale().logicalToCoordinate(sh.a.logical);return cx!=null&&Math.abs(x-cx)<9;}
   const a=px(sh.a),b=sh.b?px(sh.b):null;if(!a)return false;
+  if(sh.type==='text')return dpt({x,y},a)<16;
   if(sh.type==='trend')return b&&dseg({x,y},a,b)<9;
-  if(sh.type==='rect')return b&&x>=Math.min(a.x,b.x)&&x<=Math.max(a.x,b.x)&&y>=Math.min(a.y,b.y)&&y<=Math.max(a.y,b.y);
+  if(sh.type==='rect'||sh.type==='measure')return b&&x>=Math.min(a.x,b.x)&&x<=Math.max(a.x,b.x)&&y>=Math.min(a.y,b.y)&&y<=Math.max(a.y,b.y);
   if(sh.type==='fib')return b&&(dpt({x,y},a)<14||dpt({x,y},b)<14);
   return false;
 }
@@ -1006,13 +1191,13 @@ document.addEventListener('mousedown',e=>{if(!document.getElementById('shapeMenu
 // Show a grab/move cursor when hovering an editable shape (cursor mode only).
 document.getElementById('chartWrap').addEventListener('mousemove',e=>{
   if(D.editing){document.getElementById('chartWrap').style.cursor='grabbing';return;}
-  if(D.tool!=='cursor'||!S.chart||!S.main){document.getElementById('chartWrap').style.cursor='';return;}
+  if(!isSelect()||!S.chart||!S.main){document.getElementById('chartWrap').style.cursor='';return;}
   const rect=document.getElementById('chartWrap').getBoundingClientRect();
   const h=hitHandle(e.clientX-rect.left,e.clientY-rect.top);
   document.getElementById('chartWrap').style.cursor=h?(h.which==='move'?'move':'grab'):'';
 });
 document.getElementById('chartWrap').addEventListener('click',e=>{
-  if(D.tool!=='cursor'||!S.chart||!S.main)return;
+  if(!isSelect()||!S.chart||!S.main)return;
   if(D.justEdited){D.justEdited=false;return;} // a readjust drag just happened — don't open the menu
   const rect=document.getElementById('chartWrap').getBoundingClientRect();
   const x=e.clientX-rect.left,y=e.clientY-rect.top;
@@ -1028,6 +1213,7 @@ function evtPt(e){
 }
 /* Detect whether the cursor is over a draggable handle/body of an existing shape,
    so already-drawn shapes (trend lines, zones, fib, S/R) can be readjusted. */
+function isSelect(){return D.tool==='cursor'||D.tool==='crosshair';}
 function hitHandle(x,y){
   if(!S.main)return null;
   for(let i=D.shapes.length-1;i>=0;i--){
@@ -1035,6 +1221,11 @@ function hitHandle(x,y){
     if(sh.type==='hline'){
       const cy=S.main.priceToCoordinate(sh.a.price);
       if(cy!=null&&Math.abs(y-cy)<8)return{idx:i,which:'line'};
+    }else if(sh.type==='vline'){
+      const cx=S.chart.timeScale().logicalToCoordinate(sh.a.logical);
+      if(cx!=null&&Math.abs(x-cx)<8)return{idx:i,which:'vline'};
+    }else if(sh.type==='text'){
+      const a=px(sh.a);if(a&&dpt({x,y},a)<18)return{idx:i,which:'a'};
     }else if(sh.a&&sh.b){
       const a=px(sh.a),b=px(sh.b);
       if(a&&Math.hypot(x-a.x,y-a.y)<13)return{idx:i,which:'a'};
@@ -1047,7 +1238,7 @@ function hitHandle(x,y){
 /* In cursor mode, grabbing a handle/body starts an edit-drag. We flip the overlay
    to capture mouse moves so the chart itself doesn't pan while you readjust. */
 document.getElementById('chartWrap').addEventListener('mousedown',e=>{
-  if(D.tool!=='cursor'||!S.chart||!S.main)return;
+  if(!isSelect()||!S.chart||!S.main)return;
   const rect=document.getElementById('chartWrap').getBoundingClientRect();
   const x=e.clientX-rect.left,y=e.clientY-rect.top;
   const h=hitHandle(x,y);
@@ -1055,18 +1246,22 @@ document.getElementById('chartWrap').addEventListener('mousedown',e=>{
     D.editing={idx:h.idx,which:h.which,last:null};
     D.justEdited=false;D.selected=h.idx;
     cv.style.pointerEvents='auto';
+    // Freeze the chart so readjusting a drawing doesn't pan/zoom the whole chart.
+    try{S.chart.applyOptions({handleScroll:false,handleScale:false});}catch(err){}
     e.preventDefault();
     redrawOverlay();
   }
 });
 cv.addEventListener('mousedown',e=>{
-  if(D.tool==='cursor'||!S.chart||!S.main)return;
+  if(isSelect()||!S.chart||!S.main)return;
   const p=evtPt(e);if(p.logical==null||p.price==null)return;
   if(p.y>pricePaneH())return;
   if(D.tool==='hline'){D.shapes.push({type:'hline',a:{logical:0,price:p.price},b:null,color:'#dc2626'});redrawOverlay();setTool('cursor');return;}
+  if(D.tool==='vline'){D.shapes.push({type:'vline',a:{logical:p.logical,price:p.price},b:null,color:'#0891b2'});redrawOverlay();setTool('cursor');return;}
+  if(D.tool==='text'){const t=window.prompt('Label text:','');if(t&&t.trim()){D.shapes.push({type:'text',a:{logical:p.logical,price:p.price},b:null,text:t.trim(),color:'#374151'});redrawOverlay();}setTool('cursor');return;}
   D.dragging=true;
   D.temp={type:D.tool,a:{logical:p.logical,price:p.price},b:{logical:p.logical,price:p.price},
-    color:D.tool==='fib'?'#d97706':'#2d7d52'};
+    color:D.tool==='fib'?'#d97706':D.tool==='measure'?'#2d7d52':'#2d7d52'};
 });
 cv.addEventListener('mousemove',e=>{
   // Edit-drag of an existing shape (readjust endpoints / move / drag S-R line)
@@ -1075,12 +1270,13 @@ cv.addEventListener('mousemove',e=>{
     const p=evtPt(e);if(p.price==null)return;
     D.justEdited=true;
     if(D.editing.which==='line'){sh.a.price=p.price;}
-    else if(D.editing.which==='a'){if(p.logical!=null)sh.a={logical:p.logical,price:p.price};}
+    else if(D.editing.which==='vline'){if(p.logical!=null)sh.a.logical=p.logical;}
+    else if(D.editing.which==='a'){if(p.logical!=null){const keep=sh.text;sh.a={logical:p.logical,price:p.price};if(keep)sh.text=keep;}}
     else if(D.editing.which==='b'){if(p.logical!=null)sh.b={logical:p.logical,price:p.price};}
     else if(D.editing.which==='move'){
       if(D.editing.last&&p.logical!=null){
         const dl=p.logical-D.editing.last.logical,dp=p.price-D.editing.last.price;
-        sh.a.logical+=dl;sh.a.price+=dp;sh.b.logical+=dl;sh.b.price+=dp;
+        sh.a.logical+=dl;sh.a.price+=dp;if(sh.b){sh.b.logical+=dl;sh.b.price+=dp;}
       }
       D.editing.last={logical:p.logical,price:p.price};
     }
@@ -1091,16 +1287,22 @@ cv.addEventListener('mousemove',e=>{
   D.temp.b={logical:p.logical,price:p.price};redrawOverlay();
 });
 window.addEventListener('mouseup',()=>{
-  if(D.editing){D.editing=null;cv.style.pointerEvents=(D.tool==='cursor')?'none':'auto';redrawOverlay();return;}
+  if(D.editing){
+    D.editing=null;cv.style.pointerEvents=isSelect()?'none':'auto';
+    try{S.chart.applyOptions({handleScroll:true,handleScale:true});}catch(err){}
+    redrawOverlay();return;
+  }
   if(D.dragging&&D.temp){D.shapes.push(D.temp);D.temp=null;D.dragging=false;redrawOverlay();setTool('cursor');}
 });
 
 function setTool(t){
   D.tool=t;
-  ['cursor','trend','hline','rect','fib'].forEach(x=>{const b=document.getElementById('d'+x[0].toUpperCase()+x.slice(1));if(b)b.classList.toggle('on',x===t);});
-  // cursor mode: pointer-events none on overlay so chart can pan; click handled on chartWrap
-  cv.style.pointerEvents=(t==='cursor')?'none':'auto';
-  cv.style.cursor=(t==='cursor')?'default':'crosshair';
+  ['cursor','crosshair','trend','hline','vline','rect','fib','text','measure'].forEach(x=>{const b=document.getElementById('d'+x[0].toUpperCase()+x.slice(1));if(b)b.classList.toggle('on',x===t);});
+  // select modes (cursor/crosshair): overlay ignores pointer so chart can pan; click handled on chartWrap
+  cv.style.pointerEvents=isSelect()?'none':'auto';
+  cv.style.cursor=isSelect()?'default':'crosshair';
+  // crosshair tool snaps the chart crosshair to data points (magnet)
+  try{if(S.chart)S.chart.applyOptions({crosshair:{mode:t==='crosshair'?LWC.CrosshairMode.Magnet:LWC.CrosshairMode.Normal}});}catch(err){}
 }
 function undoDraw(){if(D.shapes.length){D.shapes.pop();D.selected=-1;hideMenu();redrawOverlay();}}
 function clearDraw(){D.shapes=[];D.temp=null;D.selected=-1;hideMenu();redrawOverlay();}
@@ -1127,12 +1329,108 @@ function exportPNG(){
   }catch(e){console.error(e);}
 }
 
+/* ════════ INDICATOR PICKER MODAL ════════ */
+function openIndModal(){
+  if(!S.times.length){showMsg('Build an index first, then add indicators.','err');return;}
+  document.getElementById('indModal').classList.add('open');
+  const inp=document.getElementById('indSearch');inp.value='';renderIndList('');inp.focus();
+}
+function closeIndModal(){document.getElementById('indModal').classList.remove('open');}
+function renderIndList(q){
+  q=(q||'').toLowerCase().trim();
+  const list=document.getElementById('indList');
+  const cats={};
+  Object.keys(IND_DEFS).forEach(type=>{
+    const d=IND_DEFS[type];
+    if(q&&d.name.toLowerCase().indexOf(q)<0&&d.short.toLowerCase().indexOf(q)<0&&d.cat.toLowerCase().indexOf(q)<0)return;
+    (cats[d.cat]=cats[d.cat]||[]).push(type);
+  });
+  let html='';
+  Object.keys(cats).forEach(cat=>{
+    html+='<div class="ind-cat">'+cat+'</div>';
+    cats[cat].forEach(type=>{
+      const d=IND_DEFS[type];
+      html+='<div class="ind-row" data-type="'+type+'"><span class="ic" style="background:'+d.color+'">'+d.short.slice(0,4)+'</span>'+
+        '<span class="meta"><span class="nm">'+d.name+'</span><span class="ds">'+d.cat+'</span></span><span class="plus">+</span></div>';
+    });
+  });
+  list.innerHTML=html||'<div class="ind-cat">No matches</div>';
+  list.querySelectorAll('.ind-row').forEach(r=>{
+    r.onclick=async()=>{closeIndModal();await addIndicator(r.dataset.type);};
+  });
+}
+
+/* ════════ INDICATOR SETTINGS POPOVER ════════ */
+function openIndSettings(id,anchor){
+  const inst=S.indicators.find(x=>x.id===id);if(!inst)return;
+  const d=IND_DEFS[inst.type],set=document.getElementById('indSet');
+  set.dataset.id=String(id);
+  document.getElementById('indSetTitle').textContent=pillLabel(inst);
+  const body=document.getElementById('indSetBody');
+  let html='';
+  if(d.params.length){
+    html+='<div class="sect">Inputs</div>';
+    d.params.forEach(p=>{
+      html+='<div class="fl"><label>'+p.label+'</label><input type="number" data-p="'+p.k+'" value="'+inst.params[p.k]+'" min="'+(p.min||1)+'" max="'+(p.max||999)+'" step="'+(p.step||1)+'"></div>';
+    });
+  }
+  if(d.source){
+    html+='<div class="fl"><label>Source</label><select data-src>'+
+      ['close','open','high','low'].map(s=>'<option value="'+s+'"'+(inst.source===s?' selected':'')+(s!=='close'&&!S.ohlc?' disabled':'')+'>'+s[0].toUpperCase()+s.slice(1)+'</option>').join('')+'</select></div>';
+  }
+  html+='<div class="sect">Style</div>';
+  html+='<div class="fl"><label>Color</label><input type="color" data-st="color" value="'+inst.style.color+'"></div>';
+  if(inst.type!=='vol'){
+    html+='<div class="fl"><label>Line width</label><select data-st="lineWidth">'+[1,2,3,4].map(w=>'<option value="'+w+'"'+(inst.style.lineWidth===w?' selected':'')+'>'+w+'px</option>').join('')+'</select></div>';
+    html+='<div class="fl"><label>Line style</label><select data-st="lineStyle">'+['solid','dashed','dotted'].map(s=>'<option value="'+s+'"'+(inst.style.lineStyle===s?' selected':'')+'>'+s[0].toUpperCase()+s.slice(1)+'</option>').join('')+'</select></div>';
+  }
+  html+='<div class="fl"><label>Opacity</label><input type="range" data-st="opacity" min="0.2" max="1" step="0.05" value="'+inst.style.opacity+'"></div>';
+  body.innerHTML=html;
+  // live updates
+  body.querySelectorAll('[data-p]').forEach(el=>el.oninput=()=>{const v=parseFloat(el.value);if(!isNaN(v))updateIndicator(id,{[el.dataset.p]:v});document.getElementById('indSetTitle').textContent=pillLabel(inst);});
+  const srcEl=body.querySelector('[data-src]');if(srcEl)srcEl.onchange=()=>updateIndicator(id,null,null,srcEl.value);
+  body.querySelectorAll('[data-st]').forEach(el=>{
+    const k=el.dataset.st;
+    el.oninput=()=>{let v=el.value;if(k==='lineWidth')v=+v;if(k==='opacity')v=+v;updateIndicator(id,null,{[k]:v});};
+  });
+  document.getElementById('indSetRemove').onclick=()=>removeIndicator(id);
+  // position near anchor pill
+  set.classList.add('open');
+  const r=anchor.getBoundingClientRect(),sw=set.offsetWidth,sh=set.offsetHeight;
+  let left=Math.min(r.left,window.innerWidth-sw-12);left=Math.max(12,left);
+  let top=r.bottom+8;if(top+sh>window.innerHeight-10)top=Math.max(10,r.top-sh-8);
+  set.style.left=left+'px';set.style.top=top+'px';
+}
+function closeIndSettings(){const s=document.getElementById('indSet');s.classList.remove('open');s.dataset.id='';}
+document.getElementById('indSetClose').onclick=closeIndSettings;
+document.addEventListener('mousedown',e=>{
+  const s=document.getElementById('indSet');
+  if(s.classList.contains('open')&&!s.contains(e.target)&&!e.target.closest('.ipill'))closeIndSettings();
+});
+
+/* ════════ TOOLBAR COLLAPSE (persisted) ════════ */
+function applyLeftbarState(){
+  const expanded=localStorage.getItem('cx_lb_expanded')==='1';
+  document.getElementById('leftbar').classList.toggle('expanded',expanded);
+}
+
 /* ── INIT ── */
 new ResizeObserver(()=>{resizeOverlay();redrawOverlay();}).observe(document.getElementById('chartWrap'));
 (function(){
   const today=new Date(),back=new Date();back.setFullYear(today.getFullYear()-2);
   document.getElementById('gStart').value=toKey(back);
   document.getElementById('gEnd').value=toKey(today);
+  // indicator picker
+  document.getElementById('btnIndicators').onclick=openIndModal;
+  document.getElementById('indClose').onclick=closeIndModal;
+  document.getElementById('indModal').addEventListener('click',e=>{if(e.target.id==='indModal')closeIndModal();});
+  document.getElementById('indSearch').addEventListener('input',e=>renderIndList(e.target.value));
+  // collapsible toolbar
+  applyLeftbarState();
+  document.getElementById('lbCollapse').onclick=()=>{
+    const lb=document.getElementById('leftbar');const exp=!lb.classList.contains('expanded');
+    lb.classList.toggle('expanded',exp);localStorage.setItem('cx_lb_expanded',exp?'1':'0');
+  };
   // Chips start empty — users add stocks from the top search bar.
   srcChange();
 })();
