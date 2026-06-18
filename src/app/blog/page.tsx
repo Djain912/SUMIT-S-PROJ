@@ -25,18 +25,21 @@ export default async function BlogPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Nav */}
-      <nav className="border-b border-zinc-100 bg-white/80 backdrop-blur sticky top-0 z-10">
+      {/* Nav — matches main site */}
+      <nav className="sticky top-0 z-50 border-b border-emerald-100 bg-white/95 backdrop-blur shadow-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-900">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600">
               <TrendingUp className="h-3.5 w-3.5 text-white" />
             </div>
-            <span className="text-sm font-bold text-zinc-950">Chartix</span>
+            <span className="text-sm font-bold text-emerald-900">Chartix</span>
           </Link>
           <div className="flex items-center gap-3">
-            <Link href="/sign-in" className="text-sm text-zinc-500 hover:text-zinc-900 transition">Sign in</Link>
-            <Link href="/sign-up" className="inline-flex items-center gap-1.5 rounded-full bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-700">
+            <Link href="/sign-in" className="text-sm font-medium text-zinc-500 hover:text-emerald-700 transition">Sign in</Link>
+            <Link
+              href="/sign-up"
+              className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+            >
               Get started
             </Link>
           </div>
@@ -44,13 +47,15 @@ export default async function BlogPage() {
       </nav>
 
       {/* Header */}
-      <section className="border-b border-zinc-100 py-14 sm:py-18 px-4 text-center">
-        <span className="inline-flex items-center rounded-full border border-zinc-200 bg-zinc-50 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-widest text-zinc-500">
+      <section className="bg-gradient-to-b from-emerald-50 to-white border-b border-emerald-100 py-14 sm:py-18 px-4 text-center">
+        <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-widest text-emerald-600">
           Blog
         </span>
-        <h1 className="mt-4 text-3xl font-bold tracking-tight text-zinc-950 sm:text-4xl">CMT Exam Insights</h1>
+        <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-emerald-900 sm:text-4xl">
+          CMT Exam Insights
+        </h1>
         <p className="mt-3 mx-auto max-w-lg text-base text-zinc-500">
-          Study strategies, technical analysis breakdowns, and exam tips from a CMT Level 3 passer.
+          Study strategies, technical analysis breakdowns, and exam tips — written by a CMT Level 3 passer.
         </p>
       </section>
 
@@ -58,19 +63,22 @@ export default async function BlogPage() {
       <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
         {posts.length === 0 ? (
           <div className="py-24 text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50">
+              <TrendingUp className="h-6 w-6 text-emerald-400" />
+            </div>
             <p className="text-zinc-400 text-sm">No posts yet — check back soon!</p>
           </div>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {posts.map((post, i) => (
+            {posts.map((post) => (
               <Link
                 key={post.id}
                 href={`/blog/${post.slug}`}
-                className="group flex flex-col rounded-2xl border border-zinc-200 bg-white overflow-hidden shadow-sm transition hover:shadow-md hover:-translate-y-0.5"
+                className="group flex flex-col rounded-2xl border border-emerald-100 bg-white overflow-hidden shadow-sm transition hover:shadow-md hover:shadow-emerald-100 hover:-translate-y-0.5"
               >
                 {/* Cover image */}
                 {post.coverImageUrl ? (
-                  <div className="h-44 overflow-hidden bg-zinc-100">
+                  <div className="h-44 overflow-hidden bg-emerald-50">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={post.coverImageUrl}
@@ -79,10 +87,8 @@ export default async function BlogPage() {
                     />
                   </div>
                 ) : (
-                  <div className={`h-44 flex items-center justify-center ${
-                    i % 3 === 0 ? 'bg-zinc-950' : i % 3 === 1 ? 'bg-emerald-600' : 'bg-zinc-800'
-                  }`}>
-                    <TrendingUp className="h-10 w-10 text-white/30" />
+                  <div className="h-44 flex items-center justify-center bg-gradient-to-br from-emerald-700 to-emerald-900">
+                    <TrendingUp className="h-10 w-10 text-white/25" />
                   </div>
                 )}
 
@@ -91,14 +97,17 @@ export default async function BlogPage() {
                   {post.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mb-3">
                       {post.tags.slice(0, 2).map((tag) => (
-                        <span key={tag} className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-[11px] font-medium text-zinc-600">
+                        <span
+                          key={tag}
+                          className="rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700"
+                        >
                           {tag}
                         </span>
                       ))}
                     </div>
                   )}
 
-                  <h2 className="font-semibold text-zinc-950 leading-snug group-hover:text-zinc-700 transition line-clamp-2">
+                  <h2 className="font-bold text-zinc-900 leading-snug group-hover:text-emerald-700 transition line-clamp-2">
                     {post.title}
                   </h2>
                   {post.excerpt && (
@@ -118,7 +127,7 @@ export default async function BlogPage() {
                         {post.readMinutes} min read
                       </span>
                     </div>
-                    <ArrowRight className="h-4 w-4 text-zinc-300 group-hover:text-zinc-600 group-hover:translate-x-0.5 transition" />
+                    <ArrowRight className="h-4 w-4 text-emerald-200 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition" />
                   </div>
                 </div>
               </Link>
@@ -128,20 +137,24 @@ export default async function BlogPage() {
       </section>
 
       {/* CTA */}
-      <section className="border-t border-zinc-100 bg-zinc-50 py-12 text-center px-4">
-        <p className="text-sm text-zinc-500">Ready to start your CMT preparation?</p>
-        <Link href="/sign-up" className="mt-4 inline-flex items-center gap-2 rounded-full bg-zinc-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-zinc-700">
+      <section className="border-t border-emerald-100 bg-gradient-to-b from-emerald-50 to-white py-14 text-center px-4">
+        <p className="text-sm font-medium text-emerald-800">Ready to start your CMT preparation?</p>
+        <p className="mt-1 text-xs text-zinc-500">Join students already studying smarter with Chartix.</p>
+        <Link
+          href="/sign-up"
+          className="mt-5 inline-flex items-center gap-2 rounded-full bg-emerald-600 px-7 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+        >
           Start free on Chartix <ArrowRight className="h-4 w-4" />
         </Link>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-zinc-100 bg-white py-6 text-center text-xs text-zinc-400">
+      <footer className="border-t border-emerald-100 bg-white py-6 text-center text-xs text-zinc-400">
         <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
-          <Link href="/" className="hover:text-zinc-600">Home</Link>
-          <Link href="/pricing" className="hover:text-zinc-600">Pricing</Link>
-          <Link href="/privacy-policy" className="hover:text-zinc-600">Privacy</Link>
-          <Link href="/terms" className="hover:text-zinc-600">Terms</Link>
+          <Link href="/" className="hover:text-emerald-700 transition">Home</Link>
+          <Link href="/pricing" className="hover:text-emerald-700 transition">Pricing</Link>
+          <Link href="/privacy-policy" className="hover:text-emerald-700 transition">Privacy</Link>
+          <Link href="/terms" className="hover:text-emerald-700 transition">Terms</Link>
         </div>
         <p className="mt-3">© {new Date().getFullYear()} Chartix. All rights reserved.</p>
       </footer>
