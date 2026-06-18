@@ -194,67 +194,92 @@ main{flex:1;display:flex;min-height:0}
 .leftbar .tbtn.draw{padding:9px 4px}
 .leftbar .tbtn.draw svg{width:16px;height:16px}
 .lb-actions .tbtn{font-size:15px;padding:7px 4px}
+/* ── merged controls: two rows ── */
+.ctrl-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ctrl-top{padding:9px 16px;border-bottom:1px solid var(--line-soft);background:var(--panel)}
+.ctrl-bottom{padding:8px 16px;background:var(--panel)}
+.ctrl-brand{display:flex;align-items:baseline;gap:6px;flex-none}
+.ctrl-brand .glyph{font-family:"Sora";font-weight:800;font-size:15px;color:var(--topbar);letter-spacing:-.3px}
+.ctrl-brand .glyph::before{content:"◧ ";color:var(--accent)}
+.ctrl-brand .brand-sub{font-size:11px;color:var(--txt-mut);font-weight:600}
+.ctrl-search{position:relative;flex:1;min-width:160px;max-width:340px}
+.ctrl-search input{width:100%;background:#fff;border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:8px 13px;font-size:13px;font-family:inherit;outline:none}
+.ctrl-search input::placeholder{color:var(--txt-mut)}
+.ctrl-search input:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(15,123,90,.10)}
+.ctrl-btn{background:#fff;border:1px solid var(--line);color:var(--txt-dim);border-radius:9px;padding:7px 12px;font-size:12.5px;font-weight:600;font-family:"Sora";cursor:pointer;white-space:nowrap}
+.ctrl-btn:hover{border-color:var(--accent);color:var(--accent)}
+.ctrl-btn.solid{background:var(--accent);border-color:var(--accent);color:#fff}
+.ctrl-btn.solid:hover{background:var(--accent-dim)}
+#saveStatus{font-size:11px;color:var(--txt-mut);min-width:0;white-space:nowrap}
+.ctrl-acct{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--txt)}
+.ctrl-acct img{width:26px;height:26px;border-radius:50%}
+.ctrl-acct .nm{font-weight:600;color:var(--txt);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ctrl-acct .lnk{font-size:12px;color:var(--txt-mut);cursor:pointer;text-decoration:underline}
+.ctrl-acct .gbtn{display:inline-flex;align-items:center;gap:6px;background:#fff;color:#1f2937;border:1px solid var(--line);border-radius:9px;padding:7px 12px;font-size:12.5px;font-weight:600;text-decoration:none;cursor:pointer;font-family:"Sora"}
+.ctrl-acct .gbtn:hover{border-color:var(--accent);color:var(--accent)}
 </style>
 </head>
 <body>
 <div class="app">
-  <!-- ── COMMAND BAR (dark) ── -->
-  <header class="cmd">
-    <div class="brand"><span class="glyph">CHARTIX</span><span class="brand-sub">Index Builder</span></div>
-    <div class="cmd-search">
-      <input type="text" id="topSearch" placeholder="Add a stock to your index…" autocomplete="off">
-      <div class="ac-drop" id="topAcDrop"></div>
-    </div>
-    <div class="cmd-actions">
-      <button class="cmd-btn" id="btnReady">Ready-made ▾</button>
-      <button class="cmd-btn" id="btnMine">My indices ▾</button>
-      <button class="cmd-btn solid" id="btnSave">Save</button>
-      <span id="saveStatus"></span>
-      <div id="cloudAcct"></div>
-      <span class="tagchip" id="srcChip" style="display:none">No data loaded</span>
-    </div>
-  </header>
+  <!-- ── CONTROLS (two rows: search/actions + index config) ── -->
+  <div class="controls" style="display:flex;flex-direction:column;gap:0;padding:0">
 
-  <!-- ── CONTROLS STRIP (light) ── -->
-  <div class="controls">
-    <input type="text" id="idxName" class="ctrl-name" value="My Custom Index" placeholder="Index name">
-    <div class="subtabs" id="weightTabs">
-      <button id="wMcap" class="active" onclick="setWeight('mcap')">Market-cap</button>
-      <button id="wEqual" onclick="setWeight('equal')">Equal</button>
+    <!-- Row 1: brand · stock search · cloud actions -->
+    <div class="ctrl-row ctrl-top">
+      <div class="ctrl-brand"><span class="glyph">CHARTIX</span><span class="brand-sub">Index Builder</span></div>
+      <div class="ctrl-search">
+        <input type="text" id="topSearch" placeholder="Add a stock to your index…" autocomplete="off">
+        <div class="ac-drop" id="topAcDrop"></div>
+      </div>
+      <button class="ctrl-btn" id="btnReady">Ready-made ▾</button>
+      <button class="ctrl-btn" id="btnMine">My indices ▾</button>
+      <button class="ctrl-btn solid" id="btnSave">Save</button>
+      <span id="saveStatus"></span>
+      <div id="cloudAcct" class="ctrl-acct"></div>
     </div>
-    <div class="range" id="rangePresets">
-      <button data-yrs="1">1Y</button><button data-yrs="2" class="on">2Y</button><button data-yrs="5">5Y</button><button data-yrs="10">Max</button>
-    </div>
-    <div class="ctype">
-      <button class="tbtn on" id="btnArea" onclick="setChartType('area')">Area</button>
-      <button class="tbtn" id="btnLine" onclick="setChartType('line')">Line</button>
-      <button class="tbtn" id="btnCandle" onclick="setChartType('candle')">Candles</button>
-    </div>
-    <div class="ctype">
-      <button class="tbtn on" id="tfD" onclick="setTimeframe('D')">D</button>
-      <button class="tbtn" id="tfW" onclick="setTimeframe('W')">W</button>
-      <button class="tbtn" id="tfM" onclick="setTimeframe('M')">M</button>
-    </div>
-    <button class="gear" id="btnSettings" title="More settings">⚙</button>
-    <button class="btn-build" onclick="fetchAndBuild()">Build →</button>
-    <span id="fetchStatus" class="hint"></span>
-    <!-- settings popover -->
-    <div class="pop" id="settingsPop">
-      <label class="fld">Exchange</label>
-      <select id="exch"><option value=".NS">NSE (.NS)</option><option value=".BO">BSE (.BO)</option><option value="">US / as-typed</option></select>
-      <label class="fld">Price field</label>
-      <select id="priceField"><option value="close">Close (split-adj)</option><option value="adjclose">Adjusted close</option></select>
-      <label class="fld">Index base value</label>
-      <input type="number" id="baseValF" value="100" step="any">
-      <label class="fld">Custom dates</label>
-      <div class="grid2"><input type="date" id="gStart"><input type="date" id="gEnd"></div>
-      <label class="fld">Indicator periods (SMA · SMA · EMA)</label>
-      <div class="grid3">
-        <input class="miniinp" id="pSMA1" value="20" onchange="refreshIndicators()">
-        <input class="miniinp" id="pSMA2" value="50" onchange="refreshIndicators()">
-        <input class="miniinp" id="pEMA" value="21" onchange="refreshIndicators()">
+
+    <!-- Row 2: index config + build -->
+    <div class="ctrl-row ctrl-bottom">
+      <input type="text" id="idxName" class="ctrl-name" value="My Custom Index" placeholder="Index name">
+      <div class="subtabs" id="weightTabs">
+        <button id="wMcap" class="active" onclick="setWeight('mcap')">Market-cap</button>
+        <button id="wEqual" onclick="setWeight('equal')">Equal</button>
+      </div>
+      <div class="range" id="rangePresets">
+        <button data-yrs="1">1Y</button><button data-yrs="2" class="on">2Y</button><button data-yrs="5">5Y</button><button data-yrs="10">Max</button>
+      </div>
+      <div class="ctype">
+        <button class="tbtn on" id="btnArea" onclick="setChartType('area')">Area</button>
+        <button class="tbtn" id="btnLine" onclick="setChartType('line')">Line</button>
+        <button class="tbtn" id="btnCandle" onclick="setChartType('candle')">Candles</button>
+      </div>
+      <div class="ctype">
+        <button class="tbtn on" id="tfD" onclick="setTimeframe('D')">D</button>
+        <button class="tbtn" id="tfW" onclick="setTimeframe('W')">W</button>
+        <button class="tbtn" id="tfM" onclick="setTimeframe('M')">M</button>
+      </div>
+      <button class="gear" id="btnSettings" title="More settings">⚙</button>
+      <button class="btn-build" onclick="fetchAndBuild()">Build →</button>
+      <span id="fetchStatus" class="hint"></span>
+      <!-- settings popover -->
+      <div class="pop" id="settingsPop">
+        <label class="fld">Exchange</label>
+        <select id="exch"><option value=".NS">NSE (.NS)</option><option value=".BO">BSE (.BO)</option><option value="">US / as-typed</option></select>
+        <label class="fld">Price field</label>
+        <select id="priceField"><option value="close">Close (split-adj)</option><option value="adjclose">Adjusted close</option></select>
+        <label class="fld">Index base value</label>
+        <input type="number" id="baseValF" value="100" step="any">
+        <label class="fld">Custom dates</label>
+        <div class="grid2"><input type="date" id="gStart"><input type="date" id="gEnd"></div>
+        <label class="fld">Indicator periods (SMA · SMA · EMA)</label>
+        <div class="grid3">
+          <input class="miniinp" id="pSMA1" value="20" onchange="refreshIndicators()">
+          <input class="miniinp" id="pSMA2" value="50" onchange="refreshIndicators()">
+          <input class="miniinp" id="pEMA" value="21" onchange="refreshIndicators()">
+        </div>
       </div>
     </div>
+
   </div>
 
   <!-- ── CONSTITUENT CHIPS ── -->
