@@ -80,6 +80,16 @@ textarea{font-family:"JetBrains Mono",monospace;font-size:11.5px;line-height:1.5
 .empty .ico{font-size:40px;opacity:.4}
 .empty .t{font-family:"Sora";font-weight:600;font-size:15px;color:var(--txt-dim)}
 .empty .s{font-size:12px;max-width:380px}
+/* ── build loader ── */
+#buildLoader{position:absolute;inset:0;z-index:8;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#fff}
+#buildLoader.show{display:flex}
+.loader-logo{font-family:"Sora",sans-serif;font-weight:800;font-size:32px;color:var(--accent);letter-spacing:-.5px;animation:logoPulse 1.4s ease-in-out infinite}
+.loader-logo::before{content:"◧ ";color:#5fe3a8}
+.loader-bar{width:160px;height:3px;background:var(--line);border-radius:3px;overflow:hidden}
+.loader-bar::after{content:"";display:block;height:100%;width:40%;background:var(--accent);border-radius:3px;animation:barSlide 1.2s ease-in-out infinite}
+.loader-txt{font-size:12px;color:var(--txt-mut);font-family:"Sora";font-weight:600;letter-spacing:.3px}
+@keyframes logoPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.65;transform:scale(.96)}}
+@keyframes barSlide{0%{transform:translateX(-100%)}100%{transform:translateX(350%)}}
 .stats{display:flex;gap:0;border-top:1px solid var(--line);background:var(--panel-2);overflow-x:auto;flex:none}
 .stat{padding:8px 16px;border-right:1px solid var(--line-soft);white-space:nowrap;min-width:auto}
 .stat .k{font-size:9.5px;color:var(--txt-mut);text-transform:uppercase;letter-spacing:.5px}
@@ -288,6 +298,7 @@ main{flex:1;display:flex;min-height:0}
     <input type="text" id="proxyUrl" value="">
     <div id="stockList"></div>
     <span id="stkCount"></span>
+    <span id="srcChip"></span>
     <div id="constHint"></div>
     <button id="addStockBtn" onclick="addStockRow()"></button>
     <button id="menuToggle"></button>
@@ -341,7 +352,12 @@ main{flex:1;display:flex;min-height:0}
         <div class="empty" id="empty">
           <div class="ico">◧</div>
           <div class="t">No index loaded yet</div>
-          <div class="s">Go to <b>Build Index</b>, add your stocks with outstanding shares, pick a date range and hit <b>Fetch &amp; build</b>.</div>
+          <div class="s">Add stocks above or load a ready-made index, then hit <b>Build →</b></div>
+        </div>
+        <div id="buildLoader">
+          <div class="loader-logo">CHARTIX</div>
+          <div class="loader-bar"></div>
+          <div class="loader-txt" id="loaderTxt">Building your index…</div>
         </div>
       </div>
       <div class="stats" id="stats" style="display:none"></div>
@@ -548,6 +564,14 @@ async function fetchSeries(sym,start,end,field){
     return{close,open,high,low};
   }
 }
+function showLoader(txt){
+  var el=document.getElementById('buildLoader');
+  if(el){el.classList.add('show');document.getElementById('loaderTxt').textContent=txt||'Building your index…';}
+  document.getElementById('empty').style.display='none';
+}
+function hideLoader(){
+  var el=document.getElementById('buildLoader');if(el)el.classList.remove('show');
+}
 async function fetchAndBuild(){
   clearMsg();
   S.rs.data={};S.raw=null;S.tf='D';  // new build — reset benchmark cache + timeframe
@@ -569,9 +593,12 @@ async function fetchAndBuild(){
     else if(!isNaN(sh)&&sh>0)stocks.push({display:tk.toUpperCase(),key:ySym(tk),sharesCr:sh});
   });
   if(stocks.length<2){showMsg(equal?'Add at least 2 stocks.':'Add at least 2 stocks with shares.','err');return;}
+  showLoader('Fetching price data…');
   const priceMap={},failed=[];
   for(let i=0;i<stocks.length;i++){
-    const s=stocks[i];status.textContent='Fetching '+s.key+' ('+(i+1)+'/'+stocks.length+')…';
+    const s=stocks[i];
+    document.getElementById('loaderTxt').textContent='Fetching '+s.display+' ('+(i+1)+'/'+stocks.length+')…';
+    status.textContent='Fetching '+s.key+' ('+(i+1)+'/'+stocks.length+')…';
     try{
       const m=await fetchSeries(s.key,start,end,field);
       if(!Object.keys(m.close).length)failed.push(s.display+' (empty)');else priceMap[s.key]=m;
@@ -579,7 +606,7 @@ async function fetchAndBuild(){
     await new Promise(r=>setTimeout(r,260));
   }
   const good=stocks.filter(s=>priceMap[s.key]);
-  if(good.length<2){showMsg('Too many fetch failures. Issues: '+failed.join(', '),'err');status.textContent='';return;}
+  if(good.length<2){hideLoader();showMsg('Too many fetch failures. Issues: '+failed.join(', '),'err');status.textContent='';return;}
   status.innerHTML=failed.length?'⚠ Skipped: '+failed.join(', '):'Fetched ✓';
   S.title=name||(good.length+'-Stock '+(equal?'Equal-Wt':'')+' Index');
   assembleAndBuild(good,priceMap,base,start,end,equal);
@@ -658,11 +685,12 @@ function finalizeData(recs,hasOHLC,hasVol){
   if(!S.ohlc&&S.chartType==='candle')S.chartType='area';
   document.getElementById('srcChip').textContent=S.title+' · '+S.times.length+' bars';
   document.getElementById('empty').style.display='none';
+  hideLoader();
   document.getElementById('legend').style.display='block';
   document.getElementById('stats').style.display='flex';
   showMsg('Loaded ✓  '+S.times.length+' trading days.','ok');
   buildChart();computeStats();
-  if(window.innerWidth<=880){document.getElementById('sidebar').classList.add('collapsed');document.getElementById('menuToggle').innerHTML='☰ Show panel';}
+  if(window.innerWidth<=880){var sb=document.getElementById('sidebar');if(sb)sb.classList.add('collapsed');}
 }
 
 /* ── CHART ── */
@@ -1313,17 +1341,25 @@ new ResizeObserver(()=>{resizeOverlay();redrawOverlay();}).observe(document.getE
     document.getElementById('rmModal').classList.remove('open');
     document.getElementById('loadOptModal').classList.add('open');
   }
-  function applyReadyMade(x, weight, years){
+  async function applyReadyMade(x, weight, years){
     currentId=null; currentShareId=null;
     document.getElementById('idxName').value=x.name||'';
     setWeight(weight);
     var list=document.getElementById('stockList'); list.innerHTML='';
     x.constituents.forEach(function(sym){ addStockRow(sym); });
     if(weight==='mcap'){
-      [].slice.call(document.querySelectorAll('#stockList [data-row]')).forEach(function(card){
+      // await all share fetches before building so fetchAndBuild sees the values
+      var cards=[].slice.call(document.querySelectorAll('#stockList [data-row]'));
+      var promises=cards.map(function(card){
         var tk=(card.querySelector('.sc-tk').value||'').trim();
-        if(tk && typeof fetchShares==='function'){ try{ fetchShares(card,(typeof ySym==='function'?ySym(tk):tk)); }catch(e){} }
+        if(tk&&typeof fetchShares==='function'){
+          try{ return fetchShares(card,(typeof ySym==='function'?ySym(tk):tk)); }catch(e){}
+        }
+        return Promise.resolve();
       });
+      document.getElementById('fetchStatus').textContent='Fetching share data…';
+      await Promise.all(promises);
+      document.getElementById('fetchStatus').textContent='';
     }
     // set date range
     var rangeBtn=document.querySelector('#rangePresets [data-yrs="'+years+'"]');
