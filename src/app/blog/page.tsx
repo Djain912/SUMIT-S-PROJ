@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import Image from 'next/image';
 import { prisma } from '@/lib/db/prisma';
 import { TrendingUp, Clock, ArrowRight, Calendar } from 'lucide-react';
 
@@ -28,11 +29,8 @@ export default async function BlogPage() {
       {/* Nav — matches main site */}
       <nav className="sticky top-0 z-50 border-b border-emerald-100 bg-white/95 backdrop-blur shadow-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600">
-              <TrendingUp className="h-3.5 w-3.5 text-white" />
-            </div>
-            <span className="text-sm font-bold text-emerald-900">Chartix</span>
+          <Link href="/" className="flex items-center">
+            <Image src="/chartix-wordmark.png" alt="Chartix" width={132} height={34} priority />
           </Link>
           <div className="flex items-center gap-3">
             <Link href="/sign-in" className="text-sm font-medium text-zinc-500 hover:text-emerald-700 transition">Sign in</Link>
