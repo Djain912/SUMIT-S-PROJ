@@ -308,9 +308,22 @@ main{flex:1;display:flex;min-height:0}
 .stats .stat{padding:7px 14px}
 .stat .v{font-size:13px}
 
+/* ── Top brand bar (Row 1: dark) ── */
+.bar-top{display:flex;align-items:center;padding:0 16px;height:46px;background:var(--topbar);box-shadow:0 2px 8px rgba(12,59,41,.15);flex:none;z-index:40;position:relative;gap:10px}
+.bar-top-spacer{flex:1}
+.bar-top #cloudAcct{display:flex;align-items:center;gap:7px;font-size:13px;color:#fff}
+.bar-top #cloudAcct img{width:28px;height:28px;border-radius:50%;object-fit:cover}
+.bar-top #cloudAcct .nm{font-weight:600;color:#fff;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-top #cloudAcct .lnk{font-size:12px;color:rgba(255,255,255,.7);cursor:pointer;text-decoration:underline;white-space:nowrap}
+.bar-top #cloudAcct .gbtn{display:inline-flex;align-items:center;gap:6px;background:#fff;color:#1f2937;border:none;border-radius:9px;padding:7px 13px;font-size:13px;font-weight:600;text-decoration:none;cursor:pointer;white-space:nowrap;font-family:"Sora"}
+.bar-top #cloudAcct .gbtn:hover{background:#f0fdf4}
+/* Controls (Row 2: light, wraps freely — no horizontal scroll) */
+.controls{display:flex;align-items:center;gap:7px;flex-wrap:wrap;overflow-x:hidden;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--line);position:relative;z-index:30;flex:none}
+
 /* ── Mobile responsive ── */
 @media(max-width:760px){
-  .controls{gap:6px;padding:7px 10px}
+  .bar-top{padding:0 12px;height:42px}
+  .controls{gap:5px;padding:7px 10px}
   .ctrl-search{width:140px}
   .ctrl-name{width:130px}
   main{flex-direction:column}
@@ -327,12 +340,17 @@ main{flex:1;display:flex;min-height:0}
 </head>
 <body>
 <div class="app">
-  <!-- ── CONTROLS (single row: logo + search + cloud actions + index config + build) ── -->
-  <div class="controls">
-    <!-- home logo -->
-    <a href="/" style="flex:none;display:flex;align-items:center;text-decoration:none;margin-right:4px">
-      <img src="/chartix-wordmark.png" alt="Chartix" style="height:28px;width:auto;display:block">
+  <!-- ── ROW 1: Brand bar (dark) — logo + account only ── -->
+  <div class="bar-top">
+    <a href="/" style="display:flex;align-items:center;text-decoration:none;flex:none">
+      <img src="/chartix-wordmark.png" alt="Chartix" style="height:26px;width:auto;display:block;filter:brightness(0) invert(1)">
     </a>
+    <div class="bar-top-spacer"></div>
+    <div id="cloudAcct"></div>
+  </div>
+
+  <!-- ── ROW 2: Controls (light) — search + cloud actions + index config + build ── -->
+  <div class="controls">
     <!-- stock search -->
     <div class="ctrl-search">
       <input type="text" id="topSearch" placeholder="Add a stock…" autocomplete="off">
@@ -342,9 +360,8 @@ main{flex:1;display:flex;min-height:0}
     <button class="ctrl-btn" id="btnMine">My indices ▾</button>
     <button class="ctrl-btn solid" id="btnSave">Save</button>
     <span id="saveStatus"></span>
-    <div id="cloudAcct" class="ctrl-acct"></div>
     <!-- divider -->
-    <div style="width:1px;height:28px;background:var(--line);flex:none;margin:0 4px"></div>
+    <div style="width:1px;height:26px;background:var(--line);flex:none;margin:0 2px"></div>
     <!-- index config -->
     <div class="subtabs" id="weightTabs">
       <button id="wMcap" class="active" onclick="setWeight('mcap')">Market-cap</button>
