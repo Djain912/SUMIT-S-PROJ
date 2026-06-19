@@ -5,7 +5,21 @@ import { ArrowRight, ChevronRight, Calculator } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Chartix Indicator Lab | Free Interactive Technical Analysis Tools',
-  description: 'Free interactive calculators for every major technical indicator — RSI, MACD, Stochastics, moving averages, OBV, CMF and more. Live chart + step-by-step calculations. No login required.',
+  description:
+    'Free interactive calculators for every major technical indicator — RSI, MACD, Stochastics, Bollinger Bands, moving averages, OBV, CMF and more. Live chart + step-by-step calculations. No login required.',
+  alternates: { canonical: '/tools' },
+  openGraph: {
+    title: 'Chartix Indicator Lab — Free Technical Analysis Calculators',
+    description:
+      'Interactive calculators for RSI, MACD, Bollinger Bands, Stochastics, OBV and 10+ more indicators. Free, no login.',
+    url: '/tools',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Chartix Indicator Lab — Free Technical Analysis Calculators',
+    description: 'Interactive calculators for RSI, MACD, Bollinger Bands and 10+ more indicators.',
+  },
 };
 
 const TOOLS = [

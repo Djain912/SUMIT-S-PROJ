@@ -20,13 +20,31 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const post = await getPost(slug);
   if (!post) return { title: 'Post Not Found | Chartix Blog' };
+
+  const description = post.excerpt ?? undefined;
+  const images = post.coverImageUrl ? [{ url: post.coverImageUrl, alt: post.title }] : [];
+
   return {
-    title: `${post.title} | Chartix Blog`,
-    description: post.excerpt ?? undefined,
+    title: post.title,
+    description,
+    keywords: post.tags.length ? post.tags : undefined,
+    alternates: { canonical: `/blog/${slug}` },
     openGraph: {
+      type: 'article',
       title: post.title,
-      description: post.excerpt ?? undefined,
-      images: post.coverImageUrl ? [post.coverImageUrl] : [],
+      description,
+      url: `/blog/${slug}`,
+      images,
+      publishedTime: post.publishedAt?.toISOString(),
+      modifiedTime: post.updatedAt?.toISOString(),
+      authors: ['https://chartix.in'],
+      tags: post.tags,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: post.title,
+      description,
+      images: post.coverImageUrl ? [post.coverImageUrl] : undefined,
     },
   };
 }
@@ -36,8 +54,31 @@ export default async function BlogPostPage({ params }: Props) {
   const post = await getPost(slug);
   if (!post) notFound();
 
+  const articleJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: post.title,
+    description: post.excerpt ?? undefined,
+    image: post.coverImageUrl ?? undefined,
+    datePublished: post.publishedAt?.toISOString(),
+    dateModified: post.updatedAt?.toISOString(),
+    author: { '@type': 'Organization', name: 'Chartix', url: 'https://chartix.in' },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Chartix',
+      url: 'https://chartix.in',
+      logo: { '@type': 'ImageObject', url: 'https://chartix.in/chartix-wordmark.png' },
+    },
+    mainEntityOfPage: { '@type': 'WebPage', '@id': `https://chartix.in/blog/${slug}` },
+    keywords: post.tags.join(', ') || undefined,
+  };
+
   return (
     <div className="min-h-screen bg-white">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
+      />
       {/* Nav */}
       <nav className="border-b border-zinc-100 bg-white/80 backdrop-blur sticky top-0 z-10">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">

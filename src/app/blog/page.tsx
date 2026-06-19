@@ -5,8 +5,22 @@ import { prisma } from '@/lib/db/prisma';
 import { TrendingUp, Clock, ArrowRight, Calendar } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Blog | Chartix — CMT Exam Insights',
-  description: 'CMT exam tips, technical analysis insights, and study strategies from Chartix.',
+  title: 'Blog | Chartix — CMT Exam Tips & Technical Analysis Insights',
+  description:
+    'CMT exam strategies, technical analysis explainers, and market study insights from Chartix — the CMT prep platform built for serious candidates.',
+  alternates: { canonical: '/blog' },
+  openGraph: {
+    title: 'Chartix Blog — CMT Exam Tips & Technical Analysis',
+    description:
+      'CMT exam strategies, technical analysis explainers, and market study insights from Chartix.',
+    url: '/blog',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Chartix Blog — CMT Exam Tips & Technical Analysis',
+    description: 'CMT exam strategies, technical analysis explainers, and market study insights.',
+  },
 };
 
 export const dynamic = 'force-dynamic';

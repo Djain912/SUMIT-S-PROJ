@@ -18,9 +18,23 @@ const NAMES: Record<IndicatorKey, string> = {
 export async function generateMetadata({ params }: { params: Promise<{ indicator: string }> }) {
   const { indicator } = await params;
   const name = NAMES[indicator as IndicatorKey] ?? 'Indicator';
+  const title = `${name} Calculator — Free Interactive Tool | Chartix`;
+  const description = `Free interactive ${name} calculator with a live price chart, step-by-step calculation table, and a clear explanation. Learn exactly how ${name} is built — no login required.`;
   return {
-    title: `${name} Calculator — Free Interactive Tool | Chartix Indicator Lab`,
-    description: `Free interactive ${name} calculator with a live price chart, step-by-step calculation table, and a clear explanation. Learn exactly how ${name} is built.`,
+    title,
+    description,
+    alternates: { canonical: `/tools/${indicator}` },
+    openGraph: {
+      title,
+      description,
+      url: `/tools/${indicator}`,
+      type: 'website' as const,
+    },
+    twitter: {
+      card: 'summary_large_image' as const,
+      title,
+      description,
+    },
   };
 }
 
