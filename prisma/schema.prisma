@@ -471,6 +471,47 @@ model BotQAPair {
   @@index([botType])
 }
 
+// ── FII/DII permanent daily log ───────────────────────────────────────────
+// Cash segment: one row per trading day, upserted by the 6:30 PM IST cron.
+model FiiDiiLog {
+  date      String   @id             // YYYY-MM-DD
+  fiiBuy    Float
+  fiiSell   Float
+  fiiNet    Float
+  diiBuy    Float
+  diiSell   Float
+  diiNet    Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+}
+
+// F&O participant open interest: one row per trading day.
+model FnoLog {
+  date            String   @id       // DD-Mon-YYYY (NSE archive format)
+  fiiIdxFutLong   Float    @default(0)
+  fiiIdxFutShort  Float    @default(0)
+  fiiStkFutLong   Float    @default(0)
+  fiiStkFutShort  Float    @default(0)
+  fiiIdxCallLong  Float    @default(0)
+  fiiIdxCallShort Float    @default(0)
+  fiiIdxPutLong   Float    @default(0)
+  fiiIdxPutShort  Float    @default(0)
+  diiIdxFutLong   Float    @default(0)
+  diiIdxFutShort  Float    @default(0)
+  diiStkFutLong   Float    @default(0)
+  diiStkFutShort  Float    @default(0)
+  diiIdxCallLong  Float    @default(0)
+  diiIdxCallShort Float    @default(0)
+  diiIdxPutLong   Float    @default(0)
+  diiIdxPutShort  Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([date])
+}
+
 // ── Homepage public chatbot knowledge sources ──────────────────────────────
 model PublicBotSource {
   id        String   @id @default(cuid())
