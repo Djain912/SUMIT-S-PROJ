@@ -48,6 +48,20 @@ const config: Config = {
       boxShadow: {
         soft: '0 18px 60px rgba(0, 0, 0, 0.08)',
       },
+      keyframes: {
+        'logo-pulse': {
+          '0%, 100%': { opacity: '1', transform: 'scale(1)' },
+          '50%': { opacity: '0.55', transform: 'scale(0.94)' },
+        },
+        'bar-slide': {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(350%)' },
+        },
+      },
+      animation: {
+        'logo-pulse': 'logo-pulse 1.4s ease-in-out infinite',
+        'bar-slide': 'bar-slide 1.2s ease-in-out infinite',
+      },
     },
   },
   plugins: [typography],
