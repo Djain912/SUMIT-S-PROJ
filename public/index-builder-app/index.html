@@ -511,6 +511,7 @@ const S = {
   matrix:null, title:'Custom Index', weightMode:'mcap',
 };
 function setWeight(mode){
+  var prev=S.weightMode;
   S.weightMode=mode;
   document.getElementById('wMcap').classList.toggle('active',mode==='mcap');
   document.getElementById('wEqual').classList.toggle('active',mode==='equal');
@@ -518,6 +519,24 @@ function setWeight(mode){
   document.getElementById('constHint').textContent = mode==='equal'
     ? 'Up to 15 stocks. Each stock gets an equal weight — no share counts needed.'
     : 'Up to 15 stocks · shares in Crores. Pick from the list and shares auto-fill from Yahoo — edit any value if needed.';
+  // auto-rebuild when toggling if a chart is already showing
+  if(S.times&&S.times.length>0){
+    if(mode==='mcap'&&prev==='equal'){
+      // fetch any missing shares before rebuilding
+      var cards=[].slice.call(document.querySelectorAll('#stockList [data-row]'));
+      var promises=cards.map(function(card){
+        var tk=(card.querySelector('.sc-tk').value||'').trim();
+        var sh=parseFloat((card.querySelector('.sc-sh').value||'').replace(/,/g,''));
+        if(tk&&(isNaN(sh)||sh<=0)&&typeof fetchShares==='function'){
+          try{return fetchShares(card,(typeof ySym==='function'?ySym(tk):tk));}catch(e){}
+        }
+        return Promise.resolve();
+      });
+      Promise.all(promises).then(function(){fetchAndBuild();});
+    } else {
+      fetchAndBuild();
+    }
+  }
 }
 const D = { tool:'cursor', shapes:[], dragging:false, temp:null, selected:-1, editing:null, justEdited:false };
 
@@ -1591,6 +1610,7 @@ new ResizeObserver(()=>{resizeOverlay();redrawOverlay();}).observe(document.getE
     };
   }
   async function applyState(ix){
+    S.times=[];S.closes=[]; // prevent auto-rebuild during state restore
     document.getElementById('idxName').value=ix.name||'';
     setWeight(ix.weightingType==='EQUAL'?'equal':'mcap');
     var list=document.getElementById('stockList'); list.innerHTML='';
@@ -1737,6 +1757,7 @@ new ResizeObserver(()=>{resizeOverlay();redrawOverlay();}).observe(document.getE
     document.getElementById('loadOptModal').classList.add('open');
   }
   async function applyReadyMade(x, weight, years){
+    S.times=[];S.closes=[]; // prevent auto-rebuild during load
     currentId=null; currentShareId=null;
     document.getElementById('idxName').value=x.name||'';
     setWeight(weight);
@@ -1854,6 +1875,8 @@ new ResizeObserver(()=>{resizeOverlay();redrawOverlay();}).observe(document.getE
         var end=new Date(), start=new Date(); start.setFullYear(end.getFullYear()-yrs);
         if(typeof toKey==='function'){ document.getElementById('gStart').value=toKey(start); document.getElementById('gEnd').value=toKey(end); }
         scheduleAutosave();
+        // auto-rebuild if a chart is already showing
+        if(S.times&&S.times.length>0) fetchAndBuild();
       };
     });
   }
