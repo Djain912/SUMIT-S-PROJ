@@ -61,6 +61,7 @@ export async function POST(request: Request) {
         weightingType: d.weightingType,
         constituents: d.constituents,
         customWeights: d.customWeights ?? undefined,
+        chartState: d.chartState ? (d.chartState as object) : undefined,
         description: d.description ?? null,
         visibility: d.visibility ?? 'PRIVATE',
       },

@@ -42,6 +42,7 @@ model Index {
   weightingType IndexWeighting @default(MARKET_CAP)
   constituents  Json           // string[] of stock symbols
   customWeights Json?          // optional { symbol: weight }
+  chartState    Json?          // drawings, indicators, timeframe, chartType
   description   String?
   visibility    IndexVisibility @default(PRIVATE)
   shareId       String?        @unique // set when made public, used in /indices/<shareId>

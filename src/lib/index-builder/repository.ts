@@ -5,6 +5,7 @@ import type { SavedIndex } from './types';
 type IndexRow = {
   id: string; name: string; weightingType: 'EQUAL' | 'MARKET_CAP';
   constituents: Prisma.JsonValue; customWeights: Prisma.JsonValue;
+  chartState: Prisma.JsonValue;
   description: string | null; visibility: 'PRIVATE' | 'PUBLIC'; shareId: string | null;
   createdAt: Date; updatedAt: Date;
 };
@@ -17,6 +18,7 @@ export function serializeIndex(row: IndexRow): SavedIndex {
     weightingType: row.weightingType,
     constituents: Array.isArray(row.constituents) ? (row.constituents as string[]) : [],
     customWeights: (row.customWeights as Record<string, number> | null) ?? null,
+    chartState: (row.chartState as Record<string, unknown> | null) ?? null,
     description: row.description,
     visibility: row.visibility,
     shareId: row.shareId,

@@ -10,6 +10,7 @@ export interface SavedIndex {
   weightingType: WeightingMethod;
   constituents: string[];
   customWeights: Record<string, number> | null;
+  chartState: Record<string, unknown> | null;
   description: string | null;
   visibility: IndexVisibility;
   shareId: string | null;

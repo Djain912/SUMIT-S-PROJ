@@ -9,6 +9,7 @@ export const indexInputSchema = z.object({
   weightingType: z.enum(['EQUAL', 'MARKET_CAP']),
   constituents: z.array(symbol).min(1).max(100),
   customWeights: z.record(z.string(), z.number().nonnegative()).nullish(),
+  chartState: z.record(z.string(), z.unknown()).nullish(),
   description: z.string().trim().max(300).nullish(),
   visibility: z.enum(['PRIVATE', 'PUBLIC']).optional(),
 });

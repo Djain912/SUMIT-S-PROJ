@@ -54,6 +54,7 @@ export async function PATCH(request: Request, { params }: Ctx) {
     if (d.weightingType !== undefined) data.weightingType = d.weightingType;
     if (d.constituents !== undefined) data.constituents = d.constituents;
     if (d.customWeights !== undefined) data.customWeights = d.customWeights ?? Prisma.JsonNull;
+    if (d.chartState !== undefined) data.chartState = d.chartState ? (d.chartState as object) : Prisma.JsonNull;
     if (d.description !== undefined) data.description = d.description ?? null;
     if (d.visibility !== undefined) {
       data.visibility = d.visibility;

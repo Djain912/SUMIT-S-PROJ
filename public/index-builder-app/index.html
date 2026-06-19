@@ -338,7 +338,7 @@ main{flex:1;display:flex;min-height:0}
       <input type="text" id="topSearch" placeholder="Add a stock…" autocomplete="off">
       <div class="ac-drop" id="topAcDrop"></div>
     </div>
-    <button class="ctrl-btn" id="btnReady">Ready-made ▾</button>
+    <button class="ctrl-btn" id="btnReady">Index Library ▾</button>
     <button class="ctrl-btn" id="btnMine">My indices ▾</button>
     <button class="ctrl-btn solid" id="btnSave">Save</button>
     <span id="saveStatus"></span>
@@ -1492,7 +1492,7 @@ new ResizeObserver(()=>{resizeOverlay();redrawOverlay();}).observe(document.getE
   .cloud-empty{text-align:center;color:#9aa0a6;font-size:13px;padding:28px 10px}
 </style>
 <div class="cloud-modal" id="rmModal"><div class="cloud-card">
-  <div class="cloud-head"><h3>Ready-made indices</h3><button class="x" data-close>×</button></div>
+  <div class="cloud-head"><h3>Index Library</h3><button class="x" data-close>×</button></div>
   <div class="cloud-tools">
     <input type="text" id="rmSearch" placeholder="Search indices…">
     <select id="rmCat"><option value="">All categories</option></select>
@@ -1547,15 +1547,30 @@ new ResizeObserver(()=>{resizeOverlay();redrawOverlay();}).observe(document.getE
       var sh=parseFloat((r.querySelector('.sc-sh').value||'').replace(/,/g,''));
       if(!isNaN(sh)&&sh>0)customWeights[tk]=sh;
     });
+    // capture full chart state so it can be restored on load
+    var activeRange=document.querySelector('#rangePresets button.on');
+    var chartState={
+      chartType:S.chartType||'area',
+      tf:S.tf||'D',
+      rangePreset:activeRange?activeRange.getAttribute('data-yrs'):null,
+      gStart:(document.getElementById('gStart')||{}).value||null,
+      gEnd:(document.getElementById('gEnd')||{}).value||null,
+      drawings:D.shapes.map(function(sh){ return JSON.parse(JSON.stringify(sh)); }),
+      indicators:S.indicators.map(function(inst){
+        var copy=Object.assign({},inst,{style:Object.assign({},inst.style)});
+        delete copy._series; delete copy._pane; return copy;
+      })
+    };
     return {
       name:(document.getElementById('idxName').value.trim()||'Untitled index'),
       weightingType:mapWeightToApi(),
       constituents:constituents,
       customWeights:Object.keys(customWeights).length?customWeights:null,
+      chartState:chartState,
       description:null
     };
   }
-  function applyState(ix){
+  async function applyState(ix){
     document.getElementById('idxName').value=ix.name||'';
     setWeight(ix.weightingType==='EQUAL'?'equal':'mcap');
     var list=document.getElementById('stockList'); list.innerHTML='';
@@ -1563,6 +1578,59 @@ new ResizeObserver(()=>{resizeOverlay();redrawOverlay();}).observe(document.getE
     (ix.constituents||[]).forEach(function(sym){ addStockRow(sym, cw[sym]!=null?cw[sym]:undefined); });
     if(!(ix.constituents||[]).length){ addStockRow(); addStockRow(); }
     updateStkCount();
+
+    var cs=ix.chartState||{};
+
+    // restore chart type button state before build (buildChart reads S.chartType)
+    if(cs.chartType&&typeof setChartType==='function'){
+      S.chartType=cs.chartType; // set directly to avoid buildChart before data ready
+      ['Area','Line','Candle'].forEach(function(x){
+        var b=document.getElementById('btn'+x); if(b)b.classList.toggle('on',x.toLowerCase()===cs.chartType);
+      });
+    }
+
+    // restore timeframe button state before build
+    if(cs.tf){
+      S.tf=cs.tf;
+      ['D','W','M'].forEach(function(t){
+        var b=document.getElementById('tf'+t); if(b)b.classList.toggle('on',t===cs.tf);
+      });
+    }
+
+    // restore date range
+    if(cs.rangePreset){
+      var rangeBtn=document.querySelector('#rangePresets [data-yrs="'+cs.rangePreset+'"]');
+      if(rangeBtn){ document.querySelectorAll('#rangePresets button').forEach(function(b){b.classList.remove('on');}); rangeBtn.classList.add('on'); rangeBtn.click(); }
+    } else if(cs.gStart&&cs.gEnd){
+      document.querySelectorAll('#rangePresets button').forEach(function(b){b.classList.remove('on');});
+      var gs=document.getElementById('gStart'), ge=document.getElementById('gEnd');
+      if(gs)gs.value=cs.gStart; if(ge)ge.value=cs.gEnd;
+    }
+
+    renderChips();
+
+    // build the chart — shares are already filled in from customWeights above so no need to re-fetch
+    await fetchAndBuild();
+
+    // restore drawings after chart is built
+    if(cs.drawings&&cs.drawings.length){
+      D.shapes=cs.drawings.map(function(sh){ return JSON.parse(JSON.stringify(sh)); });
+      if(typeof redrawOverlay==='function')redrawOverlay();
+    }
+
+    // restore indicators after chart is built
+    if(cs.indicators&&cs.indicators.length){
+      // clear any indicators that fetchAndBuild may have left
+      S.indicators.forEach(function(inst){ (inst._series||[]).forEach(function(s){ try{S.chart.removeSeries(s);}catch(e){} }); });
+      S.indicators=[];
+      for(var i=0;i<cs.indicators.length;i++){
+        var saved=cs.indicators[i];
+        var def=typeof IND_DEFS!=='undefined'?IND_DEFS[saved.type]:null; if(!def)continue;
+        if(def.sym){ var ok=await fetchBenchmark(def.sym); if(!ok)continue; }
+        S.indicators.push(Object.assign({},saved,{_series:[]}));
+      }
+      if(S.chart&&typeof renderIndicators==='function')renderIndicators();
+    }
   }
 
   // ── auth ──
@@ -1701,7 +1769,7 @@ new ResizeObserver(()=>{resizeOverlay();redrawOverlay();}).observe(document.getE
       var byId={}; p.data.forEach(function(ix){byId[ix.id]=ix;});
       list.querySelectorAll('.ix-card').forEach(function(card){
         var id=card.getAttribute('data-id'); var ix=byId[id];
-        card.querySelector('[data-act=load]').onclick=function(){ currentId=ix.id; currentShareId=ix.shareId; applyState(ix); document.getElementById('myModal').classList.remove('open'); setStatus('Loaded "'+ix.name+'"'); dirty=false; };
+        card.querySelector('[data-act=load]').onclick=async function(){ currentId=ix.id; currentShareId=ix.shareId; document.getElementById('myModal').classList.remove('open'); setStatus('Loading…'); await applyState(ix); setStatus('Loaded "'+ix.name+'"'); dirty=false; };
         card.querySelector('[data-act=rename]').onclick=async function(){ var nn=prompt('Rename index',ix.name); if(!nn)return; await api('/api/index-builder/indices/'+id,{method:'PATCH',body:JSON.stringify({name:nn.trim()})}); openMyIndices(); };
         card.querySelector('[data-act=dup]').onclick=async function(){ await api('/api/index-builder/indices',{method:'POST',body:JSON.stringify({name:ix.name+' (copy)',weightingType:ix.weightingType,constituents:ix.constituents,customWeights:ix.customWeights,description:ix.description})}); openMyIndices(); };
         card.querySelector('[data-act=del]').onclick=async function(){ if(!confirm('Delete "'+ix.name+'"?'))return; await api('/api/index-builder/indices/'+id,{method:'DELETE'}); if(currentId===id){currentId=null;currentShareId=null;} openMyIndices(); };
