@@ -761,13 +761,13 @@ function assembleAndBuild(stocks,priceMap,baseVal,gStart,gEnd,equal){
     stocks.forEach(s=>Object.keys(priceMap[s.key].close).forEach(d=>{if(d>=gStart&&d<=gEnd)set.add(d);}));
     const dates=[...set].sort();
     if(dates.length<2){showMsg('Not enough trading days.','err');return;}
-    function ff(field){const out={};stocks.forEach(s=>{const m=priceMap[s.key][field]||{};let last=NaN;const a=[];for(const d of dates){if(m[d]>0)last=m[d];a.push(last);}for(let i=1;i<a.length;i++){if(!isNaN(a[i])&&!isNaN(a[i-1])&&a[i-1]>0){const r=a[i]/a[i-1];if(r>2||r<0.5)a[i]=a[i-1];}}out[s.key]=a;});return out;}
+    function ff(field){const out={};stocks.forEach(s=>{const m=priceMap[s.key][field]||{};let last=NaN;const a=[];for(const d of dates){if(m[d]>0)last=m[d];a.push(last);}out[s.key]=a;});return out;}
     const C=ff('close'),O=ff('open'),H=ff('high'),L=ff('low');
-    // Start at earliest date where ≥50% of stocks (min 2) have data — allows
-    // recently-listed stocks to join later without truncating the whole history.
-    const minSi=Math.max(2,Math.ceil(stocks.length/2));
-    let si=-1;for(let i=0;i<dates.length;i++){if(stocks.filter(s=>!isNaN(C[s.key][i])).length>=minSi){si=i;break;}}
-    if(si<0){showMsg('No date with full pricing found.','err');return;}
+    // Require ALL stocks to have data before the index starts.
+    // This prevents pre-listing / unlisted-market prices from distorting
+    // the index when a recently-listed stock is included.
+    let si=-1;for(let i=0;i<dates.length;i++){if(stocks.every(s=>!isNaN(C[s.key][i]))){si=i;break;}}
+    if(si<0){showMsg('No date where all stocks have overlapping data. Try removing recently-listed or delisted stocks.','err');return;}
     const recs=[];
 
     if(equal){
