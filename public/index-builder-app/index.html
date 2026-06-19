@@ -183,6 +183,7 @@ header.cmd{display:flex;align-items:center;gap:14px;padding:0 16px;height:56px;b
 .pop{position:absolute;top:calc(100% + 6px);left:16px;z-index:60;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow-lg);padding:14px 16px;width:280px;display:none}
 .pop.open{display:block}
 .pop .fld{margin:10px 0 4px}.pop .fld:first-child{margin-top:0}
+.build-row{display:flex;align-items:center;gap:8px;padding:7px 14px;background:var(--panel);border-bottom:1px solid var(--line);flex:none;min-width:0;overflow:hidden}
 .chips-inline{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none}.chips-inline::-webkit-scrollbar{display:none}
 .chips-inline:empty{display:none}
 .chip{display:inline-flex;align-items:center;gap:6px;background:var(--panel-2);border:1px solid var(--line);border-radius:20px;padding:5px 7px 5px 11px;font-size:12px;font-weight:600;color:var(--txt-dim);white-space:nowrap;box-shadow:var(--shadow)}
@@ -384,11 +385,6 @@ main{flex:1;display:flex;min-height:0}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-6 4 4 6-8"/><path d="M3 21h18"/></svg>
       Indicators
     </button>
-    <button class="gear" id="btnSettings" title="More settings">⚙</button>
-    <button class="btn-build" onclick="fetchAndBuild()">Build →</button>
-    <span id="fetchStatus" class="hint"></span>
-    <!-- chips inline — stocks appear here after Build -->
-    <div id="chipStrip" class="chips-inline"></div>
     <!-- settings popover (includes index name + advanced) -->
     <div class="pop" id="settingsPop">
       <label class="fld">Index name</label>
@@ -402,6 +398,14 @@ main{flex:1;display:flex;min-height:0}
       <label class="fld">Custom dates</label>
       <div class="grid2"><input type="date" id="gStart"><input type="date" id="gEnd"></div>
     </div>
+  </div>
+
+  <!-- ── ROW 3: Build + chips ── -->
+  <div class="build-row">
+    <button class="gear" id="btnSettings" title="More settings">⚙</button>
+    <button class="btn-build" onclick="fetchAndBuild()">Build →</button>
+    <span id="fetchStatus" class="hint"></span>
+    <div id="chipStrip" class="chips-inline"></div>
   </div>
 
   <!-- ── ACTIVE INDICATOR PILLS ── -->
