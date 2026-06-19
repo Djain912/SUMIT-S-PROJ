@@ -684,10 +684,10 @@ async function fetchSeries(sym,start,end,field){
     const ca=(field==='adjclose'&&j.adjclose)?j.adjclose:j.close;
     const close={},open={},high={},low={};
     (j.dates||[]).forEach((d,i)=>{
-      if(ca[i]!=null&&!isNaN(ca[i]))close[d]=ca[i];
-      if(j.open&&j.open[i]!=null)open[d]=j.open[i];
-      if(j.high&&j.high[i]!=null)high[d]=j.high[i];
-      if(j.low&&j.low[i]!=null)low[d]=j.low[i];
+      if(ca[i]>0)close[d]=ca[i];
+      if(j.open&&j.open[i]>0)open[d]=j.open[i];
+      if(j.high&&j.high[i]>0)high[d]=j.high[i];
+      if(j.low&&j.low[i]>0)low[d]=j.low[i];
     });
     return{close,open,high,low};
   }else{
@@ -702,8 +702,8 @@ async function fetchSeries(sym,start,end,field){
     const close={},open={},high={},low={};
     (r.timestamp||[]).forEach((t,i)=>{
       const d=toKey(new Date(t*1000));
-      if(ca[i]!=null)close[d]=ca[i];if(q.open?.[i]!=null)open[d]=q.open[i];
-      if(q.high?.[i]!=null)high[d]=q.high[i];if(q.low?.[i]!=null)low[d]=q.low[i];
+      if(ca[i]>0)close[d]=ca[i];if(q.open?.[i]>0)open[d]=q.open[i];
+      if(q.high?.[i]>0)high[d]=q.high[i];if(q.low?.[i]>0)low[d]=q.low[i];
     });
     return{close,open,high,low};
   }
@@ -761,7 +761,7 @@ function assembleAndBuild(stocks,priceMap,baseVal,gStart,gEnd,equal){
     stocks.forEach(s=>Object.keys(priceMap[s.key].close).forEach(d=>{if(d>=gStart&&d<=gEnd)set.add(d);}));
     const dates=[...set].sort();
     if(dates.length<2){showMsg('Not enough trading days.','err');return;}
-    function ff(field){const out={};stocks.forEach(s=>{const m=priceMap[s.key][field]||{};let last=NaN;const a=[];for(const d of dates){if(m[d]!=null&&!isNaN(m[d]))last=m[d];a.push(last);}out[s.key]=a;});return out;}
+    function ff(field){const out={};stocks.forEach(s=>{const m=priceMap[s.key][field]||{};let last=NaN;const a=[];for(const d of dates){if(m[d]>0)last=m[d];a.push(last);}out[s.key]=a;});return out;}
     const C=ff('close'),O=ff('open'),H=ff('high'),L=ff('low');
     // Start at earliest date where ≥50% of stocks (min 2) have data — allows
     // recently-listed stocks to join later without truncating the whole history.
