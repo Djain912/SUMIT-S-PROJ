@@ -318,8 +318,9 @@ main{flex:1;display:flex;min-height:0}
 .bar-top #cloudAcct .lnk{font-size:12px;color:rgba(255,255,255,.7);cursor:pointer;text-decoration:underline;white-space:nowrap}
 .bar-top #cloudAcct .gbtn{display:inline-flex;align-items:center;gap:6px;background:#fff;color:#1f2937;border:none;border-radius:9px;padding:7px 13px;font-size:13px;font-weight:600;text-decoration:none;cursor:pointer;white-space:nowrap;font-family:"Sora"}
 .bar-top #cloudAcct .gbtn:hover{background:#f0fdf4}
-/* Controls (Row 2: light, wraps freely — no horizontal scroll) */
-.controls{display:flex;align-items:center;gap:7px;flex-wrap:wrap;overflow-x:hidden;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--line);position:relative;z-index:30;flex:none}
+/* Controls (Row 2: light, wraps freely — overflow must be visible so the
+   autocomplete dropdown can extend below the bar without being clipped) */
+.controls{display:flex;align-items:center;gap:7px;flex-wrap:wrap;overflow:visible;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--line);position:relative;z-index:30;flex:none}
 
 /* ── Mobile responsive ── */
 @media(max-width:760px){
@@ -1877,6 +1878,18 @@ new ResizeObserver(()=>{resizeOverlay();redrawOverlay();}).observe(document.getE
         if(S.times&&S.times.length>0) fetchAndBuild();
       };
     });
+    // Pre-fill dates immediately based on whichever button has class "on" (default: 2Y).
+    // Without this, non-logged-in users get "Pick a start and end date" when they click Build
+    // because restore() is skipped and the inputs start empty.
+    var active=box.querySelector('button.on');
+    if(active&&typeof toKey==='function'){
+      var gs=document.getElementById('gStart'), ge=document.getElementById('gEnd');
+      if(gs&&ge&&!gs.value&&!ge.value){
+        var yrs=parseInt(active.getAttribute('data-yrs'),10)||2;
+        var end=new Date(), start=new Date(); start.setFullYear(end.getFullYear()-yrs);
+        gs.value=toKey(start); ge.value=toKey(end);
+      }
+    }
   }
   // ── settings popover ──
   function initSettings(){
