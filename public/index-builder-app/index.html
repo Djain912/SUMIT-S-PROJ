@@ -183,10 +183,10 @@ header.cmd{display:flex;align-items:center;gap:14px;padding:0 16px;height:56px;b
 .pop{position:absolute;top:calc(100% + 6px);left:16px;z-index:60;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow-lg);padding:14px 16px;width:280px;display:none}
 .pop.open{display:block}
 .pop .fld{margin:10px 0 4px}.pop .fld:first-child{margin-top:0}
-.chips{display:flex;align-items:center;gap:7px;padding:9px 16px;background:var(--panel);border-bottom:1px solid var(--line);overflow-x:auto;flex:none;min-height:44px}
-.chips:empty::before{content:"Add stocks above, or load a ready-made index →";color:var(--txt-mut);font-size:12px}
-.chip{display:inline-flex;align-items:center;gap:7px;background:var(--panel-2);border:1px solid var(--line);border-radius:20px;padding:6px 8px 6px 13px;font-size:12.5px;font-weight:600;color:var(--txt-dim);white-space:nowrap;box-shadow:var(--shadow)}
-.chip .cx{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,.06);color:var(--txt-mut);cursor:pointer;font-size:12px;border:none}
+.chips-inline{display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex:1;min-width:0}
+.chips-inline:empty{display:none}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--panel-2);border:1px solid var(--line);border-radius:20px;padding:5px 7px 5px 11px;font-size:12px;font-weight:600;color:var(--txt-dim);white-space:nowrap;box-shadow:var(--shadow)}
+.chip .cx{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:rgba(0,0,0,.06);color:var(--txt-mut);cursor:pointer;font-size:11px;border:none;line-height:1}
 .chip .cx:hover{background:var(--down);color:#fff}
 main{flex:1;display:flex;min-height:0}
 /* chart-type segmented control in the controls strip */
@@ -387,6 +387,8 @@ main{flex:1;display:flex;min-height:0}
     <button class="gear" id="btnSettings" title="More settings">⚙</button>
     <button class="btn-build" onclick="fetchAndBuild()">Build →</button>
     <span id="fetchStatus" class="hint"></span>
+    <!-- chips inline — stocks appear here after Build -->
+    <div id="chipStrip" class="chips-inline"></div>
     <!-- settings popover (includes index name + advanced) -->
     <div class="pop" id="settingsPop">
       <label class="fld">Index name</label>
@@ -404,9 +406,6 @@ main{flex:1;display:flex;min-height:0}
 
   <!-- ── ACTIVE INDICATOR PILLS ── -->
   <div class="ind-pills" id="indPills"></div>
-
-  <!-- ── CONSTITUENT CHIPS ── -->
-  <div class="chips" id="chipStrip"></div>
 
   <!-- ── hidden data store (the JS reads constituents from #stockList) ── -->
   <div style="display:none">
