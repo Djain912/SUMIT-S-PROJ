@@ -1,7 +1,8 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { TrendingUp, ArrowRight, ChevronLeft } from 'lucide-react';
-import { IndicatorTool, type IndicatorKey } from '@/components/tools/indicator-tool';
+import { type IndicatorKey } from '@/components/tools/indicator-tool';
+import { IndicatorLab } from '@/components/tools/indicator-lab';
 
 export const dynamic = 'force-dynamic';
 
@@ -72,7 +73,7 @@ export default async function PublicIndicatorPage({ params }: { params: Promise<
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-        <IndicatorTool indicator={key} />
+        <IndicatorLab indicator={key} />
 
         {/* Sign-up nudge */}
         <div className="mt-10 rounded-2xl bg-emerald-900 px-6 py-8 text-center">
