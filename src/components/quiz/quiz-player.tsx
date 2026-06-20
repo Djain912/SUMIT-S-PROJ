@@ -424,7 +424,6 @@ export function QuizPlayer() {
                     </div>
                   ))}
                 </div>
-                <p className="mt-3 text-xs text-zinc-500">Ethics questions are being added — until then those slots are filled from the other domains so you still get a full {FULL_TEST_QUESTIONS}-question paper.</p>
               </div>
             )}
 
