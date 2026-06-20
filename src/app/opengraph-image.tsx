@@ -35,7 +35,7 @@ export default async function OpenGraphImage() {
             <span style={{ color: '#059669' }}>Study smarter.</span>
           </div>
           <div style={{ maxWidth: '900px', color: '#52525b', fontSize: '30px', lineHeight: 1.35 }}>
-            Study notes, 2,000+ practice quizzes, performance analytics, and an AI tutor for CMT Level I, II &amp; III.
+            Study notes, 10,000+ practice quizzes, performance analytics, and an AI tutor for CMT Level I, II &amp; III.
           </div>
         </div>
 

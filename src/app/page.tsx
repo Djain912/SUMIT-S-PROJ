@@ -29,7 +29,7 @@ const pillars = [
   },
   {
     icon: ListChecks,
-    title: '2000+ Practice MCQs',
+    title: '3,500+ MCQs Per Level',
     description: 'Questions written at real exam difficulty. Unlimited mock tests, customised by topic.',
   },
   {
@@ -151,7 +151,7 @@ export default async function HomePage() {
                     </h1>
 
                     <p className="mt-4 text-base leading-7 text-zinc-500 max-w-md">
-                      In-depth notes, 3,500+ exam-grade MCQs, unlimited mock tests, and the Chartix Scholar AI tutor — everything you need to crack Level I, II &amp; III.
+                      In-depth notes, 3,500+ exam-grade MCQs per level (10,000+ in all), unlimited mock tests, and the Chartix Scholar AI tutor — everything you need to crack Level I, II &amp; III.
                     </p>
 
                     <div className="mt-8 flex flex-wrap items-center gap-4">
@@ -284,7 +284,7 @@ export default async function HomePage() {
                 <dl className="grid grid-cols-2 gap-4 text-center sm:grid-cols-4">
                   {[
                     { value: '3', label: 'CMT Levels' },
-                    { value: '2000+', label: 'Practice MCQs' },
+                    { value: '10,000+', label: 'Practice MCQs' },
                     { value: '∞', label: 'Mock Tests' },
                     { value: '6 Months', label: 'Access Per Level' },
                   ].map((s) => (

@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 
 const LEVEL_1_FEATURES = [
   'All Level 1 study notes (chapter-wise)',
-  '2000+ practice MCQs at exam difficulty',
+  '3,500+ practice MCQs at exam difficulty',
   'Unlimited mock tests & custom quizzes',
   'Performance analytics dashboard',
   'Chartix Scholar (CMT-trained chatbot)',

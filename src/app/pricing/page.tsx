@@ -15,7 +15,7 @@ const plans = [
     description: 'Foundational Principles of Technical Analysis. Ideal for first-time CMT candidates.',
     features: [
       'All Level 1 study notes (chapter-wise)',
-      '2000+ practice MCQs at exam difficulty',
+      '3,500+ practice MCQs at exam difficulty',
       'Unlimited mock tests',
       'Customised MCQ tests by topic & difficulty',
       'Chapter-wise & full-test quiz modes',
@@ -35,7 +35,7 @@ const plans = [
     description: 'Application of Technical Analysis Methods. For candidates advancing to Level 2.',
     features: [
       'All Level 2 study notes (chapter-wise)',
-      '2000+ practice MCQs at exam difficulty',
+      '3,500+ practice MCQs at exam difficulty',
       'Unlimited mock tests',
       'Customised MCQ tests by topic & difficulty',
       'Chapter-wise & full-test quiz modes',
@@ -56,7 +56,7 @@ const plans = [
     description: 'The Work of a Technical Analyst. For advanced candidates completing the CMT charter.',
     features: [
       'All Level 3 study notes (chapter-wise)',
-      '2000+ practice MCQs at exam difficulty',
+      '3,500+ practice MCQs at exam difficulty',
       'Unlimited mock tests',
       'Customised MCQ tests by topic & difficulty',
       'Essay question guidance & frameworks',
@@ -259,7 +259,7 @@ export default function PricingPage() {
           <div className="mt-8 grid gap-4 sm:grid-cols-2 text-left">
             {[
               { title: 'Chapter-wise Study Notes', desc: 'Structured, exam-mapped notes for every chapter in your level.' },
-              { title: '2000+ Practice MCQs', desc: 'Questions written at real CMT exam difficulty — not generic finance questions.' },
+              { title: '3,500+ MCQs Per Level', desc: 'Questions written at real CMT exam difficulty — not generic finance questions.' },
               { title: 'Unlimited Mock Tests', desc: 'Simulate the real exam experience as many times as you want.' },
               { title: 'Customised MCQ Tests', desc: 'Filter by chapter, topic, or difficulty. Build your own test sets.' },
               { title: 'Performance Analytics', desc: 'See exactly where you are strong and where you need more work.' },

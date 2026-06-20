@@ -159,7 +159,7 @@ export default function FiiDiiPage() {
         <div className="mt-12 rounded-2xl border border-emerald-100 bg-emerald-50 p-6 text-center">
           <h2 className="text-lg font-bold text-emerald-900">Preparing for the CMT exam?</h2>
           <p className="mt-2 text-sm leading-6 text-zinc-600">
-            Chartix is a focused CMT exam-prep platform — structured notes, 2000+ practice questions, and an AI tutor for
+            Chartix is a focused CMT exam-prep platform — structured notes, 10,000+ practice questions, and an AI tutor for
             Levels I, II and III.
           </p>
           <Link
