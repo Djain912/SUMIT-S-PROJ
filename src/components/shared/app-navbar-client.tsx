@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import React, { useState, useRef, useEffect } from 'react';
 import { signOut } from 'next-auth/react';
-import { Menu, X, LayoutDashboard, Brain, BarChart3, Shield, Infinity as InfinityIcon, Crown, Calendar, Clock, BookOpen, LogOut, ChevronDown } from 'lucide-react';
+import { Menu, X, LayoutDashboard, Brain, BarChart3, Shield, Infinity as InfinityIcon, Crown, Calendar, Clock, BookOpen, LogOut, ChevronDown, Sparkles } from 'lucide-react';
 
 type Access = {
   isPremium: boolean;
@@ -89,6 +89,7 @@ export function AppNavbarClient({ isLoggedIn, role, userName, userEmail, access 
       ? [{ href: '/admin', label: 'Console', icon: null }]
       : [
           { href: '/user', label: 'Dashboard', icon: LayoutDashboard },
+          { href: '/user/summary', label: 'Takeaways', icon: Sparkles },
           { href: '/user/quiz', label: 'Quiz', icon: Brain },
           { href: '/user/analytics', label: 'Analytics', icon: BarChart3 },
         ];

@@ -32,6 +32,7 @@ model User {
   entitlements      Entitlement[]
   payments          Payment[]
   indices           Index[]
+  summaryBookmarks  SummaryBookmark[]
 }
 
 // A user-saved custom stock index built in the Index Builder tool.
@@ -139,6 +140,7 @@ model Chapter {
   questions   Question[]
   subtopics   Subtopic[]
   entitlements Entitlement[]
+  summary     ChapterSummary?
 
   @@unique([level, slug])
   @@index([level, isPublished, orderIndex])
@@ -510,6 +512,38 @@ model FnoLog {
   updatedAt       DateTime @updatedAt
 
   @@index([date])
+}
+
+// ── Chapter Quick Revision (6-section summary) ───────────────────────────────
+// One revision sheet per chapter, authored by admin (often AI-drafted), read by students.
+model ChapterSummary {
+  id          String   @id @default(cuid())
+  chapterId   String   @unique
+  summary     Json     @default("[]")   // string[] — Chapter Summary bullets
+  keyConcepts Json     @default("[]")   // { name, definition, whyItMatters, examAngle }[]
+  formulas    Json     @default("[]")   // { label, expression, notes }[]
+  examTips    Json     @default("[]")   // { remember, mistake }[]
+  highYield   Json     @default("[]")   // string[] — High-Yield Facts
+  oneMinute   Json     @default("[]")   // string[] — One-Minute Revision
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  chapter     Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@index([chapterId, isPublished])
+}
+
+model SummaryBookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  chapterId String
+  itemType  String   // 'keyPoint' | 'examTip' | 'formula'
+  itemIndex Int
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, chapterId, itemType, itemIndex])
+  @@index([userId, chapterId])
 }
 
 // ── Homepage public chatbot knowledge sources ──────────────────────────────
