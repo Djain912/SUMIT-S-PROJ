@@ -470,6 +470,39 @@ function Quiz({ edu }: { edu: IndicatorEducation }) {
 }
 
 // ── Module 13 streaming AI tutor (reuses /api/public-chat) ──
+// ── lightweight markdown for the tutor stream (bold, code, bullet/numbered lists) ──
+function renderInline(text: string): ReactNode {
+  const parts = text.split(/(\*\*.*?\*\*|`.*?`)/g);
+  return parts.map((p, i) => {
+    if (p.startsWith('**') && p.endsWith('**')) return <strong key={i} className="font-semibold text-zinc-900">{p.slice(2, -2)}</strong>;
+    if (p.startsWith('`') && p.endsWith('`')) return <code key={i} className="rounded bg-zinc-200 px-1 font-mono text-[12px]">{p.slice(1, -1)}</code>;
+    return <span key={i}>{p}</span>;
+  });
+}
+function TutorMarkdown({ content }: { content: string }) {
+  const lines = content.split('\n');
+  const out: ReactNode[] = [];
+  let bullets: ReactNode[] = [];
+  let k = 0;
+  const flush = () => { if (bullets.length) { out.push(<ul key={`u${k++}`} className="my-1.5 space-y-1 pl-1">{bullets}</ul>); bullets = []; } };
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) { flush(); continue; }
+    const bullet = line.match(/^[-•*]\s+(.*)/);
+    const numbered = line.match(/^\d+\.\s+(.*)/);
+    if (bullet) {
+      bullets.push(<li key={`b${k++}`} className="flex items-start gap-2"><span className="mt-1.5 flex-none text-emerald-500">▸</span><span>{renderInline(bullet[1])}</span></li>);
+    } else if (numbered) {
+      bullets.push(<li key={`b${k++}`} className="flex items-start gap-2"><span className="flex-none font-semibold text-emerald-600">{line.match(/^\d+/)![0]}.</span><span>{renderInline(numbered[1])}</span></li>);
+    } else {
+      flush();
+      out.push(<p key={`p${k++}`} className="my-1.5 first:mt-0">{renderInline(line)}</p>);
+    }
+  }
+  flush();
+  return <div className="text-[13.5px] leading-relaxed text-zinc-700">{out}</div>;
+}
+
 const DAILY_FREE_LIMIT = 3;
 
 function Tutor({ edu }: { edu: IndicatorEducation }) {
@@ -548,8 +581,8 @@ function Tutor({ edu }: { edu: IndicatorEducation }) {
       {(asked || answer) && (
         <div className="mt-4 space-y-3">
           {asked && <p className="text-sm font-semibold text-zinc-800">{asked}</p>}
-          <div className="rounded-xl border border-zinc-200 bg-zinc-50/60 px-4 py-3 text-sm leading-relaxed text-zinc-700 whitespace-pre-wrap">
-            {answer || (busy ? <span className="inline-flex items-center gap-2 text-zinc-400"><Loader2 className="h-4 w-4 animate-spin" /> Thinking…</span> : null)}
+          <div className="rounded-xl border border-zinc-200 bg-zinc-50/60 px-4 py-3">
+            {answer ? <TutorMarkdown content={answer} /> : (busy ? <span className="inline-flex items-center gap-2 text-sm text-zinc-400"><Loader2 className="h-4 w-4 animate-spin" /> Thinking…</span> : null)}
           </div>
           <p className="text-[11px] text-zinc-400">The Chartix Scholar answers from the CMT curriculum. <Link href="/sign-up" className="font-semibold text-emerald-600 hover:underline">Enroll</Link> for unlimited questions + the full study platform.</p>
         </div>
