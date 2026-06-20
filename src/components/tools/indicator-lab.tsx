@@ -8,9 +8,56 @@ import {
   ChevronRight, CheckCircle2, XCircle, Send, Loader2, TrendingUp, TrendingDown, Minus,
 } from 'lucide-react';
 import { AAPL_SAMPLE } from '@/lib/tools/sample-data';
-import { computeRsi } from '@/lib/tools/indicators';
+import {
+  computeRsi, computeRoc, computeMacd, computeStochastics, computeMfi, computePpo,
+  computeCmf, computeRvol, computeObv, computeAdl, computeDmi, computeDistMa,
+  computeBollinger, computeSma, computeEma, computeLwma, computeWilderMa,
+} from '@/lib/tools/indicators';
 import { IndicatorTool, type IndicatorKey } from '@/components/tools/indicator-tool';
-import { getEducation, type IndicatorEducation, type Tone, type SignalType } from '@/lib/tools/indicator-education';
+import { getEducation, type IndicatorEducation, type Tone, type SignalDef } from '@/lib/tools/indicator-education';
+
+// ── Per-indicator primary value series for the live interpretation + signal engine ──
+const CLOSES = AAPL_SAMPLE.map(b => b.close);
+const compact = (n: number) => {
+  const a = Math.abs(n);
+  return a >= 1e9 ? (n / 1e9).toFixed(1) + 'B' : a >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : a >= 1e3 ? (n / 1e3).toFixed(1) + 'K' : n.toFixed(0);
+};
+// Indicators whose primary value does NOT depend on the period slider
+export const FIXED_PARAM: IndicatorKey[] = ['macd', 'ppo', 'obv', 'adl'];
+
+type Primary = { line: (number | null)[]; label: string; fmt: (n: number) => string };
+
+// N-bar change of a (possibly cumulative) series
+const deltaN = (line: (number | null)[], n: number): (number | null)[] =>
+  line.map((_, i) => (i >= n && line[i] != null && line[i - n] != null ? (line[i] as number) - (line[i - n] as number) : null));
+
+function getPrimary(key: IndicatorKey, period: number): Primary {
+  const dec1 = (n: number) => n.toFixed(1);
+  const pct2 = (n: number) => (n >= 0 ? '+' : '') + n.toFixed(2) + '%';
+  switch (key) {
+    case 'rsi': return { line: computeRsi(AAPL_SAMPLE, period).line, label: `RSI(${period})`, fmt: dec1 };
+    case 'roc': return { line: computeRoc(AAPL_SAMPLE, period).line, label: `ROC(${period})`, fmt: (n) => n.toFixed(2) + '%' };
+    case 'macd': return { line: computeMacd(AAPL_SAMPLE, 12, 26, 9).macdLine, label: 'MACD(12,26,9)', fmt: (n) => n.toFixed(2) };
+    case 'stochastics': return { line: computeStochastics(AAPL_SAMPLE, period).kLine, label: `%K(${period})`, fmt: dec1 };
+    case 'mfi': return { line: computeMfi(AAPL_SAMPLE, period).line, label: `MFI(${period})`, fmt: dec1 };
+    case 'ppo': return { line: computePpo(AAPL_SAMPLE, 12, 26, 9).ppoLine, label: 'PPO(12,26,9)', fmt: (n) => n.toFixed(2) + '%' };
+    case 'cmf': return { line: computeCmf(AAPL_SAMPLE, period).line, label: `CMF(${period})`, fmt: (n) => n.toFixed(2) };
+    case 'rvol': return { line: computeRvol(AAPL_SAMPLE, period).line, label: `RVOL(${period})`, fmt: (n) => n.toFixed(2) + '×' };
+    // For cumulative lines, interpret the recent TREND (10-bar change), so the
+    // band reads accumulation (rising) vs distribution (falling).
+    case 'obv': return { line: deltaN(computeObv(AAPL_SAMPLE).line, 10), label: 'OBV 10-bar change', fmt: compact };
+    case 'adl': return { line: deltaN(computeAdl(AAPL_SAMPLE).line, 10), label: 'ADL 10-bar change', fmt: compact };
+    case 'dmi': return { line: computeDmi(AAPL_SAMPLE, period).adx, label: `ADX(${period})`, fmt: dec1 };
+    case 'distma': return { line: computeDistMa(AAPL_SAMPLE, period).distLine, label: `Distance from SMA(${period})`, fmt: pct2 };
+    case 'bb': return { line: computeBollinger(AAPL_SAMPLE, period, 2).rows.map(r => r.pctB), label: '%B', fmt: (n) => n.toFixed(0) + '%' };
+    case 'sma': case 'ema': case 'lwma': case 'wilderma': {
+      const ma = (key === 'sma' ? computeSma : key === 'ema' ? computeEma : key === 'lwma' ? computeLwma : computeWilderMa)(AAPL_SAMPLE, period).line;
+      const dist = ma.map((m, i) => (m == null ? null : ((CLOSES[i] - m) / m) * 100));
+      return { line: dist, label: `Price vs ${key.toUpperCase()}(${period})`, fmt: pct2 };
+    }
+    default: return { line: [], label: '', fmt: (n) => String(n) };
+  }
+}
 
 // ── small UI helpers ──
 const toneStyles: Record<Tone, string> = {
@@ -113,6 +160,37 @@ function swings(vals: number[], w: number, max: boolean): number[] {
   }
   return out;
 }
+function lastValid(line: (number | null)[]): number { let i = line.length - 1; while (i >= 0 && line[i] == null) i--; return i; }
+function trendDetect(line: (number | null)[], up: boolean): Detected {
+  const li = lastValid(line); if (li < 0) return { present: false };
+  let pi = li - 10; while (pi >= 0 && line[pi] == null) pi--; if (pi < 0) return { present: false };
+  const rising = (line[li] as number) > (line[pi] as number);
+  return (up ? rising : !rising) ? { present: true, date: AAPL_SAMPLE[li].date, value: line[li] as number } : { present: false };
+}
+function divergenceDetect(line: (number | null)[], bear: boolean): Detected {
+  const start = Math.max(0, line.length - 60);
+  const pts = swings(CLOSES, 3, bear).filter(i => i >= start && line[i] != null);
+  if (pts.length < 2) return { present: false };
+  const a = pts[pts.length - 2], b = pts[pts.length - 1];
+  const priceCond = bear ? CLOSES[b] > CLOSES[a] : CLOSES[b] < CLOSES[a];
+  const indCond = bear ? (line[b] as number) < (line[a] as number) : (line[b] as number) > (line[a] as number);
+  return priceCond && indCond ? { present: true, date: AAPL_SAMPLE[b].date, value: line[b] as number } : { present: false };
+}
+function runDetector(sig: SignalDef, line: (number | null)[]): Detected {
+  const at = (i: number): Detected => i < 0 ? { present: false } : { present: true, date: AAPL_SAMPLE[i].date, value: line[i] as number };
+  const lv = sig.level ?? 0;
+  switch (sig.type) {
+    case 'above': return at(lastWhere(line, v => v >= lv));
+    case 'below': return at(lastWhere(line, v => v <= lv));
+    case 'cross_above': return at(lastCross(line, lv, true));
+    case 'cross_below': return at(lastCross(line, lv, false));
+    case 'rising': return trendDetect(line, true);
+    case 'falling': return trendDetect(line, false);
+    case 'bullish_divergence': return divergenceDetect(line, false);
+    case 'bearish_divergence': return divergenceDetect(line, true);
+    default: return { present: false };
+  }
+}
 
 export function IndicatorLab({ indicator }: { indicator: IndicatorKey }) {
   const edu = getEducation(indicator);
@@ -125,11 +203,13 @@ export function IndicatorLab({ indicator }: { indicator: IndicatorKey }) {
 function Lab({ edu, indicator }: { edu: IndicatorEducation; indicator: IndicatorKey }) {
   const [period, setPeriod] = useState(14);
 
-  const { line, latest, latestDate } = useMemo(() => {
-    const { rows, line } = computeRsi(AAPL_SAMPLE, period);
-    let li = line.length - 1; while (li >= 0 && line[li] == null) li--;
-    return { line, latest: li >= 0 ? (line[li] as number) : null, latestDate: li >= 0 ? rows[li].date : '' };
-  }, [period]);
+  const usesPeriod = !FIXED_PARAM.includes(indicator);
+
+  const { line, label, fmt, latest, latestDate } = useMemo(() => {
+    const p = getPrimary(indicator, period);
+    const li = lastValid(p.line);
+    return { ...p, latest: li >= 0 ? (p.line[li] as number) : null, latestDate: li >= 0 ? AAPL_SAMPLE[li].date : '' };
+  }, [indicator, period]);
 
   // 6 — interpretation band for the live value
   const band = useMemo(() => {
@@ -138,38 +218,8 @@ function Lab({ edu, indicator }: { edu: IndicatorEducation; indicator: Indicator
       (b.min == null || latest >= b.min) && (b.max == null || latest <= b.max)) ?? null;
   }, [latest, edu]);
 
-  // 7 — run detectors referenced by the data
-  const detections = useMemo(() => {
-    const closes = AAPL_SAMPLE.map(b => b.close);
-    const out: Record<SignalType, Detected> = {} as Record<SignalType, Detected>;
-    const at = (i: number): Detected => i < 0 ? { present: false } : { present: true, date: AAPL_SAMPLE[i].date, value: line[i] as number };
-    out.overbought = at(lastWhere(line, v => v >= 70));
-    out.oversold = at(lastWhere(line, v => v <= 30));
-    out.centerline_up = at(lastCross(line, 50, true));
-    out.centerline_down = at(lastCross(line, 50, false));
-
-    // divergence: compare the last two qualifying swing points within the recent window
-    const win = 60, start = Math.max(0, line.length - win);
-    const idxs = Array.from({ length: line.length - start }, (_, k) => k + start).filter(i => line[i] != null);
-    const priceHi = swings(closes, 3, true).filter(i => i >= start);
-    const priceLo = swings(closes, 3, false).filter(i => i >= start);
-    const bear = (() => {
-      if (priceHi.length < 2) return { present: false };
-      const [a, b] = [priceHi[priceHi.length - 2], priceHi[priceHi.length - 1]];
-      if (line[a] == null || line[b] == null) return { present: false };
-      return closes[b] > closes[a] && (line[b] as number) < (line[a] as number) ? { present: true, date: AAPL_SAMPLE[b].date, value: line[b] as number } : { present: false };
-    })();
-    const bull = (() => {
-      if (priceLo.length < 2) return { present: false };
-      const [a, b] = [priceLo[priceLo.length - 2], priceLo[priceLo.length - 1]];
-      if (line[a] == null || line[b] == null) return { present: false };
-      return closes[b] < closes[a] && (line[b] as number) > (line[a] as number) ? { present: true, date: AAPL_SAMPLE[b].date, value: line[b] as number } : { present: false };
-    })();
-    void idxs;
-    out.bearish_divergence = bear as Detected;
-    out.bullish_divergence = bull as Detected;
-    return out;
-  }, [line]);
+  // 7 — run each signal's detector against the primary value series
+  const detections = useMemo(() => edu.signals.map(sig => runDetector(sig, line)), [line, edu]);
 
   const toc = [
     ['snapshot', 'Snapshot'], ['why', 'Why It Exists'], ['calc', 'Calculation'], ['thinks', 'How It Thinks'],
@@ -293,12 +343,14 @@ function Lab({ edu, indicator }: { edu: IndicatorEducation; indicator: Indicator
       {/* 6 — Dynamic interpretation engine */}
       <Module id="interp" n={6} icon={<Gauge className="h-4 w-4" />} title="Dynamic Interpretation Engine" subtitle="Plain-English read of the live value">
         <div className="mb-4 flex flex-wrap items-center gap-3">
-          <label className="text-xs font-semibold text-zinc-500">Lookback period</label>
-          <input type="range" min={7} max={21} value={period} onChange={e => setPeriod(parseInt(e.target.value, 10))} className="h-1.5 w-44 accent-emerald-600" />
-          <span className="rounded-lg bg-zinc-100 px-2 py-0.5 font-mono text-xs font-semibold text-zinc-700">{period}</span>
+          {usesPeriod && <>
+            <label className="text-xs font-semibold text-zinc-500">Lookback period</label>
+            <input type="range" min={7} max={26} value={period} onChange={e => setPeriod(parseInt(e.target.value, 10))} className="h-1.5 w-44 accent-emerald-600" />
+            <span className="rounded-lg bg-zinc-100 px-2 py-0.5 font-mono text-xs font-semibold text-zinc-700">{period}</span>
+          </>}
           {latest != null && (
             <span className="ml-auto font-mono text-sm">
-              <span className="text-zinc-400">RSI({period}) =</span> <span className="font-bold text-zinc-900">{latest.toFixed(1)}</span>
+              <span className="text-zinc-400">{label} =</span> <span className="font-bold text-zinc-900">{fmt(latest)}</span>
               <span className="ml-2 text-xs text-zinc-400">as of {latestDate}</span>
             </span>
           )}
@@ -315,10 +367,10 @@ function Lab({ edu, indicator }: { edu: IndicatorEducation; indicator: Indicator
       {/* 7 — Signal explanation layer */}
       <Module id="signals" n={7} icon={<Radio className="h-4 w-4" />} title="Signal Explanation Layer" subtitle="What fired, why, and how much to trust it">
         <div className="space-y-3">
-          {edu.signals.map(sig => {
-            const d = detections[sig.type];
+          {edu.signals.map((sig, si) => {
+            const d = detections[si];
             return (
-              <div key={sig.type} className="rounded-xl border border-zinc-100 bg-zinc-50/60 px-4 py-3">
+              <div key={si} className="rounded-xl border border-zinc-100 bg-zinc-50/60 px-4 py-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="text-sm font-bold text-zinc-800">{sig.name}</p>
                   {d?.present
