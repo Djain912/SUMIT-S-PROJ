@@ -58,6 +58,20 @@ No specific context was found for this question. Answer only if you are certain 
   return prompt;
 }
 
+// The Indicator Lab tutor is a TEACHING bot, not the doc-restricted helpdesk.
+// It explains technical-analysis indicators directly from general TA knowledge.
+const LAB_TUTOR_SYSTEM = `You are the Chartix Scholar — a friendly, expert technical-analysis tutor on Chartix.in, helping students and CMT candidates understand chart indicators.
+
+You answer questions about technical-analysis indicators (RSI, MACD, Bollinger Bands, Stochastics, ATR, ADX, OBV, moving averages, etc.) — what they are, how they are calculated, how to read them, their strengths and limits, and how they are tested on the CMT exam.
+
+RULES:
+• Explain clearly and accurately using established, textbook-correct technical-analysis knowledge. Never invent formulas — if unsure of an exact formula, describe the concept instead of guessing.
+• Be concise and practical: short paragraphs or bullet points, plain English, focused on understanding.
+• Write formulas in plain readable text with Unicode symbols (× ÷ − √ Σ) — NEVER use LaTeX, $, \\(, \\), \\frac, or \\text.
+• Where useful, add the professional/CMT-exam angle (common traps, how pros adjust).
+• If a question is unrelated to technical analysis or markets, politely steer back to indicators, and suggest signing up at chartix.in for the full CMT study platform.
+• Keep responses under 250 words.`;
+
 type ChatMessage = { role: 'user' | 'assistant'; content: string };
 
 export async function POST(request: Request) {
@@ -113,30 +127,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: { message: 'Message too long (max 1000 characters)' } }, { status: 400 });
     }
 
-    // Run vector search on uploaded PDFs + load admin Q&A in parallel
-    const [queryEmbedding, qaPairs] = await Promise.all([
-      createEmbedding(message),
-      prisma.botQAPair.findMany({
-        where: { botType: 'public' },
-        select: { question: true, answer: true },
-        orderBy: { createdAt: 'desc' },
-        take: 30,
-      }),
-    ]);
+    let systemPrompt: string;
+    if (isLabTutor) {
+      // The Lab tutor teaches indicators directly — no doc retrieval needed.
+      systemPrompt = LAB_TUTOR_SYSTEM;
+    } else {
+      // Run vector search on uploaded PDFs + load admin Q&A in parallel
+      const [queryEmbedding, qaPairs] = await Promise.all([
+        createEmbedding(message),
+        prisma.botQAPair.findMany({
+          where: { botType: 'public' },
+          select: { question: true, answer: true },
+          orderBy: { createdAt: 'desc' },
+          take: 30,
+        }),
+      ]);
 
-    // Search only public_bot chunks (from your uploaded PDFs)
-    const chunks = await searchPublicBotChunks(queryEmbedding, 8);
-
-    const context = chunks
-      .map((c) => c.content)
-      .join('\n\n---\n\n');
-
-    const systemPrompt = buildSystemPrompt(context, qaPairs);
+      // Search only public_bot chunks (from your uploaded PDFs)
+      const chunks = await searchPublicBotChunks(queryEmbedding, 8);
+      const context = chunks.map((c) => c.content).join('\n\n---\n\n');
+      systemPrompt = buildSystemPrompt(context, qaPairs);
+    }
 
     const stream = await openai.chat.completions.create({
-      // The Lab tutor runs on the far cheaper mini model — plenty for short
-      // indicator Q&A, and keeps public AI cost low. Homepage chat stays on 4o.
-      model: isLabTutor ? 'gpt-4o-mini' : 'gpt-4o',
+      model: 'gpt-4o',
       messages: [
         { role: 'system', content: systemPrompt },
         ...history.map((m) => ({ role: m.role, content: m.content })),
