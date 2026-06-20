@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useRef, type ReactNode } from 'react';
+import { useMemo, useState, useRef, useEffect, type ReactNode } from 'react';
 import Link from 'next/link';
 import {
   Info, HelpCircle, Calculator, Brain, CloudSun, Gauge, Radio, Network,
@@ -556,6 +556,14 @@ function TutorMarkdown({ content }: { content: string }) {
 }
 
 const DAILY_FREE_LIMIT = 3;
+const TUTOR_USAGE_KEY = 'chartix-lab-tutor-usage';
+const TUTOR_LIMIT_MSG = `You've used your ${DAILY_FREE_LIMIT} free Chartix Scholar questions for today. Enroll for unlimited access to the full study chatbot, notes, quizzes, mock tests and analytics.`;
+function readTutorUsage(): number {
+  try { const raw = JSON.parse(localStorage.getItem(TUTOR_USAGE_KEY) || '{}'); return raw.date === new Date().toDateString() ? (raw.count || 0) : 0; } catch { return 0; }
+}
+function writeTutorUsage(count: number) {
+  try { localStorage.setItem(TUTOR_USAGE_KEY, JSON.stringify({ date: new Date().toDateString(), count })); } catch { /* ignore */ }
+}
 
 function Tutor({ edu }: { edu: IndicatorEducation }) {
   const [input, setInput] = useState('');
@@ -565,6 +573,13 @@ function Tutor({ edu }: { edu: IndicatorEducation }) {
   const [used, setUsed] = useState(0);
   const [limited, setLimited] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  // Restore today's usage so the cap persists across refreshes (server is the real gate).
+  useEffect(() => {
+    const u = readTutorUsage();
+    setUsed(u);
+    if (u >= DAILY_FREE_LIMIT) setLimited(TUTOR_LIMIT_MSG);
+  }, []);
 
   const ask = async (raw: string) => {
     const q = raw.trim();
@@ -579,14 +594,15 @@ function Tutor({ edu }: { edu: IndicatorEducation }) {
       });
       if (res.status === 429) {
         const j = await res.json().catch(() => null) as { limit?: boolean; error?: { message?: string } } | null;
-        setLimited(j?.error?.message ?? 'You’ve reached today’s free question limit.');
+        writeTutorUsage(DAILY_FREE_LIMIT); // persist so a refresh stays blocked
+        setLimited(j?.error?.message ?? TUTOR_LIMIT_MSG);
         setAsked(''); return;
       }
       if (!res.ok || !res.body) {
         const j = await res.json().catch(() => null) as { error?: { message?: string } } | null;
         setAnswer(j?.error?.message ?? 'The tutor is unavailable right now. Please try again.'); return;
       }
-      setUsed(u => u + 1);
+      setUsed(u => { const n = u + 1; writeTutorUsage(n); return n; });
       const reader = res.body.getReader(); const dec = new TextDecoder();
       for (;;) { const { done, value } = await reader.read(); if (done) break; setAnswer(a => a + dec.decode(value, { stream: true })); }
     } catch {
