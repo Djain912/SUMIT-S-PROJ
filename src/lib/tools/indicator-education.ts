@@ -34,6 +34,13 @@ export interface CalcStep {
   title: string;
   detail: string;
   formula?: string;
+  whyMatters?: string; // "Why This Matters" callout under the step
+}
+
+// Institutional / professional interpretation surfaced as emphasis cards
+export interface ProInsight {
+  title: string;
+  body: string;
 }
 
 // 4 — How This Indicator Thinks
@@ -124,6 +131,7 @@ export interface IndicatorEducation {
   snapshot: Snapshot;
   whyExists: WhyExists;
   calcSteps: CalcStep[];
+  proInsights: ProInsight[];
   howItThinks: HowItThinks;
   marketEnvironment: MarketEnvironment;
   interpretation: { bands: InterpretationBand[]; note: string };
@@ -155,18 +163,23 @@ const RSI: IndicatorEducation = {
   },
   whyExists: {
     problem:
-      'Raw momentum measures (like simple rate-of-change) are unbounded and spike with volatility, so a reading of "+8" means nothing without context and can\'t be compared across stocks or time. Traders needed a momentum gauge with fixed, comparable limits.',
+      'Raw momentum (e.g. rate-of-change) is unbounded and spikes with volatility — "+8" means nothing on its own and can\'t be compared across stocks or time. RSI exists to give momentum fixed, comparable limits.',
     history:
-      'Welles Wilder introduced RSI in 1978 alongside ATR, ADX and Parabolic SAR. His key innovation was the Wilder smoothing of average gains and losses, which dampens the wild swings of earlier momentum tools and pins the output to a stable 0–100 range. RSI became one of the most widely used oscillators in technical analysis.',
+      'Welles Wilder introduced RSI in 1978 alongside ATR, ADX and Parabolic SAR. His innovation was the smoothing of average gains and losses — it dampens the jumpiness of earlier tools and pins output to a stable 0–100 range.',
     useCase:
-      'A swing trader watching a range-bound stock uses RSI to time entries: buy interest near oversold (≈30) and trim near overbought (≈70), while using failure swings and divergence to anticipate turns before price confirms.',
+      'On a range-bound stock, a swing trader leans long near oversold (~30) and trims near overbought (~70) — but uses failure swings and divergence, not the raw level, to anticipate the actual turn.',
   },
   calcSteps: [
-    { title: 'Measure each bar\'s change', detail: 'For every bar, record the change vs the prior close. A higher close is a "gain"; a lower close is a "loss" (stored as a positive number). Unchanged = 0 on both.' },
-    { title: 'Seed the first averages', detail: 'The very first Average Gain and Average Loss are simple averages of the gains and losses over the first n bars (default n = 14).', formula: 'First Avg Gain = Σ gains ÷ 14   ·   First Avg Loss = Σ losses ÷ 14' },
-    { title: 'Apply Wilder smoothing', detail: 'Every bar after that smooths the running average — this is what makes RSI stable instead of jumpy.', formula: 'Avg = ((prev Avg × 13) + current value) ÷ 14' },
-    { title: 'Compute Relative Strength (RS)', detail: 'RS is simply how big the average gain is relative to the average loss.', formula: 'RS = Average Gain ÷ Average Loss' },
-    { title: 'Convert to the 0–100 scale', detail: 'The final transform squeezes RS into a bounded oscillator so every reading is directly comparable.', formula: 'RSI = 100 − (100 ÷ (1 + RS))' },
+    { title: 'Measure each bar\'s change', detail: 'For every bar, record the change vs the prior close: a higher close is a "gain", a lower close a "loss" (stored positive).', whyMatters: 'RSI only ever sees closing-price changes — this is the exact moment volume and intraday range drop out of the picture.' },
+    { title: 'Seed the first averages', detail: 'The first Average Gain and Average Loss are simple averages over the first n bars (default n = 14).', formula: 'First Avg Gain = Σ gains ÷ 14   ·   First Avg Loss = Σ losses ÷ 14' },
+    { title: 'Apply Wilder smoothing', detail: 'Every later bar smooths the running average rather than recomputing it — this is what makes RSI stable instead of jumpy.', formula: 'Avg = ((prev Avg × 13) + current value) ÷ 14', whyMatters: 'Wilder smoothing (not a simple MA) is why RSI has "memory" — one big bar nudges it but can\'t whipsaw it. The exam tests that it is Wilder, not SMA.' },
+    { title: 'Compute Relative Strength (RS)', detail: 'RS is how large the average gain is relative to the average loss.', formula: 'RS = Average Gain ÷ Average Loss' },
+    { title: 'Convert to the 0–100 scale', detail: 'The final transform squeezes RS into a bounded oscillator so every reading is directly comparable.', formula: 'RSI = 100 − (100 ÷ (1 + RS))', whyMatters: 'This is what makes RSI("today") and RSI("a year ago") — or RSI on two different stocks — directly comparable. That comparability is the entire point of the indicator.' },
+  ],
+  proInsights: [
+    { title: 'Read the range, not the line', body: 'Desk analysts care less about the absolute level and more about the band RSI respects. A name that holds 40–80 is in a confirmed uptrend; when it starts holding 20–60, the regime has flipped. The shift in the range often precedes the price trend break.' },
+    { title: 'Failure swings over raw levels', body: 'Wilder\'s own preferred signal was the failure swing (RSI fails to retake a prior extreme), not the 70/30 tag. Professionals treat 70/30 as context and wait for a failure swing or divergence with structure confirmation before acting.' },
+    { title: 'Period is a regime choice', body: 'Shorter periods (≈9) suit active range-trading; the standard 14 suits swing horizons; longer (≈21–25) filters noise for position work. Pros pick the period to match the holding period — they do not curve-fit it to recent price.' },
   ],
   howItThinks: {
     measures: [

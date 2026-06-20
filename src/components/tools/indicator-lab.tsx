@@ -32,16 +32,14 @@ function Module({ id, icon, n, title, subtitle, children, defaultOpen = true }: 
   const [open, setOpen] = useState(defaultOpen);
   return (
     <section id={id} className="scroll-mt-20 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
-      <button type="button" onClick={() => setOpen(v => !v)} className="flex w-full items-center gap-3 px-5 py-4 text-left transition hover:bg-zinc-50">
-        <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-emerald-600 text-white">{icon}</span>
+      <button type="button" onClick={() => setOpen(v => !v)} className="flex w-full items-center gap-3.5 px-5 py-4 text-left transition hover:bg-zinc-50">
+        <span className="flex h-10 w-10 flex-none items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm shadow-emerald-600/30">{icon}</span>
         <span className="min-w-0 flex-1">
-          <span className="flex items-baseline gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-500">Module {n}</span>
-          </span>
-          <span className="block text-sm font-bold text-zinc-900">{title}</span>
-          {subtitle && <span className="block truncate text-xs text-zinc-400">{subtitle}</span>}
+          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-500">Module {n}</span>
+          <span className="block font-heading text-[17px] font-bold leading-tight tracking-tight text-zinc-900">{title}</span>
+          {subtitle && <span className="block truncate text-xs text-zinc-500">{subtitle}</span>}
         </span>
-        <span className="flex-none text-zinc-400">{open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</span>
+        <span className="flex-none text-zinc-400">{open ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}</span>
       </button>
       {open && <div className="border-t border-zinc-100 px-5 py-5">{children}</div>}
     </section>
@@ -49,15 +47,43 @@ function Module({ id, icon, n, title, subtitle, children, defaultOpen = true }: 
 }
 
 function Bullets({ items, tone = 'zinc' }: { items: string[]; tone?: 'emerald' | 'rose' | 'amber' | 'zinc' }) {
-  const dot = { emerald: 'text-emerald-500', rose: 'text-rose-400', amber: 'text-amber-500', zinc: 'text-zinc-400' }[tone];
+  const dot = { emerald: 'text-emerald-500', rose: 'text-rose-500', amber: 'text-amber-500', zinc: 'text-zinc-400' }[tone];
   return (
-    <ul className="space-y-2">
+    <ul className="space-y-2.5">
       {items.map((t, i) => (
-        <li key={i} className="flex items-start gap-2.5 text-sm leading-relaxed text-zinc-700">
-          <span className={`mt-1.5 flex-none ${dot}`}>▸</span><span>{t}</span>
+        <li key={i} className="flex items-start gap-2.5 text-[13.5px] leading-relaxed text-zinc-700">
+          <span className={`mt-1 flex-none text-base font-bold ${dot}`}>▸</span><span>{t}</span>
         </li>
       ))}
     </ul>
+  );
+}
+
+// Prominent formula display — dark slate card, mono font, emerald accent.
+function FormulaBlock({ children, size = 'md' }: { children: ReactNode; size?: 'sm' | 'md' }) {
+  return (
+    <div className={`overflow-x-auto rounded-xl border-l-4 border-emerald-400 bg-zinc-900 px-4 ${size === 'md' ? 'py-3.5' : 'py-2.5'} shadow-sm`}>
+      <code className={`font-mono font-semibold tracking-tight text-emerald-50 ${size === 'md' ? 'text-[15px]' : 'text-[13px]'} whitespace-nowrap`}>{children}</code>
+    </div>
+  );
+}
+
+// Emphasis callouts. Each variant teaches a specific kind of insight.
+type CalloutKind = 'why' | 'pro' | 'trap' | 'exam';
+const calloutCfg: Record<CalloutKind, { ring: string; chip: string; label: string; icon: ReactNode }> = {
+  why: { ring: 'border-emerald-200 bg-emerald-50/70', chip: 'bg-emerald-600', label: 'Why this matters', icon: <Info className="h-3 w-3" /> },
+  pro: { ring: 'border-indigo-200 bg-indigo-50/70', chip: 'bg-indigo-600', label: 'Professional insight', icon: <Brain className="h-3 w-3" /> },
+  trap: { ring: 'border-rose-200 bg-rose-50/70', chip: 'bg-rose-500', label: 'Common trap', icon: <AlertTriangle className="h-3 w-3" /> },
+  exam: { ring: 'border-amber-200 bg-amber-50/70', chip: 'bg-amber-500', label: 'Exam focus', icon: <GraduationCap className="h-3 w-3" /> },
+};
+function Callout({ kind, title, children }: { kind: CalloutKind; title?: string; children: ReactNode }) {
+  const c = calloutCfg[kind];
+  return (
+    <div className={`rounded-xl border ${c.ring} px-4 py-3`}>
+      <span className={`inline-flex items-center gap-1 rounded-full ${c.chip} px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wider text-white`}>{c.icon} {c.label}</span>
+      {title && <p className="mt-2 text-[13.5px] font-bold text-zinc-900">{title}</p>}
+      <p className="mt-1.5 text-[13.5px] leading-relaxed text-zinc-700">{children}</p>
+    </div>
   );
 }
 
@@ -159,8 +185,8 @@ function Lab({ edu, indicator }: { edu: IndicatorEducation; indicator: Indicator
           <span className="rounded-full bg-emerald-600 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-white">Indicator Lab</span>
           <span className="rounded-full border border-emerald-200 bg-white px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-emerald-600">{edu.snapshot.difficulty}</span>
         </div>
-        <h1 className="mt-3 text-2xl font-extrabold tracking-tight text-emerald-900 sm:text-3xl">{edu.name}</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-600">{edu.tagline}</p>
+        <h1 className="mt-3 font-heading text-3xl font-extrabold tracking-tight text-emerald-950 sm:text-4xl">{edu.name}</h1>
+        <p className="mt-2.5 max-w-2xl text-[15px] leading-relaxed text-zinc-600">{edu.tagline}</p>
       </div>
 
       {/* Sticky module nav */}
@@ -183,9 +209,9 @@ function Lab({ edu, indicator }: { edu: IndicatorEducation; indicator: Indicator
               <dd className="mt-1 text-sm font-medium text-zinc-800">{v}</dd>
             </div>
           ))}
-          <div className="rounded-xl border border-violet-100 bg-violet-50/40 px-4 py-3 sm:col-span-2">
-            <dt className="text-[10px] font-bold uppercase tracking-widest text-violet-500">Formula</dt>
-            <dd className="mt-1 font-mono text-sm font-semibold text-zinc-800">{edu.snapshot.formula}</dd>
+          <div className="sm:col-span-2">
+            <dt className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-emerald-600">Formula</dt>
+            <dd><FormulaBlock>{edu.snapshot.formula}</FormulaBlock></dd>
           </div>
         </dl>
       </Module>
@@ -204,15 +230,16 @@ function Lab({ edu, indicator }: { edu: IndicatorEducation; indicator: Indicator
 
       {/* 3 — Interactive calculation (narrative + live tool) */}
       <Module id="calc" n={3} icon={<Calculator className="h-4 w-4" />} title="Interactive Calculation Breakdown" subtitle="Every step, on real price data">
-        <ol className="mb-5 space-y-2.5">
+        <ol className="mb-5 space-y-3">
           {edu.calcSteps.map((s, i) => (
-            <li key={i} className="rounded-xl border border-zinc-100 bg-zinc-50/60 px-4 py-3">
+            <li key={i} className="rounded-xl border border-zinc-200 bg-white px-4 py-3.5 shadow-sm">
               <div className="flex items-start gap-3">
-                <span className="mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-full bg-emerald-100 text-[10px] font-bold text-emerald-700">{i + 1}</span>
-                <div>
-                  <p className="text-sm font-semibold text-zinc-800">{s.title}</p>
-                  <p className="mt-0.5 text-sm leading-relaxed text-zinc-600">{s.detail}</p>
-                  {s.formula && <p className="mt-1.5 font-mono text-xs font-semibold text-violet-700">{s.formula}</p>}
+                <span className="mt-0.5 flex h-6 w-6 flex-none items-center justify-center rounded-lg bg-emerald-600 text-xs font-bold text-white">{i + 1}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-heading text-[15px] font-bold text-zinc-900">{s.title}</p>
+                  <p className="mt-1 text-[13.5px] leading-relaxed text-zinc-600">{s.detail}</p>
+                  {s.formula && <div className="mt-2.5"><FormulaBlock size="sm">{s.formula}</FormulaBlock></div>}
+                  {s.whyMatters && <div className="mt-2.5"><Callout kind="why">{s.whyMatters}</Callout></div>}
                 </div>
               </div>
             </li>
@@ -235,6 +262,14 @@ function Lab({ edu, indicator }: { edu: IndicatorEducation; indicator: Indicator
             <Bullets items={edu.howItThinks.ignores} tone="rose" />
           </div>
         </div>
+        {edu.proInsights.length > 0 && (
+          <div className="mt-5 space-y-3">
+            <p className="text-xs font-bold uppercase tracking-widest text-indigo-600">How professionals actually use it</p>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {edu.proInsights.map((p, i) => <Callout key={i} kind="pro" title={p.title}>{p.body}</Callout>)}
+            </div>
+          </div>
+        )}
       </Module>
 
       {/* 5 — Market environment */}
@@ -274,7 +309,7 @@ function Lab({ edu, indicator }: { edu: IndicatorEducation; indicator: Indicator
             <p className="mt-1.5 text-sm leading-relaxed">{band.message}</p>
           </div>
         )}
-        <p className="mt-3 text-xs italic text-zinc-400">{edu.interpretation.note}</p>
+        <div className="mt-4"><Callout kind="pro">{edu.interpretation.note}</Callout></div>
       </Module>
 
       {/* 7 — Signal explanation layer */}
@@ -363,9 +398,9 @@ function Lab({ edu, indicator }: { edu: IndicatorEducation; indicator: Indicator
       <Module id="cmt" n={11} icon={<GraduationCap className="h-4 w-4" />} title="CMT Exam Corner" subtitle="What gets tested">
         <div className="space-y-4">
           <div>
-            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-violet-600">Key formulas</p>
-            <div className="space-y-1.5">
-              {edu.cmtCorner.keyFormulas.map((f, i) => <p key={i} className="rounded-lg bg-violet-50/50 px-3 py-2 font-mono text-xs font-semibold text-zinc-800">{f}</p>)}
+            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-emerald-600">Key formulas</p>
+            <div className="space-y-2">
+              {edu.cmtCorner.keyFormulas.map((f, i) => <FormulaBlock key={i} size="sm">{f}</FormulaBlock>)}
             </div>
           </div>
           <div>
@@ -373,8 +408,10 @@ function Lab({ edu, indicator }: { edu: IndicatorEducation; indicator: Indicator
             <Bullets items={edu.cmtCorner.testedConcepts} tone="emerald" />
           </div>
           <div>
-            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-amber-600">Exam traps</p>
-            <Bullets items={edu.cmtCorner.traps} tone="amber" />
+            <p className="mb-2.5 text-xs font-bold uppercase tracking-widest text-rose-500">Exam traps</p>
+            <div className="space-y-2.5">
+              {edu.cmtCorner.traps.map((t, i) => <Callout key={i} kind="trap">{t}</Callout>)}
+            </div>
           </div>
         </div>
       </Module>
