@@ -151,7 +151,7 @@ export default async function HomePage() {
                     </h1>
 
                     <p className="mt-4 text-base leading-7 text-zinc-500 max-w-md">
-                      Chapter-by-chapter notes, 2000+ practice MCQs, unlimited mock tests, and the Chartix Scholar — everything you need for Level I, II, and III.
+                      In-depth notes, 3,500+ exam-grade MCQs, unlimited mock tests, and the Chartix Scholar AI tutor — everything you need to crack Level I, II &amp; III.
                     </p>
 
                     <div className="mt-8 flex flex-wrap items-center gap-4">
