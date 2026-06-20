@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, type CSSProperties } from 'react';
 import { Bookmark, BookmarkCheck, ChevronDown, ChevronRight, Lightbulb, FlaskConical, BookOpen, AlertCircle, Brain, Zap, Timer, Eye, Star, LayoutList } from 'lucide-react';
 import { type ChapterSummaryContent, type KeyConcept, type Formula, type ExamTip, type SummaryItemType } from '@/lib/chapter-summary/types';
+import { LogoLoader } from '@/components/shared/logo-loader';
 
 type BookmarkKey = { itemType: string; itemIndex: number };
 type Summary = ChapterSummaryContent & { chapterId: string; isPublished: boolean };
@@ -318,7 +319,11 @@ export function UserSummaryClient({ userEmail }: { userEmail: string }) {
             </div>
           </div>
 
-          {loading && <div className="space-y-4">{[1, 2, 3].map(i => <div key={i} className="h-32 animate-pulse rounded-2xl bg-zinc-100" />)}</div>}
+          {loading && (
+            <div className="rounded-2xl border border-zinc-200 bg-white py-16 shadow-sm">
+              <LogoLoader text="Loading revision sheet…" />
+            </div>
+          )}
 
           {!loading && summary && !summary.isPublished && (
             <div className="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-700">
@@ -438,7 +443,11 @@ export function UserSummaryClient({ userEmail }: { userEmail: string }) {
       {/* ════════ BOOKMARKS MODE ════════ */}
       {mode === 'bookmarks' && (
         <>
-          {groupsLoading && <div className="space-y-4">{[1, 2].map(i => <div key={i} className="h-40 animate-pulse rounded-2xl bg-zinc-100" />)}</div>}
+          {groupsLoading && (
+            <div className="rounded-2xl border border-zinc-200 bg-white py-16 shadow-sm">
+              <LogoLoader text="Loading your bookmarks…" />
+            </div>
+          )}
 
           {!groupsLoading && groups.length === 0 && (
             <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-zinc-200 bg-white px-6 py-16 text-center">
