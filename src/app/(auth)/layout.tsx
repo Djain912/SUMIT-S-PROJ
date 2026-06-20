@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { TrendingUp, CheckCircle } from 'lucide-react';
+import Image from 'next/image';
+import { CheckCircle } from 'lucide-react';
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
 
 const features = [
   'CMT curriculum mapped chapter by chapter',
-  '2,000+ practice MCQs at real exam difficulty',
+  '3,500+ practice MCQs at real exam difficulty',
   'Unlimited mock tests & customised MCQ sets',
   'Analytics to identify and fix weak areas',
   'Chartix Scholar — CMT-trained study chatbot',
@@ -27,10 +28,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
 
         {/* Logo */}
         <div className="relative z-10 flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500">
-            <TrendingUp className="h-5 w-5 text-white" />
-          </div>
-          <span className="text-xl font-bold tracking-tight text-white">Chartix</span>
+          <Image src="/chartix-wordmark.png" alt="Chartix" width={132} height={34} priority className="h-8 w-auto [filter:brightness(0)_invert(1)]" />
           <span className="rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-widest text-emerald-400">
             CMT Prep
           </span>
@@ -63,7 +61,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
             <p className="text-xs font-semibold uppercase tracking-widest text-emerald-400 mb-3">What you get</p>
             <div className="grid grid-cols-2 gap-3">
               {[
-                { value: '2,000+', label: 'Practice MCQs' },
+                { value: '3,500+', label: 'Practice MCQs' },
                 { value: '∞', label: 'Mock Tests' },
                 { value: '3', label: 'CMT Levels' },
                 { value: '6 Months', label: 'Access per level' },
@@ -81,7 +79,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         <div className="relative z-10 grid grid-cols-3 gap-6">
           {[
             { value: '3',      label: 'CMT Levels covered' },
-            { value: '2,000+', label: 'Practice MCQs' },
+            { value: '3,500+', label: 'Practice MCQs' },
             { value: '6 Months',   label: 'Access per level' },
           ].map((s) => (
             <div key={s.label}>
@@ -95,11 +93,8 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       {/* ── Right panel: form ── */}
       <div className="flex flex-1 flex-col items-center justify-center bg-zinc-50 px-6 py-12">
         {/* Mobile logo */}
-        <Link href="/" className="mb-8 flex items-center gap-2 lg:hidden">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-900">
-            <TrendingUp className="h-4 w-4 text-white" />
-          </div>
-          <span className="text-lg font-bold text-zinc-950">Chartix</span>
+        <Link href="/" className="mb-8 flex items-center lg:hidden">
+          <Image src="/chartix-wordmark.png" alt="Chartix" width={120} height={31} priority className="h-7 w-auto" />
         </Link>
 
         <div className="w-full max-w-[400px]">
