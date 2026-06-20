@@ -433,28 +433,38 @@ function Quiz({ edu }: { edu: IndicatorEducation }) {
 }
 
 // ── Module 13 streaming AI tutor (reuses /api/public-chat) ──
+const DAILY_FREE_LIMIT = 3;
+
 function Tutor({ edu }: { edu: IndicatorEducation }) {
   const [input, setInput] = useState('');
   const [answer, setAnswer] = useState('');
   const [busy, setBusy] = useState(false);
   const [asked, setAsked] = useState('');
+  const [used, setUsed] = useState(0);
+  const [limited, setLimited] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const ask = async (raw: string) => {
     const q = raw.trim();
-    if (!q || busy) return;
+    if (!q || busy || limited) return;
     setBusy(true); setAnswer(''); setAsked(q); setInput('');
     abortRef.current?.abort();
     const ctrl = new AbortController(); abortRef.current = ctrl;
     try {
       const res = await fetch('/api/public-chat', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: `About the ${edu.name} indicator: ${q}` }), signal: ctrl.signal,
+        body: JSON.stringify({ message: `About the ${edu.name} indicator: ${q}`, source: 'indicator-lab' }), signal: ctrl.signal,
       });
+      if (res.status === 429) {
+        const j = await res.json().catch(() => null) as { limit?: boolean; error?: { message?: string } } | null;
+        setLimited(j?.error?.message ?? 'You’ve reached today’s free question limit.');
+        setAsked(''); return;
+      }
       if (!res.ok || !res.body) {
         const j = await res.json().catch(() => null) as { error?: { message?: string } } | null;
         setAnswer(j?.error?.message ?? 'The tutor is unavailable right now. Please try again.'); return;
       }
+      setUsed(u => u + 1);
       const reader = res.body.getReader(); const dec = new TextDecoder();
       for (;;) { const { done, value } = await reader.read(); if (done) break; setAnswer(a => a + dec.decode(value, { stream: true })); }
     } catch {
@@ -462,9 +472,29 @@ function Tutor({ edu }: { edu: IndicatorEducation }) {
     } finally { setBusy(false); }
   };
 
+  const remaining = Math.max(0, DAILY_FREE_LIMIT - used);
+
+  // Hard upsell once the daily cap is hit
+  if (limited) {
+    return (
+      <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white px-6 py-7 text-center">
+        <Sparkles className="mx-auto h-7 w-7 text-emerald-600" />
+        <p className="mt-3 text-base font-bold text-emerald-900">You&apos;ve used your free questions for today</p>
+        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-zinc-600">{limited}</p>
+        <Link href="/sign-up" className="mt-5 inline-flex items-center gap-2 rounded-full bg-emerald-700 px-6 py-3 text-sm font-bold text-white transition hover:bg-emerald-600">
+          Enroll for unlimited access <Send className="h-4 w-4" />
+        </Link>
+        <p className="mt-3 text-[11px] text-zinc-400">Unlimited Chartix Scholar + notes, 3,500+ MCQs, mock tests & analytics.</p>
+      </div>
+    );
+  }
+
   return (
     <div>
-      <p className="text-sm leading-relaxed text-zinc-600">{edu.aiTutor.intro}</p>
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-sm leading-relaxed text-zinc-600">{edu.aiTutor.intro}</p>
+        <span className="flex-none rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">{remaining}/{DAILY_FREE_LIMIT} free today</span>
+      </div>
       <div className="mt-3 flex flex-wrap gap-2">
         {edu.aiTutor.suggestedQuestions.map((s, i) => (
           <button key={i} type="button" onClick={() => ask(s)} disabled={busy}
@@ -484,7 +514,7 @@ function Tutor({ edu }: { edu: IndicatorEducation }) {
           <div className="rounded-xl border border-zinc-200 bg-zinc-50/60 px-4 py-3 text-sm leading-relaxed text-zinc-700 whitespace-pre-wrap">
             {answer || (busy ? <span className="inline-flex items-center gap-2 text-zinc-400"><Loader2 className="h-4 w-4 animate-spin" /> Thinking…</span> : null)}
           </div>
-          <p className="text-[11px] text-zinc-400">The Chartix Scholar answers from the CMT curriculum. <Link href="/sign-up" className="font-semibold text-emerald-600 hover:underline">Sign up</Link> for the full study chatbot.</p>
+          <p className="text-[11px] text-zinc-400">The Chartix Scholar answers from the CMT curriculum. <Link href="/sign-up" className="font-semibold text-emerald-600 hover:underline">Enroll</Link> for unlimited questions + the full study platform.</p>
         </div>
       )}
     </div>

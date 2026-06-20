@@ -79,6 +79,31 @@ export async function POST(request: Request) {
     const body = await request.json();
     const message: string = (body.message as string | undefined)?.trim() ?? '';
     const history: ChatMessage[] = Array.isArray(body.history) ? body.history.slice(-6) : [];
+    const source: string = (body.source as string | undefined) ?? '';
+    const isLabTutor = source === 'indicator-lab';
+
+    // The Indicator Lab AI tutor is a public, anonymous funnel — cap it hard at
+    // 3 questions/day per IP and steer heavy users to enroll. This protects AI
+    // spend; signed-in study members get the full Chartix Scholar instead.
+    if (isLabTutor) {
+      const daily = await enforceRateLimit({
+        request,
+        key: 'indicator-lab-tutor',
+        maxRequests: 3,
+        windowMs: 24 * 60 * 60 * 1000,
+      });
+      if (!daily.allowed) {
+        const hrs = Math.ceil(daily.retryAfterSeconds / 3600);
+        return NextResponse.json(
+          {
+            success: false,
+            limit: true,
+            error: { message: `You've used your 3 free Chartix Scholar questions for today. Enroll for unlimited access to the full study chatbot, notes, quizzes and mock tests — your free questions reset in about ${hrs} hour${hrs !== 1 ? 's' : ''}.` },
+          },
+          { status: 429 },
+        );
+      }
+    }
 
     if (!message || message.length < 2) {
       return NextResponse.json({ success: false, error: { message: 'Message is required' } }, { status: 400 });
@@ -109,7 +134,9 @@ export async function POST(request: Request) {
     const systemPrompt = buildSystemPrompt(context, qaPairs);
 
     const stream = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      // The Lab tutor runs on the far cheaper mini model — plenty for short
+      // indicator Q&A, and keeps public AI cost low. Homepage chat stays on 4o.
+      model: isLabTutor ? 'gpt-4o-mini' : 'gpt-4o',
       messages: [
         { role: 'system', content: systemPrompt },
         ...history.map((m) => ({ role: m.role, content: m.content })),
