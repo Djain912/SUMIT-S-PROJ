@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { TrendingUp, CheckCircle, Lock, Clock } from 'lucide-react';
+import { CheckCircle, Lock, Clock } from 'lucide-react';
 import { auth } from '@/lib/auth/auth';
 import { getAccessByEmail, getTrialState } from '@/server/policies/access';
 import { CouponRedeemForm } from '@/components/get-access-client';
@@ -41,21 +40,6 @@ export default async function GetAccessPage() {
 
   return (
     <div className="min-h-screen bg-[#f0f7f4]">
-      {/* Nav */}
-      <nav className="border-b border-emerald-100 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3.5">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-700">
-              <TrendingUp className="h-4 w-4 text-white" />
-            </div>
-            <span className="text-base font-bold tracking-tight text-emerald-900">Chartix</span>
-          </Link>
-          <Link href="/api/auth/signout" className="text-sm font-medium text-zinc-500 hover:text-emerald-700">
-            Sign out
-          </Link>
-        </div>
-      </nav>
-
       <main className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
         {trialExpired && (
           <div className="mx-auto mb-8 max-w-md rounded-2xl border border-amber-200 bg-amber-50 p-5 text-center">
