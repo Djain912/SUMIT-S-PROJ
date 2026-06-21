@@ -103,8 +103,28 @@ export async function getChapterAccess(email: string): Promise<ChapterAccess> {
 // True when the user has ANY access at all (full premium, a live entitlement,
 // or an active trial). Used to admit users into the student area.
 export async function hasAnyAccess(email: string): Promise<boolean> {
-  const access = await getChapterAccess(email);
-  return access.full || access.chapterIds.size > 0;
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true, role: true, isPremium: true, premiumUntil: true, trialStartedAt: true, trialExpiresAt: true },
+  });
+  if (!user) return false;
+
+  const now = new Date();
+  const full = user.role === 'ADMIN' || (user.isPremium && (!user.premiumUntil || user.premiumUntil > now));
+  if (full) return true;
+
+  // Any active trial user is admitted — they see locked content + upgrade prompts
+  // even when no chapters are marked trial-free yet.
+  const trial = computeTrialState(user.trialStartedAt, user.trialExpiresAt, now);
+  if (trial.inTrial) return true;
+
+  // Scoped entitlements (chapter-level coupons)
+  const ents = await prisma.entitlement.findMany({
+    where: { userId: user.id, expiresAt: { gt: now } },
+    select: { chapterId: true },
+    take: 1,
+  });
+  return ents.length > 0;
 }
 
 // Trial status for UI (banner, dashboard, conversion prompts) — also reports
