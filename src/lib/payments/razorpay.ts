@@ -33,6 +33,19 @@ export function verifySignature(payload: string, signature: string, secret: stri
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
+// Computes the discounted amount for a coupon.
+export function applyDiscount(
+  orderPaise: number,
+  discountType: 'PERCENT' | 'FIXED',
+  discountValue: number,
+): { discountPaise: number; finalPaise: number } {
+  const raw = discountType === 'PERCENT'
+    ? Math.floor(orderPaise * discountValue / 100)
+    : discountValue;
+  const finalPaise = Math.max(100, orderPaise - raw); // never below ₹1
+  return { discountPaise: orderPaise - finalPaise, finalPaise };
+}
+
 // Grants 6 months of premium access, extending any existing access rather than
 // shortening it. Returns the resulting premium expiry.
 export async function grantPremiumAccess(userId: string): Promise<Date> {

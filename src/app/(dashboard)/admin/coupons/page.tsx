@@ -25,6 +25,9 @@ export default async function AdminCouponsPage() {
     redeemedCount: c.redeemedCount,
     note: c.note,
     createdAt: c.createdAt.toISOString(),
+    discountType: c.discountType,
+    discountValue: c.discountValue,
+    minOrderPaise: c.minOrderPaise,
   }));
 
   return (

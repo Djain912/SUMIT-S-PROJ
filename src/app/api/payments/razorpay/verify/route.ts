@@ -48,6 +48,14 @@ export async function POST(request: Request) {
       data: { status: 'PAID', razorpayPaymentId: paymentId, grantedUntil: premiumUntil },
     });
 
+    // Increment coupon usage if a discount coupon was applied to this order.
+    if (payment.couponCode) {
+      await prisma.coupon.updateMany({
+        where: { code: payment.couponCode },
+        data: { redeemedCount: { increment: 1 } },
+      }).catch(() => {});
+    }
+
     return NextResponse.json({ success: true, data: { premiumUntil } });
   } catch (error) {
     if (error instanceof AuthError) {

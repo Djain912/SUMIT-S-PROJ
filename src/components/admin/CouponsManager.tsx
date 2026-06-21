@@ -1,12 +1,13 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Ticket, Copy, Check, Trash2, Infinity as InfinityIcon, Loader2 } from 'lucide-react';
+import { Ticket, Copy, Check, Trash2, Infinity as InfinityIcon, Loader2, Percent, IndianRupee } from 'lucide-react';
 
 type Chapter = { id: string; level: 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3'; title: string; isPublished: boolean };
 type Coupon = {
-  id: string; code: string; days: number; allChapters: boolean; chapterIds: string[];
+  id: string; code: string; days: number | null; allChapters: boolean; chapterIds: string[];
   isActive: boolean; maxRedemptions: number | null; redeemedCount: number; note: string | null; createdAt: string;
+  discountType: 'PERCENT' | 'FIXED' | null; discountValue: number | null; minOrderPaise: number | null;
 };
 
 const LEVEL_LABEL: Record<string, string> = { LEVEL_1: 'CMT Level I', LEVEL_2: 'CMT Level II', LEVEL_3: 'CMT Level III' };
@@ -17,8 +18,12 @@ export function CouponsManager({ chapters, initialCoupons }: { chapters: Chapter
   const [days, setDays] = useState(30);
   const [maxRedemptions, setMaxRedemptions] = useState<string>('');
   const [note, setNote] = useState('');
+  const [couponPurpose, setCouponPurpose] = useState<'access' | 'discount'>('access');
   const [accessType, setAccessType] = useState<'full' | 'chapters'>('chapters');
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [discountType, setDiscountType] = useState<'PERCENT' | 'FIXED'>('PERCENT');
+  const [discountValue, setDiscountValue] = useState<string>('');
+  const [minOrder, setMinOrder] = useState<string>('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState('');
@@ -50,25 +55,42 @@ export function CouponsManager({ chapters, initialCoupons }: { chapters: Chapter
   async function createCoupon() {
     setError('');
     if (!code.trim()) { setError('Enter a coupon code.'); return; }
-    if (accessType === 'chapters' && selected.size === 0) { setError('Pick at least one chapter, or choose Full Access.'); return; }
+    if (couponPurpose === 'access' && accessType === 'chapters' && selected.size === 0) {
+      setError('Pick at least one chapter, or choose Full Access.'); return;
+    }
+    if (couponPurpose === 'discount' && (!discountValue || Number(discountValue) < 1)) {
+      setError('Enter a valid discount value.'); return;
+    }
     setBusy(true);
     try {
+      const body = couponPurpose === 'discount'
+        ? {
+            code: code.trim(),
+            discountType,
+            discountValue: Number(discountValue),
+            minOrderPaise: minOrder ? Number(minOrder) * 100 : null,
+            note: note.trim() || null,
+            maxRedemptions: maxRedemptions === '' ? null : Number(maxRedemptions),
+          }
+        : {
+            code: code.trim(),
+            days,
+            allChapters: accessType === 'full',
+            chapterIds: accessType === 'full' ? [] : [...selected],
+            note: note.trim() || null,
+            maxRedemptions: maxRedemptions === '' ? null : Number(maxRedemptions),
+          };
+
       const res = await fetch('/api/admin/coupons', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          code: code.trim(),
-          days,
-          allChapters: accessType === 'full',
-          chapterIds: accessType === 'full' ? [] : [...selected],
-          note: note.trim() || null,
-          maxRedemptions: maxRedemptions === '' ? null : Number(maxRedemptions),
-        }),
+        body: JSON.stringify(body),
       });
       const json = await res.json();
       if (!res.ok || !json.success) { setError(json?.error?.message ?? 'Could not create coupon.'); return; }
       setCoupons((prev) => [json.data, ...prev]);
-      setCode(''); setNote(''); setMaxRedemptions(''); setSelected(new Set()); setDays(30); setAccessType('chapters');
+      setCode(''); setNote(''); setMaxRedemptions(''); setSelected(new Set());
+      setDays(30); setAccessType('chapters'); setDiscountValue(''); setMinOrder('');
     } catch {
       setError('Network error. Please try again.');
     } finally {
@@ -108,17 +130,63 @@ export function CouponsManager({ chapters, initialCoupons }: { chapters: Chapter
           <h2 className="text-sm font-bold text-zinc-900">Create a new coupon</h2>
         </div>
 
+        {/* Coupon purpose toggle */}
+        <div className="mt-4">
+          <p className="text-sm font-medium text-zinc-700">Coupon type</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button type="button" onClick={() => setCouponPurpose('access')}
+              className={`rounded-lg border px-3 py-1.5 text-sm font-semibold transition ${couponPurpose === 'access' ? 'border-emerald-600 bg-emerald-50 text-emerald-700' : 'border-zinc-200 text-zinc-600 hover:border-zinc-300'}`}>
+              Free access (gives content days)
+            </button>
+            <button type="button" onClick={() => setCouponPurpose('discount')}
+              className={`rounded-lg border px-3 py-1.5 text-sm font-semibold transition ${couponPurpose === 'discount' ? 'border-violet-600 bg-violet-50 text-violet-700' : 'border-zinc-200 text-zinc-600 hover:border-zinc-300'}`}>
+              Price discount (reduces checkout price)
+            </button>
+          </div>
+        </div>
+
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <label className="text-sm">
             <span className="font-medium text-zinc-700">Coupon code</span>
-            <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="SUMITSPECIAL"
+            <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="SAVE20"
               className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm font-mono uppercase tracking-wide focus:border-emerald-500 focus:outline-none" />
           </label>
-          <label className="text-sm">
-            <span className="font-medium text-zinc-700">Days of access</span>
-            <input type="number" min={1} max={3650} value={days} onChange={(e) => setDays(Math.max(1, Number(e.target.value) || 1))}
-              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
-          </label>
+
+          {couponPurpose === 'access' ? (
+            <label className="text-sm">
+              <span className="font-medium text-zinc-700">Days of access</span>
+              <input type="number" min={1} max={3650} value={days} onChange={(e) => setDays(Math.max(1, Number(e.target.value) || 1))}
+                className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
+            </label>
+          ) : (
+            <>
+              <label className="text-sm">
+                <span className="font-medium text-zinc-700">Discount type</span>
+                <div className="mt-1 flex gap-1.5">
+                  <button type="button" onClick={() => setDiscountType('PERCENT')}
+                    className={`flex flex-1 items-center justify-center gap-1 rounded-lg border py-2 text-sm font-semibold transition ${discountType === 'PERCENT' ? 'border-violet-600 bg-violet-50 text-violet-700' : 'border-zinc-200 text-zinc-600'}`}>
+                    <Percent className="h-3.5 w-3.5" /> %
+                  </button>
+                  <button type="button" onClick={() => setDiscountType('FIXED')}
+                    className={`flex flex-1 items-center justify-center gap-1 rounded-lg border py-2 text-sm font-semibold transition ${discountType === 'FIXED' ? 'border-violet-600 bg-violet-50 text-violet-700' : 'border-zinc-200 text-zinc-600'}`}>
+                    <IndianRupee className="h-3.5 w-3.5" /> ₹
+                  </button>
+                </div>
+              </label>
+              <label className="text-sm">
+                <span className="font-medium text-zinc-700">{discountType === 'PERCENT' ? 'Percentage off (1–90)' : 'Amount off (₹)'}</span>
+                <input type="number" min={1} max={discountType === 'PERCENT' ? 90 : undefined} value={discountValue}
+                  onChange={(e) => setDiscountValue(e.target.value)} placeholder={discountType === 'PERCENT' ? '20' : '1000'}
+                  className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none" />
+              </label>
+              <label className="text-sm">
+                <span className="font-medium text-zinc-700">Min order ₹ <span className="text-zinc-400">(optional)</span></span>
+                <input type="number" min={1} value={minOrder} onChange={(e) => setMinOrder(e.target.value)} placeholder="e.g. 5000"
+                  className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none" />
+              </label>
+            </>
+          )}
+
           <label className="text-sm">
             <span className="font-medium text-zinc-700">Max uses <span className="text-zinc-400">(optional)</span></span>
             <input type="number" min={1} value={maxRedemptions} onChange={(e) => setMaxRedemptions(e.target.value)} placeholder="Unlimited"
@@ -126,12 +194,13 @@ export function CouponsManager({ chapters, initialCoupons }: { chapters: Chapter
           </label>
           <label className="text-sm">
             <span className="font-medium text-zinc-700">Label <span className="text-zinc-400">(optional)</span></span>
-            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. WhatsApp friends"
+            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. WhatsApp promo"
               className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
           </label>
         </div>
 
-        {/* Access type */}
+        {/* Access type (free-access coupons only) */}
+        {couponPurpose === 'access' && (
         <div className="mt-5">
           <p className="text-sm font-medium text-zinc-700">What does this coupon unlock?</p>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -145,9 +214,10 @@ export function CouponsManager({ chapters, initialCoupons }: { chapters: Chapter
             </button>
           </div>
         </div>
+        )}
 
         {/* Chapter picker */}
-        {accessType === 'chapters' && (
+        {couponPurpose === 'access' && accessType === 'chapters' && (
           <div className="mt-4 space-y-4">
             {(['LEVEL_1', 'LEVEL_2', 'LEVEL_3'] as const).map((level) => {
               const list = chaptersByLevel[level] ?? [];
@@ -206,9 +276,21 @@ export function CouponsManager({ chapters, initialCoupons }: { chapters: Chapter
                     </span>
                   </div>
                   <p className="mt-1 text-xs text-zinc-500">
-                    {c.allChapters ? 'Full access (all chapters)' : `${c.chapterIds.length} chapter${c.chapterIds.length === 1 ? '' : 's'}`}
-                    {' · '}{c.days} days{' · '}
-                    {c.redeemedCount} used{c.maxRedemptions ? ` / ${c.maxRedemptions}` : ''}
+                    {c.discountType ? (
+                      <>
+                        <span className="font-semibold text-violet-600">
+                          {c.discountType === 'PERCENT' ? `${c.discountValue}% off` : `₹${((c.discountValue ?? 0) / 100).toLocaleString('en-IN')} off`}
+                        </span>
+                        {c.minOrderPaise ? ` · min order ₹${Math.round(c.minOrderPaise / 100).toLocaleString('en-IN')}` : ''}
+                        {' · '}Price discount at checkout
+                      </>
+                    ) : (
+                      <>
+                        {c.allChapters ? 'Full access (all chapters)' : `${c.chapterIds.length} chapter${c.chapterIds.length === 1 ? '' : 's'}`}
+                        {' · '}{c.days} days
+                      </>
+                    )}
+                    {' · '}{c.redeemedCount} used{c.maxRedemptions ? ` / ${c.maxRedemptions}` : ''}
                     {c.maxRedemptions == null && <InfinityIcon className="ml-0.5 inline h-3 w-3 align-text-bottom" />}
                     {c.note ? ` · ${c.note}` : ''}
                   </p>

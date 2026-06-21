@@ -39,6 +39,12 @@ export async function POST(request: Request) {
             where: { id: payment.id },
             data: { status: 'PAID', razorpayPaymentId: paymentId ?? payment.razorpayPaymentId, grantedUntil: premiumUntil },
           });
+          if (payment.couponCode) {
+            await prisma.coupon.updateMany({
+              where: { code: payment.couponCode },
+              data: { redeemedCount: { increment: 1 } },
+            }).catch(() => {});
+          }
         }
       }
     }

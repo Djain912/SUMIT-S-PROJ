@@ -36,6 +36,12 @@ export async function POST(request: Request) {
     if (!coupon.isActive) {
       return NextResponse.json({ error: 'This coupon is no longer active.' }, { status: 400 });
     }
+    if (coupon.discountType) {
+      return NextResponse.json({ error: 'This is a discount code — apply it at checkout to get a reduced price.' }, { status: 400 });
+    }
+    if (!coupon.days || coupon.days < 1) {
+      return NextResponse.json({ error: 'Invalid coupon.' }, { status: 400 });
+    }
     if (coupon.maxRedemptions !== null && coupon.redeemedCount >= coupon.maxRedemptions) {
       return NextResponse.json({ error: 'This coupon has reached its redemption limit.' }, { status: 400 });
     }

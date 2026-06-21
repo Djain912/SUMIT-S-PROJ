@@ -5,7 +5,7 @@ import { enforceRateLimit } from '@/server/policies/rate-limit';
 import { getAccessByEmail } from '@/server/policies/access';
 import { prisma } from '@/lib/db/prisma';
 import {
-  getRazorpay, razorpayConfigured, LEVEL1_PRICE_PAISE, PLAN_LEVEL,
+  getRazorpay, razorpayConfigured, LEVEL1_PRICE_PAISE, PLAN_LEVEL, applyDiscount,
 } from '@/lib/payments/razorpay';
 
 export const dynamic = 'force-dynamic';
@@ -37,10 +37,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: { message: 'You already have active access.' } }, { status: 409 });
     }
 
+    // Optional discount coupon — re-validate server-side even if client already checked.
+    const body = await request.json().catch(() => ({})) as { couponCode?: string };
+    const couponCode = body.couponCode ? String(body.couponCode).trim().toUpperCase() : null;
+
+    let chargeAmount = LEVEL1_PRICE_PAISE;
+    let discountPaise: number | null = null;
+
+    if (couponCode) {
+      const coupon = await prisma.coupon.findUnique({ where: { code: couponCode } });
+      if (!coupon || !coupon.isActive || !coupon.discountType || coupon.discountValue == null) {
+        return NextResponse.json({ success: false, error: { message: 'Coupon is no longer valid.' } }, { status: 400 });
+      }
+      if (coupon.maxRedemptions !== null && coupon.redeemedCount >= coupon.maxRedemptions) {
+        return NextResponse.json({ success: false, error: { message: 'Coupon has reached its limit.' } }, { status: 400 });
+      }
+      const result = applyDiscount(LEVEL1_PRICE_PAISE, coupon.discountType, coupon.discountValue);
+      chargeAmount = result.finalPaise;
+      discountPaise = result.discountPaise;
+    }
+
     const order = await getRazorpay().orders.create({
-      amount: LEVEL1_PRICE_PAISE,
+      amount: chargeAmount,
       currency: 'INR',
-      receipt: `cmt1_${user.id.slice(-10)}_${Date.now().toString(36)}`, // Razorpay caps receipt at 40 chars
+      receipt: `cmt1_${user.id.slice(-10)}_${Date.now().toString(36)}`,
       notes: { userId: user.id, level: PLAN_LEVEL },
     });
 
@@ -48,10 +68,11 @@ export async function POST(request: Request) {
       data: {
         userId: user.id,
         level: PLAN_LEVEL,
-        amount: LEVEL1_PRICE_PAISE,
+        amount: chargeAmount,
         currency: 'INR',
         razorpayOrderId: order.id,
         status: 'CREATED',
+        ...(couponCode ? { couponCode, discountPaise } : {}),
       },
     });
 
@@ -59,7 +80,7 @@ export async function POST(request: Request) {
       success: true,
       data: {
         orderId: order.id,
-        amount: LEVEL1_PRICE_PAISE,
+        amount: chargeAmount,
         currency: 'INR',
         keyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         prefill: { name: user.fullName ?? '', email: user.email },
