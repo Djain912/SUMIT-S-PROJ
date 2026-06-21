@@ -38,7 +38,17 @@ export async function POST(request: Request) {
     }
 
     // Optional discount coupon — re-validate server-side even if client already checked.
-    const body = await request.json().catch(() => ({})) as { couponCode?: string };
+    const body = await request.json().catch(() => ({})) as {
+      couponCode?: string;
+      billingName?: string;
+      billingPhone?: string;
+      billingEmail?: string;
+      billingAddress?: string;
+      billingCity?: string;
+      billingState?: string;
+      billingPincode?: string;
+      billingGst?: string;
+    };
     const couponCode = body.couponCode ? String(body.couponCode).trim().toUpperCase() : null;
 
     let chargeAmount = LEVEL1_PRICE_PAISE;
@@ -73,6 +83,14 @@ export async function POST(request: Request) {
         razorpayOrderId: order.id,
         status: 'CREATED',
         ...(couponCode ? { couponCode, discountPaise } : {}),
+        billingName:    body.billingName    ? String(body.billingName).trim()    : null,
+        billingPhone:   body.billingPhone   ? String(body.billingPhone).trim()   : null,
+        billingEmail:   body.billingEmail   ? String(body.billingEmail).trim()   : null,
+        billingAddress: body.billingAddress ? String(body.billingAddress).trim() : null,
+        billingCity:    body.billingCity    ? String(body.billingCity).trim()    : null,
+        billingState:   body.billingState   ? String(body.billingState).trim()   : null,
+        billingPincode: body.billingPincode ? String(body.billingPincode).trim() : null,
+        billingGst:     body.billingGst     ? String(body.billingGst).trim()     : null,
       },
     });
 

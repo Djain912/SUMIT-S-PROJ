@@ -110,12 +110,31 @@ model Payment {
   grantedUntil      DateTime?     // premium expiry granted by this payment
   couponCode        String?       // discount coupon applied at checkout
   discountPaise     Int?          // paise deducted by the coupon
+  // Billing details collected at checkout (for invoice generation)
+  billingName       String?
+  billingPhone      String?
+  billingEmail      String?
+  billingAddress    String?
+  billingCity       String?
+  billingState      String?
+  billingPincode    String?
+  billingGst        String?
+  invoice           Invoice?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
   user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, status])
   @@index([razorpayPaymentId])
+}
+
+model Invoice {
+  id        String   @id @default(cuid())
+  number    String   @unique       // CHX-2026-0001
+  paymentId String   @unique
+  emailSent Boolean  @default(false)
+  createdAt DateTime @default(now())
+  payment   Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
 }
 
 enum PaymentStatus {

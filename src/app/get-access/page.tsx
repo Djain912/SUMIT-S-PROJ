@@ -100,7 +100,7 @@ export default async function GetAccessPage() {
           </ul>
 
           {/* Buy (shows live button once Razorpay keys are set, else a notice) */}
-          <BuyButton userName={session?.user?.name ?? ''} />
+          <BuyButton userName={session?.user?.name ?? ''} userEmail={session?.user?.email ?? ''} />
 
           {/* Coupon */}
           <div className="mt-5 border-t border-zinc-100 pt-5">

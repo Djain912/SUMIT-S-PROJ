@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Tag, X, CheckCircle, Loader2, AlertCircle, ShieldCheck, Clock } from 'lucide-react';
+import { Tag, X, CheckCircle, Loader2, AlertCircle, ShieldCheck, Clock, ChevronDown } from 'lucide-react';
 
 type RazorpayOptions = {
   key: string; amount: number; currency: string; order_id: string;
@@ -18,6 +18,15 @@ declare global {
 const CHECKOUT_SRC = 'https://checkout.razorpay.com/v1/checkout.js';
 const RAZORPAY_ENABLED = (process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? '').startsWith('rzp_');
 const BASE_PRICE = 699900;
+
+const INDIAN_STATES = [
+  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat',
+  'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh',
+  'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab',
+  'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand',
+  'West Bengal', 'Andaman & Nicobar Islands', 'Chandigarh', 'Dadra & Nagar Haveli and Daman & Diu',
+  'Delhi', 'Jammu & Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry',
+];
 
 function fmt(paise: number) {
   return '₹' + Math.round(paise / 100).toLocaleString('en-IN');
@@ -36,10 +45,32 @@ function loadCheckout(): Promise<boolean> {
 
 type AppliedCoupon = { code: string; discountPaise: number; finalPaise: number; label: string };
 
-export function BuyButton({ userName = '' }: { userName?: string }) {
+type Billing = {
+  name: string;
+  phone: string;
+  email: string;
+  address: string;
+  city: string;
+  state: string;
+  pincode: string;
+  gst: string;
+};
+
+type FieldErrors = Partial<Record<keyof Billing, string>>;
+
+export function BuyButton({ userName = '', userEmail = '' }: { userName?: string; userEmail?: string }) {
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState(userName);
-  const [phone, setPhone] = useState('');
+  const [billing, setBilling] = useState<Billing>({
+    name: userName,
+    phone: '',
+    email: userEmail,
+    address: '',
+    city: '',
+    state: '',
+    pincode: '',
+    gst: '',
+  });
+  const [errors, setErrors] = useState<FieldErrors>({});
   const [couponInput, setCouponInput] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState('');
@@ -50,10 +81,11 @@ export function BuyButton({ userName = '' }: { userName?: string }) {
 
   useEffect(() => {
     if (open) {
+      setBilling(b => ({ ...b, name: userName || b.name, email: userEmail || b.email }));
       loadCheckout().catch(() => {});
       setTimeout(() => nameRef.current?.focus(), 100);
     }
-  }, [open]);
+  }, [open, userName, userEmail]);
 
   useEffect(() => {
     if (!open) return;
@@ -61,6 +93,23 @@ export function BuyButton({ userName = '' }: { userName?: string }) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [open]);
+
+  const set = (field: keyof Billing) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setBilling(b => ({ ...b, [field]: e.target.value }));
+    setErrors(er => ({ ...er, [field]: undefined }));
+  };
+
+  const validate = (): boolean => {
+    const errs: FieldErrors = {};
+    if (!billing.name.trim())    errs.name    = 'Full name is required';
+    if (!billing.phone.trim())   errs.phone   = 'Phone number is required';
+    if (!billing.address.trim()) errs.address = 'Address is required';
+    if (!billing.city.trim())    errs.city    = 'City is required';
+    if (!billing.state)          errs.state   = 'Please select a state';
+    if (!billing.pincode.trim()) errs.pincode = 'PIN code is required';
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
 
   const applyCode = useCallback(async () => {
     const code = couponInput.trim().toUpperCase();
@@ -90,7 +139,7 @@ export function BuyButton({ userName = '' }: { userName?: string }) {
   const removeCoupon = () => { setApplied(null); setCouponInput(''); setCouponError(''); };
 
   const startPayment = useCallback(async () => {
-    if (!name.trim()) { nameRef.current?.focus(); return; }
+    if (!validate()) return;
     setPayError('');
     setPaying(true);
     try {
@@ -100,12 +149,22 @@ export function BuyButton({ userName = '' }: { userName?: string }) {
       const res = await fetch('/api/payments/razorpay/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(applied ? { couponCode: applied.code } : {}),
+        body: JSON.stringify({
+          couponCode: applied?.code ?? null,
+          billingName: billing.name.trim(),
+          billingPhone: billing.phone.trim(),
+          billingEmail: billing.email.trim() || null,
+          billingAddress: billing.address.trim(),
+          billingCity: billing.city.trim(),
+          billingState: billing.state,
+          billingPincode: billing.pincode.trim(),
+          billingGst: billing.gst.trim() || null,
+        }),
       });
       const payload = await res.json();
       if (!res.ok || !payload.success) throw new Error(payload.error?.message ?? 'Could not start payment.');
 
-      const { orderId, amount, currency, keyId, prefill } = payload.data;
+      const { orderId, amount, currency, keyId } = payload.data;
       const rzp = new window.Razorpay({
         key: keyId,
         amount,
@@ -113,7 +172,11 @@ export function BuyButton({ userName = '' }: { userName?: string }) {
         order_id: orderId,
         name: 'Chartix',
         description: 'CMT Level 1 — 6 months access',
-        prefill: { ...prefill, name: name.trim(), contact: phone.trim() || prefill?.contact },
+        prefill: {
+          name: billing.name.trim(),
+          email: billing.email.trim() || undefined,
+          contact: billing.phone.trim(),
+        },
         theme: { color: '#047857' },
         handler: async (resp) => {
           try {
@@ -137,7 +200,8 @@ export function BuyButton({ userName = '' }: { userName?: string }) {
       setPayError(e instanceof Error ? e.message : 'Something went wrong. Try again.');
       setPaying(false);
     }
-  }, [name, phone, applied]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [billing, applied]);
 
   if (!RAZORPAY_ENABLED) {
     return (
@@ -166,50 +230,165 @@ export function BuyButton({ userName = '' }: { userName?: string }) {
           className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center"
           onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
         >
-          <div className="relative w-full max-w-md rounded-t-3xl bg-white p-6 shadow-2xl sm:rounded-2xl">
-            {/* Close */}
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="absolute right-4 top-4 rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600"
-            >
-              <X className="h-4 w-4" />
-            </button>
+          <div className="relative w-full max-w-lg rounded-t-3xl bg-white shadow-2xl sm:rounded-2xl flex flex-col max-h-[90vh]">
+            {/* Header */}
+            <div className="shrink-0 px-6 pt-6 pb-4 border-b border-zinc-100">
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="absolute right-4 top-4 rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+              <p className="text-xs font-semibold uppercase tracking-widest text-emerald-600">CMT Level 1</p>
+              <h2 className="mt-1 text-lg font-bold text-zinc-900">Complete your purchase</h2>
+            </div>
 
-            <p className="text-xs font-semibold uppercase tracking-widest text-emerald-600">CMT Level 1</p>
-            <h2 className="mt-1 text-lg font-bold text-zinc-900">Complete your purchase</h2>
+            {/* Scrollable body */}
+            <div className="overflow-y-auto px-6 py-5 space-y-5">
 
-            <div className="mt-5 space-y-4">
-              {/* Name */}
-              <label className="block text-sm">
-                <span className="font-medium text-zinc-700">Your name</span>
-                <input
-                  ref={nameRef}
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Full name"
-                  className="mt-1.5 w-full rounded-xl border border-zinc-300 px-3.5 py-2.5 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                />
-              </label>
+              {/* ── Contact Details ── */}
+              <div>
+                <p className="mb-3 text-[11px] font-bold uppercase tracking-widest text-zinc-400">Contact Details</p>
+                <div className="space-y-3">
+                  {/* Name */}
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                      Full name <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      ref={nameRef}
+                      type="text"
+                      value={billing.name}
+                      onChange={set('name')}
+                      placeholder="As on ID / for invoice"
+                      className={`w-full rounded-xl border px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 ${errors.name ? 'border-rose-400 focus:border-rose-400' : 'border-zinc-300 focus:border-emerald-500'}`}
+                    />
+                    {errors.name && <p className="mt-1 text-xs text-rose-600">{errors.name}</p>}
+                  </div>
 
-              {/* Phone */}
-              <label className="block text-sm">
-                <span className="font-medium text-zinc-700">Phone number <span className="text-zinc-400">(optional)</span></span>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+91 98765 43210"
-                  className="mt-1.5 w-full rounded-xl border border-zinc-300 px-3.5 py-2.5 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                />
-              </label>
+                  {/* Phone */}
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                      Mobile number <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      value={billing.phone}
+                      onChange={set('phone')}
+                      placeholder="+91 98765 43210"
+                      className={`w-full rounded-xl border px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 ${errors.phone ? 'border-rose-400 focus:border-rose-400' : 'border-zinc-300 focus:border-emerald-500'}`}
+                    />
+                    {errors.phone && <p className="mt-1 text-xs text-rose-600">{errors.phone}</p>}
+                  </div>
 
-              {/* Coupon */}
-              <div className="text-sm">
-                <span className="font-medium text-zinc-700">Promo code <span className="text-zinc-400">(optional)</span></span>
+                  {/* Email */}
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                      Email for invoice <span className="text-zinc-400 text-xs font-normal">(optional)</span>
+                    </label>
+                    <input
+                      type="email"
+                      value={billing.email}
+                      onChange={set('email')}
+                      placeholder="invoice@example.com"
+                      className="w-full rounded-xl border border-zinc-300 px-3.5 py-2.5 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Billing Address ── */}
+              <div>
+                <p className="mb-3 text-[11px] font-bold uppercase tracking-widest text-zinc-400">Billing Address</p>
+                <div className="space-y-3">
+                  {/* Address */}
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                      Street / flat / building <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={billing.address}
+                      onChange={set('address')}
+                      placeholder="House no., street, area"
+                      className={`w-full rounded-xl border px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 ${errors.address ? 'border-rose-400 focus:border-rose-400' : 'border-zinc-300 focus:border-emerald-500'}`}
+                    />
+                    {errors.address && <p className="mt-1 text-xs text-rose-600">{errors.address}</p>}
+                  </div>
+
+                  {/* City + PIN */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                        City <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={billing.city}
+                        onChange={set('city')}
+                        placeholder="Mumbai"
+                        className={`w-full rounded-xl border px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 ${errors.city ? 'border-rose-400 focus:border-rose-400' : 'border-zinc-300 focus:border-emerald-500'}`}
+                      />
+                      {errors.city && <p className="mt-1 text-xs text-rose-600">{errors.city}</p>}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                        PIN code <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={6}
+                        value={billing.pincode}
+                        onChange={set('pincode')}
+                        placeholder="400001"
+                        className={`w-full rounded-xl border px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 ${errors.pincode ? 'border-rose-400 focus:border-rose-400' : 'border-zinc-300 focus:border-emerald-500'}`}
+                      />
+                      {errors.pincode && <p className="mt-1 text-xs text-rose-600">{errors.pincode}</p>}
+                    </div>
+                  </div>
+
+                  {/* State */}
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                      State <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={billing.state}
+                        onChange={set('state')}
+                        className={`w-full appearance-none rounded-xl border px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 ${errors.state ? 'border-rose-400 focus:border-rose-400' : 'border-zinc-300 focus:border-emerald-500'} ${!billing.state ? 'text-zinc-400' : 'text-zinc-900'}`}
+                      >
+                        <option value="" disabled>Select state</option>
+                        {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                    </div>
+                    {errors.state && <p className="mt-1 text-xs text-rose-600">{errors.state}</p>}
+                  </div>
+
+                  {/* GST */}
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                      GSTIN <span className="text-zinc-400 text-xs font-normal">(optional — for business invoices)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={billing.gst}
+                      onChange={set('gst')}
+                      placeholder="22AAAAA0000A1Z5"
+                      className="w-full rounded-xl border border-zinc-300 px-3.5 py-2.5 font-mono text-sm uppercase focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Promo Code ── */}
+              <div>
+                <p className="mb-3 text-[11px] font-bold uppercase tracking-widest text-zinc-400">Promo Code</p>
                 {applied ? (
-                  <div className="mt-1.5 flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5">
+                  <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5">
                     <div className="flex items-center gap-2">
                       <CheckCircle className="h-4 w-4 shrink-0 text-emerald-600" />
                       <span className="text-sm font-bold text-emerald-800">{applied.code}</span>
@@ -220,7 +399,7 @@ export function BuyButton({ userName = '' }: { userName?: string }) {
                     </button>
                   </div>
                 ) : (
-                  <div className="mt-1.5 space-y-1.5">
+                  <div className="space-y-1.5">
                     <div className="flex gap-2">
                       <div className="relative flex-1">
                         <Tag className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
@@ -252,46 +431,48 @@ export function BuyButton({ userName = '' }: { userName?: string }) {
               </div>
             </div>
 
-            {/* Price summary */}
-            <div className="mt-5 rounded-xl border border-zinc-100 bg-zinc-50 px-4 py-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-zinc-500">CMT Level 1 · 6 months</span>
-                {applied ? (
-                  <span className="flex items-center gap-2">
-                    <span className="text-xs text-zinc-400 line-through">{fmt(BASE_PRICE)}</span>
-                    <span className="font-bold text-emerald-700">{fmt(finalAmount)}</span>
-                  </span>
-                ) : (
-                  <span className="font-bold text-zinc-900">{fmt(BASE_PRICE)}</span>
+            {/* Sticky footer */}
+            <div className="shrink-0 border-t border-zinc-100 px-6 py-4 bg-white rounded-b-2xl">
+              {/* Price summary */}
+              <div className="rounded-xl border border-zinc-100 bg-zinc-50 px-4 py-3 mb-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-zinc-500">CMT Level 1 · 6 months</span>
+                  {applied ? (
+                    <span className="flex items-center gap-2">
+                      <span className="text-xs text-zinc-400 line-through">{fmt(BASE_PRICE)}</span>
+                      <span className="font-bold text-emerald-700">{fmt(finalAmount)}</span>
+                    </span>
+                  ) : (
+                    <span className="font-bold text-zinc-900">{fmt(BASE_PRICE)}</span>
+                  )}
+                </div>
+                {applied && (
+                  <p className="mt-1 text-xs text-emerald-600">You save {fmt(applied.discountPaise)}</p>
                 )}
               </div>
-              {applied && (
-                <p className="mt-1 text-xs text-emerald-600">You save {fmt(applied.discountPaise)}</p>
+
+              {payError && (
+                <p className="mb-3 flex items-center gap-1.5 text-xs text-rose-600">
+                  <AlertCircle className="h-3.5 w-3.5 shrink-0" />{payError}
+                </p>
               )}
-            </div>
 
-            {payError && (
-              <p className="mt-3 flex items-center gap-1.5 text-xs text-rose-600">
-                <AlertCircle className="h-3.5 w-3.5 shrink-0" />{payError}
-              </p>
-            )}
+              <button
+                type="button"
+                onClick={startPayment}
+                disabled={paying}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 disabled:opacity-60"
+              >
+                {paying
+                  ? <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> Opening payment…</>
+                  : `Pay ${fmt(finalAmount)} securely`}
+              </button>
 
-            {/* Pay button */}
-            <button
-              type="button"
-              onClick={startPayment}
-              disabled={paying || !name.trim()}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 disabled:opacity-60"
-            >
-              {paying
-                ? <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> Opening payment…</>
-                : `Pay ${fmt(finalAmount)} securely`}
-            </button>
-
-            <div className="mt-3 flex items-center justify-center gap-3 text-[11px] text-zinc-400">
-              <span className="flex items-center gap-1"><ShieldCheck className="h-3 w-3" /> Razorpay secured</span>
-              <span>·</span>
-              <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> UPI · Cards · Net banking</span>
+              <div className="mt-2.5 flex items-center justify-center gap-3 text-[11px] text-zinc-400">
+                <span className="flex items-center gap-1"><ShieldCheck className="h-3 w-3" /> Razorpay secured</span>
+                <span>·</span>
+                <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> UPI · Cards · Net banking</span>
+              </div>
             </div>
           </div>
         </div>

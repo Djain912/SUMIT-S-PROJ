@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 import { verifySignature, grantPremiumAccess } from '@/lib/payments/razorpay';
+import { issueInvoice } from '@/lib/invoices/send';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -45,6 +46,8 @@ export async function POST(request: Request) {
               data: { redeemedCount: { increment: 1 } },
             }).catch(() => {});
           }
+          // Generate PDF invoice + email it (fail-soft — 200 to Razorpay regardless).
+          issueInvoice(payment.id).catch((err) => console.error('[webhook] invoice error:', err));
         }
       }
     }
