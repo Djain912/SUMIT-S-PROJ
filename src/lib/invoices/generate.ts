@@ -27,7 +27,7 @@ const GREY    = rgb(0.45, 0.45, 0.45);
 const LIGHT   = rgb(0.95, 0.97, 0.96);
 
 function rupees(paise: number) {
-  return '₹' + (paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+  return 'Rs. ' + (paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 });
 }
 
 export async function generateInvoicePdf(data: InvoiceData): Promise<Uint8Array> {
