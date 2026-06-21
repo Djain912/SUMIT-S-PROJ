@@ -55,7 +55,6 @@ export async function TrialBanner({ email }: { email: string }) {
     'Full 3,500+ question bank',
     'Unlimited mock exams',
     'Unlimited Chartix Scholar',
-    'Unlimited Indicator Lab',
   ];
 
   const progressPct = Math.round((trial.dayOfTrial / TRIAL_DAYS) * 100);

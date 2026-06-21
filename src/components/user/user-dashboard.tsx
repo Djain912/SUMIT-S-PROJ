@@ -267,6 +267,26 @@ function ChapterRow({ chapter: ch, forceExpanded }: ChapterRowProps) {
   const hasSubtopics = ch.subtopics.length > 0;
   const expanded = forceExpanded !== null ? forceExpanded : localExpanded;
 
+  if (ch.isLocked) {
+    return (
+      <div className="border-b border-zinc-100 last:border-0 bg-zinc-50/50">
+        <div className="flex items-center justify-between gap-3 px-4 py-3.5">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <Lock className="h-4 w-4 shrink-0 text-zinc-300" />
+            <span className="text-sm font-semibold text-zinc-400 truncate">{ch.title}</span>
+          </div>
+          <Link
+            href="/get-access"
+            className="inline-flex items-center gap-1 rounded-md border border-zinc-200 px-2.5 py-1.5 text-xs font-medium text-zinc-400 transition hover:bg-zinc-100"
+          >
+            <Lock className="h-3.5 w-3.5" />
+            Unlock
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="border-b border-zinc-100 last:border-0">
       <div className="flex items-center justify-between gap-3 px-4 py-3.5">
