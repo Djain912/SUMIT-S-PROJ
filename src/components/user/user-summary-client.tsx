@@ -7,7 +7,7 @@ import { LogoLoader } from '@/components/shared/logo-loader';
 
 type BookmarkKey = { itemType: string; itemIndex: number };
 type Summary = ChapterSummaryContent & { chapterId: string; isPublished: boolean };
-type Chapter = { id: string; title: string };
+type Chapter = { id: string; title: string; isLocked?: boolean };
 
 type ResolvedItem = {
   itemType: SummaryItemType;
@@ -172,7 +172,7 @@ export function UserSummaryClient({ userEmail }: { userEmail: string }) {
       .then(r => r.json())
       .then((d: { success: boolean; data?: { sections: { chapters: Chapter[] }[] } }) => {
         if (d.success && d.data) {
-          const chs = d.data.sections.flatMap(s => s.chapters);
+          const chs = d.data.sections.flatMap(s => s.chapters).filter(c => !c.isLocked);
           setChapters(chs);
           if (chs.length > 0) setSelectedId(chs[0].id);
         }

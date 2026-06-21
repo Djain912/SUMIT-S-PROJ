@@ -3,6 +3,7 @@ import { AuthError, requireAuthenticatedUser, requireAdminUser } from '@/server/
 import { validateCsrfOrigin } from '@/server/policies/csrf';
 import { prisma } from '@/lib/db/prisma';
 import { normalizeSummary, type ChapterSummaryContent } from '@/lib/chapter-summary/types';
+import { getChapterAccess } from '@/server/policies/access';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -14,7 +15,12 @@ export async function GET(
 ) {
   try {
     const { chapterId } = await params;
-    await requireAuthenticatedUser();
+    const user = await requireAuthenticatedUser();
+
+    const access = await getChapterAccess(user.email);
+    if (!access.full && !access.chapterIds.has(chapterId)) {
+      return NextResponse.json({ success: false, error: { message: 'Access denied' } }, { status: 403 });
+    }
 
     const row = await prisma.chapterSummary.findUnique({ where: { chapterId } });
     if (!row) return NextResponse.json({ success: true, data: null });
