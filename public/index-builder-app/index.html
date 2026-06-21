@@ -76,6 +76,8 @@ textarea{font-family:"JetBrains Mono",monospace;font-size:11.5px;line-height:1.5
 .legend{position:absolute;top:10px;left:12px;z-index:6;font-family:"JetBrains Mono";font-size:11.5px;pointer-events:none;line-height:1.7;max-width:72%;background:rgba(255,255,255,.86);border:1px solid var(--line);border-radius:8px;padding:7px 11px;backdrop-filter:blur(2px);box-shadow:0 2px 8px rgba(0,0,0,.06);color:#111827;}
 .legend .ttl{font-family:"Sora";font-weight:600;font-size:12.5px;color:var(--accent);margin-bottom:2px}
 .legend .row span.k{color:var(--txt-mut)}
+.ind-legend{position:absolute;left:12px;z-index:6;font-family:"JetBrains Mono",monospace;font-size:11px;pointer-events:none;line-height:1.5;background:rgba(255,255,255,.86);border:1px solid var(--line);border-radius:6px;padding:4px 9px;backdrop-filter:blur(2px);box-shadow:0 2px 6px rgba(0,0,0,.05);color:#111827;white-space:nowrap;}
+.ind-legend .ik{font-family:"Sora",sans-serif;font-weight:600;font-size:11px;}
 .empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--txt-mut);text-align:center;padding:24px;z-index:7}
 .empty .ico{font-size:40px;opacity:.4}
 .empty .t{font-family:"Sora";font-weight:600;font-size:15px;color:var(--txt-dim)}
@@ -129,14 +131,28 @@ input[type=date]::-webkit-calendar-picker-indicator{opacity:.6}
 .shares-tbl td:first-child{font-family:"JetBrains Mono";font-size:11.5px;color:var(--txt)}
 .shares-tbl input{padding:5px 7px;font-size:11.5px}
 /* shape context menu */
-#shapeMenu{position:fixed;z-index:300;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.13);padding:10px 12px;display:none;min-width:200px}
+#shapeMenu{position:fixed;z-index:300;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.13);padding:10px 12px;display:none;min-width:220px}
 #shapeMenu .sm-hd{font-size:10px;color:var(--txt-mut);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}
 #shapeMenu .sm-colors{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
 .sm-col{width:22px;height:22px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:.12s}
 .sm-col:hover{transform:scale(1.18)}
 .sm-col.picked{border-color:#111827}
+.sm-row{display:flex;gap:4px;margin-bottom:8px}
+.sm-row .sm-opt{flex:1;background:#f8faf9;border:1px solid var(--line);border-radius:6px;padding:5px 2px;font-size:11px;font-family:"Sora";font-weight:600;color:var(--txt-dim);cursor:pointer;text-align:center;transition:.12s}
+.sm-row .sm-opt:hover{border-color:var(--accent);color:var(--accent)}
+.sm-row .sm-opt.on{background:rgba(15,123,90,.1);border-color:var(--accent);color:var(--accent)}
+.sm-sep{height:1px;background:var(--line-soft);margin:8px 0}
 #smDelete{width:100%;background:#fff;border:1px solid rgba(220,38,38,.35);color:#dc2626;border-radius:6px;padding:7px;font-size:12px;font-family:"Sora";font-weight:600;cursor:pointer}
 #smDelete:hover{background:rgba(220,38,38,.06)}
+/* wave options panel */
+#waveOpts{position:fixed;z-index:301;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.12);padding:10px 12px;display:none;min-width:210px;left:90px;top:50%}
+#waveOpts .wo-hd{font-size:10px;color:var(--txt-mut);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}
+.wo-row{display:flex;gap:4px;margin-bottom:8px}
+.wo-row .wo-btn{flex:1;background:#f8faf9;border:1px solid var(--line);border-radius:6px;padding:5px 2px;font-size:11.5px;font-family:"Sora";font-weight:700;color:var(--txt-dim);cursor:pointer;text-align:center;transition:.12s}
+.wo-btn:hover{border-color:var(--accent);color:var(--accent)}
+.wo-btn.on{background:rgba(15,123,90,.1);border-color:var(--accent);color:var(--accent)}
+/* wave in-progress hint */
+#waveCursor{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);background:#0c3b29;color:#fff;font-family:"Sora";font-size:12px;font-weight:600;padding:6px 14px;border-radius:20px;z-index:400;display:none;pointer-events:none;letter-spacing:.2px}
 
 /* ── TradingView-style command bar + controls (overhaul) ── */
 .app{display:flex;flex-direction:column;height:100vh;min-height:0}
@@ -440,6 +456,10 @@ main{flex:1;display:flex;min-height:0}
       <button class="lb-tool" id="dText" onclick="setTool('text')" data-tip="Text label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 5h14M12 5v14"/></svg><span class="tl-txt">Text</span></button>
       <button class="lb-tool" id="dMeasure" onclick="setTool('measure')" data-tip="Measure"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 8h18v8H3z"/><path d="M7 8v3M11 8v4M15 8v3M19 8v4"/></svg><span class="tl-txt">Measure</span></button>
       <div class="lb-sep"></div>
+      <button class="lb-tool" id="dWave5" onclick="setTool('wave5')" data-tip="Elliott Wave 1-2-3-4-5 (motive)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18l4-8 4 4 4-10 4 6"/><circle cx="2" cy="18" r="1.2" fill="currentColor"/><circle cx="6" cy="10" r="1.2" fill="currentColor"/><circle cx="10" cy="14" r="1.2" fill="currentColor"/><circle cx="14" cy="4" r="1.2" fill="currentColor"/><circle cx="18" cy="10" r="1.2" fill="currentColor"/></svg><span class="tl-txt">Wave 1–5</span></button>
+      <button class="lb-tool" id="dWaveABC" onclick="setTool('waveABC')" data-tip="Elliott Wave A-B-C (corrective)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16l5-10 5 10"/><circle cx="3" cy="16" r="1.2" fill="currentColor"/><circle cx="8" cy="6" r="1.2" fill="currentColor"/><circle cx="13" cy="16" r="1.2" fill="currentColor"/><text x="3" y="22" font-size="5" fill="currentColor" stroke="none" font-family="Sora" font-weight="700">A</text><text x="7" y="5" font-size="5" fill="currentColor" stroke="none" font-family="Sora" font-weight="700">B</text><text x="12" y="22" font-size="5" fill="currentColor" stroke="none" font-family="Sora" font-weight="700">C</text></svg><span class="tl-txt">Wave A-B-C</span></button>
+      <button class="lb-tool" id="dWaveABCDE" onclick="setTool('waveABCDE')" data-tip="Elliott Wave A-B-C-D-E (triangle)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 17l4-8 4 5 4-7 4 5"/><circle cx="2" cy="17" r="1.1" fill="currentColor"/><circle cx="6" cy="9" r="1.1" fill="currentColor"/><circle cx="10" cy="14" r="1.1" fill="currentColor"/><circle cx="14" cy="7" r="1.1" fill="currentColor"/><circle cx="18" cy="12" r="1.1" fill="currentColor"/></svg><span class="tl-txt">Wave ABCDE</span></button>
+      <div class="lb-sep"></div>
       <button class="lb-tool" onclick="undoDraw()" data-tip="Undo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10H9"/></svg><span class="tl-txt">Undo</span></button>
       <button class="lb-tool" onclick="clearDraw()" data-tip="Delete all drawings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg><span class="tl-txt">Delete all</span></button>
       <button class="lb-tool" onclick="fitChart()" data-tip="Fit to screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="tl-txt">Fit</span></button>
@@ -474,10 +494,68 @@ main{flex:1;display:flex;min-height:0}
   </main>
 </div>
 
+<!-- Wave options panel -->
+<div id="waveOpts">
+  <div class="wo-hd">Label Style</div>
+  <div class="wo-row">
+    <button class="wo-btn on" id="wls1" onclick="setWaveStyle('arabic')" title="1 2 3 4 5">1 2 3</button>
+    <button class="wo-btn" id="wls2" onclick="setWaveStyle('roman')" title="I II III IV V">I II III</button>
+    <button class="wo-btn" id="wls3" onclick="setWaveStyle('lower')" title="i ii iii iv v">i ii iii</button>
+    <button class="wo-btn" id="wls4" onclick="setWaveStyle('alpha')" title="A B C / a b c">a b c</button>
+  </div>
+  <div class="wo-hd">Label Size</div>
+  <div class="wo-row">
+    <button class="wo-btn" id="wsz1" onclick="setWaveSize('sm')" title="Small (nested waves)">S</button>
+    <button class="wo-btn on" id="wsz2" onclick="setWaveSize('md')" title="Medium">M</button>
+    <button class="wo-btn" id="wsz3" onclick="setWaveSize('lg')" title="Large (primary waves)">L</button>
+  </div>
+  <div class="wo-hd">Lines</div>
+  <div class="wo-row">
+    <button class="wo-btn on" id="wln-show" onclick="setWaveLineVis(false)">Show lines</button>
+    <button class="wo-btn" id="wln-hide" onclick="setWaveLineVis(true)">Hide lines</button>
+  </div>
+  <div style="font-size:10px;color:var(--txt-mut);text-align:center;margin-top:2px">Click points on chart · ESC to cancel</div>
+</div>
+<!-- Wave in-progress hint -->
+<div id="waveCursor"></div>
 <!-- Shape context menu -->
 <div id="shapeMenu">
   <div class="sm-hd">Edit shape</div>
   <div class="sm-colors" id="smColors"></div>
+  <div class="sm-sep" id="smLineSep"></div>
+  <div class="sm-row" id="smLineStyleRow">
+    <button class="sm-opt on" id="sls-solid" onclick="setShapeStyle('lineStyle','solid')" title="Solid">——</button>
+    <button class="sm-opt" id="sls-dashed" onclick="setShapeStyle('lineStyle','dashed')" title="Dashed">- - -</button>
+    <button class="sm-opt" id="sls-dotted" onclick="setShapeStyle('lineStyle','dotted')" title="Dotted">···</button>
+  </div>
+  <div class="sm-row" id="smLineWidthRow">
+    <button class="sm-opt on" id="slw-thin" onclick="setShapeStyle('lineWidth','thin')" title="Thin">Thin</button>
+    <button class="sm-opt" id="slw-normal" onclick="setShapeStyle('lineWidth','normal')" title="Normal">Mid</button>
+    <button class="sm-opt" id="slw-thick" onclick="setShapeStyle('lineWidth','thick')" title="Thick">Thick</button>
+  </div>
+  <!-- wave-specific controls -->
+  <div class="sm-sep" id="smWaveSep" style="display:none"></div>
+  <div id="smWaveControls" style="display:none">
+    <div class="sm-hd" style="margin-top:2px">Lines</div>
+    <div class="sm-row">
+      <button class="sm-opt" id="wm-lines-show" onclick="setWaveShapeStyle('hideLines',false)">Show</button>
+      <button class="sm-opt" id="wm-lines-hide" onclick="setWaveShapeStyle('hideLines',true)">Hide</button>
+    </div>
+    <div class="sm-hd">Label Style</div>
+    <div class="sm-row">
+      <button class="sm-opt" id="wm-arabic" onclick="setWaveShapeStyle('waveStyle','arabic')">1 2 3</button>
+      <button class="sm-opt" id="wm-roman"  onclick="setWaveShapeStyle('waveStyle','roman')">I II</button>
+      <button class="sm-opt" id="wm-lower"  onclick="setWaveShapeStyle('waveStyle','lower')">i ii</button>
+      <button class="sm-opt" id="wm-alpha"  onclick="setWaveShapeStyle('waveStyle','alpha')">a b c</button>
+    </div>
+    <div class="sm-hd">Size</div>
+    <div class="sm-row">
+      <button class="sm-opt" id="wm-sm" onclick="setWaveShapeStyle('waveSize','sm')">S</button>
+      <button class="sm-opt" id="wm-md" onclick="setWaveShapeStyle('waveSize','md')">M</button>
+      <button class="sm-opt" id="wm-lg" onclick="setWaveShapeStyle('waveSize','lg')">L</button>
+    </div>
+  </div>
+  <div class="sm-sep"></div>
   <button id="smDelete">🗑 Delete shape</button>
 </div>
 
@@ -539,7 +617,104 @@ function setWeight(mode){
     }
   }
 }
-const D = { tool:'cursor', shapes:[], dragging:false, temp:null, selected:-1, editing:null, justEdited:false };
+const D = { tool:'cursor', shapes:[], dragging:false, temp:null, selected:-1, editing:null, justEdited:false, waveStyle:'arabic', waveSize:'md', hideLines:false, wavePoints:[], waveCursorPt:null };
+
+/* ── ELLIOTT WAVE CONSTANTS ── */
+const WAVE_MOTIVE   = ['1','2','3','4','5'];
+const WAVE_ABC      = ['A','B','C'];
+const WAVE_ABCDE    = ['A','B','C','D','E'];
+const WAVE_COUNTS   = { wave5:6, waveABC:4, waveABCDE:6 }; // +1 for unlabeled origin point
+const WAVE_BASE     = { wave5:WAVE_MOTIVE, waveABC:WAVE_ABC, waveABCDE:WAVE_ABCDE };
+function waveLabels(waveType, style){
+  const base = WAVE_BASE[waveType]||WAVE_MOTIVE;
+  if(style==='roman'){
+    const rom=['I','II','III','IV','V'];
+    return base.map((l,i)=>{ if(waveType==='wave5')return rom[i]||l; return l; });
+  }
+  if(style==='lower'){
+    const lo=['i','ii','iii','iv','v'];
+    return base.map((l,i)=>{ if(waveType==='wave5')return lo[i]||l; return l.toLowerCase(); });
+  }
+  if(style==='alpha'){
+    return base.map(l=>l.toLowerCase());
+  }
+  return base; // arabic / default
+}
+function waveFontSize(size){ return size==='sm'?10:size==='lg'?16:13; }
+function waveDotR(size){ return size==='sm'?5:size==='lg'?9:7; }
+function setWaveStyle(s){
+  D.waveStyle=s;
+  ['arabic','roman','lower','alpha'].forEach(x=>{const b=document.getElementById('wls'+({'arabic':1,'roman':2,'lower':3,'alpha':4}[x]));if(b)b.classList.toggle('on',x===s);});
+}
+function setWaveSize(s){
+  D.waveSize=s;
+  ['sm','md','lg'].forEach((x,i)=>{const b=document.getElementById('wsz'+(i+1));if(b)b.classList.toggle('on',x===s);});
+}
+function waveToolName(t){ return {wave5:'Wave 1–5',waveABC:'Wave A-B-C',waveABCDE:'Wave A-B-C-D-E'}[t]||''; }
+function updateWaveCursor(){
+  const hint=document.getElementById('waveCursor');
+  const t=D.tool;
+  if(!['wave5','waveABC','waveABCDE'].includes(t)){hint.style.display='none';return;}
+  const total=WAVE_COUNTS[t];
+  const placed=D.wavePoints.length;
+  const labels=waveLabels(t,D.waveStyle);
+  const next=labels[placed]||'';
+  hint.textContent=placed===0?`Click to place point ${next} (${placed+1}/${total})`
+    :placed===total-1?`Click to place final point ${next} — wave complete`
+    :`Click to place point ${next} (${placed+1}/${total}) · ESC to cancel`;
+  hint.style.display='block';
+}
+/* ── SHAPE STYLE HELPERS ── */
+function applyLineDash(ctx,sh){
+  const s=sh.lineStyle||'solid';
+  if(s==='dashed')ctx.setLineDash([8,5]);
+  else if(s==='dotted')ctx.setLineDash([2,4]);
+  else ctx.setLineDash([]);
+}
+function lineWidthPx(sh){ const w=sh.lineWidth||'normal'; return w==='thin'?1:w==='thick'?3:1.8; }
+function setShapeStyle(prop,val){
+  if(D.selected<0)return;
+  D.shapes[D.selected][prop]=val;
+  syncMenuStyle();
+  redrawOverlay();
+}
+function syncMenuStyle(){
+  if(D.selected<0)return;
+  const sh=D.shapes[D.selected];
+  // line style
+  ['solid','dashed','dotted'].forEach(s=>{const b=document.getElementById('sls-'+s);if(b)b.classList.toggle('on',(sh.lineStyle||'solid')===s);});
+  // line width
+  ['thin','normal','thick'].forEach(w=>{const b=document.getElementById('slw-'+w);if(b)b.classList.toggle('on',(sh.lineWidth||'normal')===w);});
+  // show line controls only for line-based shapes
+  const hasLine=['trend','hline','vline','rect','fib','wave'].includes(sh.type);
+  document.getElementById('smLineSep').style.display=hasLine?'':'none';
+  document.getElementById('smLineStyleRow').style.display=hasLine?'':'none';
+  document.getElementById('smLineWidthRow').style.display=hasLine?'':'none';
+  // wave-specific controls
+  const isWave=sh.type==='wave';
+  document.getElementById('smWaveSep').style.display=isWave?'':'none';
+  document.getElementById('smWaveControls').style.display=isWave?'':'none';
+  if(isWave){
+    const hl=!!sh.hideLines;
+    const bs=document.getElementById('wm-lines-show'),bh=document.getElementById('wm-lines-hide');
+    if(bs)bs.classList.toggle('on',!hl);
+    if(bh)bh.classList.toggle('on',hl);
+    ['arabic','roman','lower','alpha'].forEach(s=>{const b=document.getElementById('wm-'+s);if(b)b.classList.toggle('on',(sh.waveStyle||'arabic')===s);});
+    ['sm','md','lg'].forEach(s=>{const b=document.getElementById('wm-'+s);if(b)b.classList.toggle('on',(sh.waveSize||'md')===s);});
+  }
+}
+function setWaveShapeStyle(prop,val){
+  if(D.selected<0)return;
+  D.shapes[D.selected][prop]=val;
+  syncMenuStyle();
+  redrawOverlay();
+}
+// D.hideLines tracks the default for new waves placed while the panel is open
+function setWaveLineVis(hide){
+  D.hideLines=hide;
+  document.getElementById('wln-show').classList.toggle('on',!hide);
+  document.getElementById('wln-hide').classList.toggle('on',hide);
+}
 
 /* ── UI ── */
 function showMsg(text,kind){const m=document.getElementById('msg');m.textContent=text;m.className='msg '+(kind||'ok');}
@@ -835,7 +1010,7 @@ function finalizeData(recs,hasOHLC,hasVol){
 }
 
 /* ── CHART ── */
-function disposeChart(){if(S.chart){try{S.chart.remove();}catch(e){}S.chart=null;S.main=null;S.indicators.forEach(i=>i._series=[]);}}
+function disposeChart(){if(S.chart){try{S.chart.remove();}catch(e){}S.chart=null;S.main=null;S.indicators.forEach(i=>i._series=[]);}clearIndLegends();}
 function buildChart(){
   disposeChart();
   const chart=LWC.createChart(document.getElementById('chart'),{
@@ -846,7 +1021,7 @@ function buildChart(){
       vertLine:{color:'#a7f3d0',width:1,style:LWC.LineStyle.Solid,labelBackgroundColor:'#2d7d52'},
       horzLine:{color:'#a7f3d0',width:1,style:LWC.LineStyle.Solid,labelBackgroundColor:'#2d7d52'}},
     rightPriceScale:{borderColor:'#d1fae5',scaleMargins:{top:0.08,bottom:0.08}},
-    timeScale:{borderColor:'#d1fae5',timeVisible:false,secondsVisible:false,rightOffset:6,barSpacing:7},
+    timeScale:{borderColor:'#d1fae5',timeVisible:false,secondsVisible:false,rightOffset:6,barSpacing:12,minBarSpacing:1},
     autoSize:true,
   });
   S.chart=chart;addMainSeries();refreshIndicators();
@@ -858,7 +1033,7 @@ function buildChart(){
 function addMainSeries(){
   const t=S.chartType;
   if(t==='candle'&&S.ohlc){
-    S.main=S.chart.addSeries(LWC.CandlestickSeries,{upColor:'#16a34a',downColor:'#dc2626',borderVisible:false,wickUpColor:'#16a34a',wickDownColor:'#dc2626'},0);
+    S.main=S.chart.addSeries(LWC.CandlestickSeries,{upColor:'#16a34a',downColor:'#dc2626',borderVisible:true,borderUpColor:'#16a34a',borderDownColor:'#dc2626',wickUpColor:'#16a34a',wickDownColor:'#dc2626'},0);
     S.main.setData(S.ohlc);
   }else if(t==='line'){
     S.main=S.chart.addSeries(LWC.LineSeries,{color:'#2d7d52',lineWidth:2},0);S.main.setData(ld());
@@ -989,6 +1164,9 @@ function removeIndicator(id){
   const i=S.indicators.findIndex(x=>x.id===id);if(i<0)return;
   (S.indicators[i]._series||[]).forEach(s=>{try{S.chart.removeSeries(s);}catch(e){}});
   S.indicators.splice(i,1);
+  // remove this indicator's pane legend
+  const el=document.getElementById('chartWrap').querySelector('.ind-legend[data-key="ind-lg-'+id+'"]');
+  if(el)el.remove();
   if(document.getElementById('indSet').dataset.id==String(id))closeIndSettings();
   if(S.chart)renderIndicators();else renderPills();
 }
@@ -1086,23 +1264,48 @@ function renderPills(){
 function fmt(n,d){if(n==null||isNaN(n))return'—';return Number(n).toLocaleString('en-IN',{minimumFractionDigits:d,maximumFractionDigits:d});}
 function onCrosshair(param){
   const lg=document.getElementById('legend');
-  // resolve the bar index being hovered (fall back to the last bar)
-  let idx = (param.time && S.timeIdx && S.timeIdx[param.time]!=null) ? S.timeIdx[param.time] : S.times.length-1;
+  const wrap=document.getElementById('chartWrap');
+  let idx=(param.time&&S.timeIdx&&S.timeIdx[param.time]!=null)?S.timeIdx[param.time]:S.times.length-1;
   const date=S.times[idx];
   const C=S.indCache||{};
+  // ── Main pane: title + date + OHLC only ──
   let main;
   if(S.ohlc){const b=S.ohlc[idx];main=`O ${fmt(b.open,2)}  H ${fmt(b.high,2)}  L ${fmt(b.low,2)}  C ${fmt(b.close,2)}`;}
   else main=`<b style="color:#111827">${fmt(S.closes[idx],2)}</b>`;
-  let html=`<div class="ttl">${S.title}</div><div class="row"><span class="k">${date}</span> &nbsp; ${main}</div>`;
-  const add=(lbl,x,col)=>{html+=`<div class="row"><span class="k" style="color:${col}">${lbl}</span> <b>${fmt(x,2)}</b></div>`;};
+  lg.innerHTML=`<div class="ttl">${S.title}</div><div class="row"><span class="k">${date}</span> &nbsp; ${main}</div>`;
+  // ── Per-pane indicator legends ──
+  // compute cumulative Y top of each pane
+  const paneYs=[0];
+  try{const ps=S.chart.panes();for(let i=0;i<ps.length-1;i++)paneYs.push(paneYs[i]+ps[i].getHeight());}catch(e){}
+  // update or create a legend div per indicator
+  const seen=new Set();
   S.indicators.forEach(inst=>{
-    const c=C[inst.id];if(!c)return;const col=inst.style.color;
-    if(inst.type==='bb'&&c.up){html+=`<div class="row"><span class="k" style="color:${col}">${pillLabel(inst)}</span> <b>${fmt(c.up[idx],2)} / ${fmt(c.mid[idx],2)} / ${fmt(c.lo[idx],2)}</b></div>`;}
-    else if(inst.type==='macd'&&c.macd){html+=`<div class="row"><span class="k" style="color:${col}">MACD</span> <b>${fmt(c.macd[idx],2)}</b> <span class="k" style="color:#d97706">sig</span> ${fmt(c.signal[idx],2)} <span class="k">hist</span> ${fmt(c.hist[idx],2)}</div>`;}
-    else if(c.arr)add(pillLabel(inst),c.arr[idx],col);
+    const c=C[inst.id];if(!c)return;
+    const col=inst.style.color;
+    const paneIdx=inst._pane||1;
+    const paneTop=paneYs[paneIdx]||0;
+    let valHtml='';
+    if(inst.type==='bb'&&c.up)
+      valHtml=`<b>${fmt(c.up[idx],2)}</b> <span style="color:#6b7280">mid</span> ${fmt(c.mid[idx],2)} <span style="color:#6b7280">lo</span> ${fmt(c.lo[idx],2)}`;
+    else if(inst.type==='macd'&&c.macd)
+      valHtml=`<b>${fmt(c.macd[idx],2)}</b> <span style="color:#d97706">sig</span> ${fmt(c.signal[idx],2)} <span style="color:#6b7280">hist</span> ${fmt(c.hist[idx],2)}`;
+    else if(c.arr)
+      valHtml=`<b>${fmt(c.arr[idx],2)}</b>`;
+    const key='ind-lg-'+inst.id;
+    seen.add(key);
+    let el=wrap.querySelector('.ind-legend[data-key="'+key+'"]');
+    if(!el){
+      el=document.createElement('div');el.className='ind-legend';el.dataset.key=key;
+      wrap.appendChild(el);
+    }
+    el.style.top=(paneTop+8)+'px';
+    el.innerHTML=`<span class="ik" style="color:${col}">${pillLabel(inst)}</span> ${valHtml}`;
   });
-  lg.innerHTML=html;
+  // remove legends for indicators that no longer exist
+  wrap.querySelectorAll('.ind-legend').forEach(el=>{if(!seen.has(el.dataset.key))el.remove();});
 }
+function clearIndLegends(){document.getElementById('chartWrap').querySelectorAll('.ind-legend').forEach(el=>el.remove());}
+
 
 /* ── STATS ── */
 function computeStats(){
@@ -1141,25 +1344,78 @@ function redrawOverlay(){
   const ctx=cv.getContext('2d');ctx.clearRect(0,0,cv.clientWidth,cv.clientHeight);
   const all=D.temp?[...D.shapes,D.temp]:D.shapes;
   all.forEach((sh,i)=>drawShape(ctx,sh,i===D.selected));
+  // draw in-progress wave points + ghost line to cursor
+  if(D.wavePoints.length>0&&['wave5','waveABC','waveABCDE'].includes(D.tool)){
+    drawShape(ctx,{type:'wave',waveType:D.tool,waveStyle:D.waveStyle,waveSize:D.waveSize,
+      points:D.wavePoints,complete:false,color:'#2d7d52'},false);
+    // ghost dashed line from last placed point to cursor
+    if(D.waveCursorPt){
+      const last=D.wavePoints[D.wavePoints.length-1];
+      const a=px(last);
+      if(a){
+        ctx.save();ctx.strokeStyle='rgba(45,125,82,0.45)';ctx.lineWidth=1.2;
+        ctx.setLineDash([5,5]);ctx.beginPath();
+        ctx.moveTo(a.x,a.y);ctx.lineTo(D.waveCursorPt.x,D.waveCursorPt.y);
+        ctx.stroke();ctx.setLineDash([]);ctx.restore();
+      }
+    }
+  }
 }
 function drawShape(ctx,sh,sel){
-  ctx.save();ctx.lineWidth=sel?2.5:1.5;
+  ctx.save();
+  const lw=lineWidthPx(sh);
+  ctx.lineWidth=sel?lw+1:lw;
   if(sel){ctx.shadowColor='rgba(45,125,82,.35)';ctx.shadowBlur=8;}
   const col=sh.color||'#2d7d52';
   if(sh.type==='hline'){
     const y=S.main.priceToCoordinate(sh.a.price);if(y==null){ctx.restore();return;}
-    ctx.strokeStyle=col;ctx.setLineDash([7,4]);ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(cv.clientWidth,y);ctx.stroke();ctx.setLineDash([]);
+    ctx.strokeStyle=col;applyLineDash(ctx,sh);ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(cv.clientWidth,y);ctx.stroke();ctx.setLineDash([]);
     lbl(ctx,cv.clientWidth-88,y,fmt(sh.a.price,2),col);
   }else if(sh.type==='trend'){
     const a=px(sh.a),b=sh.b&&px(sh.b);if(!a||!b){ctx.restore();return;}
-    ctx.strokeStyle=col;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+    ctx.strokeStyle=col;applyLineDash(ctx,sh);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.setLineDash([]);
     dot(ctx,a,col);dot(ctx,b,col);lbl(ctx,b.x+6,b.y,fmt(sh.b.price,2),col);
   }else if(sh.type==='rect'){
     const a=px(sh.a),b=sh.b&&px(sh.b);if(!a||!b){ctx.restore();return;}
     const x=Math.min(a.x,b.x),y=Math.min(a.y,b.y),w=Math.abs(b.x-a.x),h=Math.abs(b.y-a.y);
     ctx.fillStyle='rgba(45,125,82,.07)';ctx.fillRect(x,y,w,h);
-    ctx.strokeStyle=col;ctx.setLineDash([4,3]);ctx.strokeRect(x,y,w,h);ctx.setLineDash([]);
+    ctx.strokeStyle=col;applyLineDash(ctx,sh);ctx.strokeRect(x,y,w,h);ctx.setLineDash([]);
     lbl(ctx,x+4,y-3,fmt(Math.max(sh.a.price,sh.b.price),2)+' / '+fmt(Math.min(sh.a.price,sh.b.price),2),'#374151');
+  }else if(sh.type==='wave'){
+    // Elliott Wave: pts[0] = unlabeled origin, pts[1..n] = labeled wave points
+    const pts=sh.points||[];if(pts.length===0){ctx.restore();return;}
+    const labels=waveLabels(sh.waveType||'wave5',sh.waveStyle||'arabic');
+    const fs=waveFontSize(sh.waveSize||'md');
+    const dr=waveDotR(sh.waveSize||'md');
+    // draw connecting lines (skipped when hideLines is on)
+    if(!sh.hideLines){
+      ctx.strokeStyle=col;applyLineDash(ctx,sh);ctx.beginPath();
+      let started=false;
+      pts.forEach(pt=>{const p=px(pt);if(!p)return;if(!started){ctx.moveTo(p.x,p.y);started=true;}else ctx.lineTo(p.x,p.y);});
+      ctx.stroke();ctx.setLineDash([]);
+    }
+    // draw each point
+    pts.forEach((pt,i)=>{
+      const p=px(pt);if(!p)return;
+      if(i===0){
+        // origin: tiny solid dot only, no label
+        ctx.fillStyle=col;ctx.beginPath();ctx.arc(p.x,p.y,3,0,7);ctx.fill();
+      }else{
+        // labeled wave point — badge only, no circle
+        const lbTxt=labels[i-1]||String(i);
+        ctx.font=`700 ${fs}px Sora,sans-serif`;
+        const tw=ctx.measureText(lbTxt).width+8;
+        const bx=p.x-tw/2;
+        const prev=pts[i-1];const above=prev?pt.price>=prev.price:true;
+        const by=above?p.y-fs-10:p.y+4;
+        ctx.fillStyle=col;
+        if(ctx.roundRect){ctx.beginPath();ctx.roundRect(bx,by,tw,fs+5,3);ctx.fill();}
+        else ctx.fillRect(bx,by,tw,fs+5);
+        ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText(lbTxt,p.x,by+(fs+5)/2);
+        ctx.textAlign='left';ctx.textBaseline='alphabetic';
+      }
+    });
   }else if(sh.type==='fib'){
     const a=px(sh.a),b=sh.b&&px(sh.b);if(!a||!b){ctx.restore();return;}
     const hi=Math.max(sh.a.price,sh.b.price),lo=Math.min(sh.a.price,sh.b.price);
@@ -1198,6 +1454,16 @@ function hitTest(sh,x,y){
   if(!S.main)return false;
   if(sh.type==='hline'){const cy=S.main.priceToCoordinate(sh.a.price);return cy!=null&&Math.abs(y-cy)<9;}
   if(sh.type==='vline'){const cx=S.chart.timeScale().logicalToCoordinate(sh.a.logical);return cx!=null&&Math.abs(x-cx)<9;}
+  // wave must be checked before px(sh.a) — waves use .points[], not .a/.b
+  if(sh.type==='wave'){
+    const pts=sh.points||[];
+    for(let i=0;i<pts.length;i++){
+      const p=px(pts[i]);if(!p)continue;
+      if(dpt({x,y},p)<14)return true;
+      if(i>0){const prev=px(pts[i-1]);if(prev&&dseg({x,y},prev,p)<9)return true;}
+    }
+    return false;
+  }
   const a=px(sh.a),b=sh.b?px(sh.b):null;if(!a)return false;
   if(sh.type==='text')return dpt({x,y},a)<16;
   if(sh.type==='trend')return b&&dseg({x,y},a,b)<9;
@@ -1220,18 +1486,57 @@ const COLS=['#2d7d52','#dc2626','#d97706','#0891b2','#7c3aed','#db2777','#374151
 function showMenu(idx,cx,cy){
   D.selected=idx;redrawOverlay();
   const m=document.getElementById('shapeMenu');m.style.display='block';
-  // highlight current color
   const cur=D.shapes[idx]?.color;
   m.querySelectorAll('.sm-col').forEach(b=>b.classList.toggle('picked',b.style.background===cur||b.title===cur));
-  m.style.left=Math.min(cx+6,window.innerWidth-210)+'px';
-  m.style.top=Math.min(cy+6,window.innerHeight-120)+'px';
+  syncMenuStyle();
+  m.style.left=Math.min(cx+6,window.innerWidth-240)+'px';
+  m.style.top=Math.min(cy+6,window.innerHeight-180)+'px';
 }
 function hideMenu(){D.selected=-1;document.getElementById('shapeMenu').style.display='none';redrawOverlay();}
-document.addEventListener('keydown',e=>{if(e.key==='Escape')hideMenu();});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    if(D.wavePoints.length>0){D.wavePoints=[];redrawOverlay();updateWaveCursor();}
+    else if(['wave5','waveABC','waveABCDE'].includes(D.tool)){setTool('cursor');}
+    else hideMenu();
+  }
+});
 document.addEventListener('mousedown',e=>{if(!document.getElementById('shapeMenu').contains(e.target)&&e.target.id!=='overlay')hideMenu();});
 
 /* ── CHART WRAP CLICK (cursor mode hit test) ── */
 // Show a grab/move cursor when hovering an editable shape (cursor mode only).
+// ── Mouse wheel zoom (TradingView-style: scroll = zoom, cursor-centred) ──
+// Intercepted during capture phase so it fires before LWC's own canvas handler
+// in both cursor mode (overlay pointer-events:none, LWC canvas is target) and
+// drawing mode (overlay pointer-events:auto is target). stopPropagation in
+// capture phase prevents the event from ever reaching the child canvas,
+// so LWC doesn't also try to pan/scroll — our handler owns it entirely.
+document.getElementById('chartWrap').addEventListener('wheel', e=>{
+  if(!S.chart)return;
+  // If primarily horizontal (trackpad left/right swipe), let LWC handle panning natively
+  if(Math.abs(e.deltaX)>Math.abs(e.deltaY))return;
+  e.preventDefault();
+  e.stopPropagation();
+  const tr=S.chart.timeScale().getVisibleLogicalRange();
+  if(tr==null)return;
+  // Normalise delta across mouse wheel (line/page mode) and trackpad (pixel mode)
+  let dy=e.deltaY;
+  if(e.deltaMode===1)dy*=20;   // line → pixels
+  if(e.deltaMode===2)dy*=300;  // page → pixels
+  dy=Math.max(-150,Math.min(150,dy)); // cap so one fast flick can't go crazy
+  // Exponential zoom: each pixel of scroll = tiny factor, so fast scroll = bigger zoom
+  // 0.0008 sensitivity: a typical mouse click (~100px) ≈ 8% zoom change
+  const factor=Math.exp(dy*0.0008);
+  const range=tr.to-tr.from;
+  const newRange=Math.max(5,Math.min(range*factor,S.times.length*1.5||5000));
+  const rect=document.getElementById('chartWrap').getBoundingClientRect();
+  const ratio=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));
+  const anchor=tr.from+ratio*range;
+  S.chart.timeScale().setVisibleLogicalRange({
+    from:anchor-ratio*newRange,
+    to:anchor+(1-ratio)*newRange
+  });
+},{passive:false,capture:true});
+
 document.getElementById('chartWrap').addEventListener('mousemove',e=>{
   if(D.editing){document.getElementById('chartWrap').style.cursor='grabbing';return;}
   if(!isSelect()||!S.chart||!S.main){document.getElementById('chartWrap').style.cursor='';return;}
@@ -1269,6 +1574,14 @@ function hitHandle(x,y){
       if(cx!=null&&Math.abs(x-cx)<8)return{idx:i,which:'vline'};
     }else if(sh.type==='text'){
       const a=px(sh.a);if(a&&dpt({x,y},a)<18)return{idx:i,which:'a'};
+    }else if(sh.type==='wave'){
+      // check each wave point for drag handle
+      const pts=sh.points||[];
+      for(let pi=0;pi<pts.length;pi++){
+        const p=px(pts[pi]);
+        if(p&&Math.hypot(x-p.x,y-p.y)<14)return{idx:i,which:'wave-pt-'+pi};
+      }
+      if(hitTest(sh,x,y))return{idx:i,which:'move'};
     }else if(sh.a&&sh.b){
       const a=px(sh.a),b=px(sh.b);
       if(a&&Math.hypot(x-a.x,y-a.y)<13)return{idx:i,which:'a'};
@@ -1302,12 +1615,33 @@ cv.addEventListener('mousedown',e=>{
   if(D.tool==='hline'){D.shapes.push({type:'hline',a:{logical:0,price:p.price},b:null,color:'#dc2626'});redrawOverlay();setTool('cursor');return;}
   if(D.tool==='vline'){D.shapes.push({type:'vline',a:{logical:p.logical,price:p.price},b:null,color:'#0891b2'});redrawOverlay();setTool('cursor');return;}
   if(D.tool==='text'){const t=window.prompt('Label text:','');if(t&&t.trim()){D.shapes.push({type:'text',a:{logical:p.logical,price:p.price},b:null,text:t.trim(),color:'#374151'});redrawOverlay();}setTool('cursor');return;}
+  // Elliott Wave: accumulate click points
+  if(['wave5','waveABC','waveABCDE'].includes(D.tool)){
+    const total=WAVE_COUNTS[D.tool];
+    D.wavePoints.push({logical:p.logical,price:p.price});
+    if(D.wavePoints.length>=total){
+      // wave complete — commit to shapes
+      D.shapes.push({type:'wave',waveType:D.tool,waveStyle:D.waveStyle,waveSize:D.waveSize,
+        hideLines:D.hideLines,points:[...D.wavePoints],complete:true,color:'#2d7d52'});
+      D.wavePoints=[];
+      redrawOverlay();setTool('cursor');
+    }else{
+      redrawOverlay();updateWaveCursor();
+    }
+    return;
+  }
   D.dragging=true;
   D.temp={type:D.tool,a:{logical:p.logical,price:p.price},b:{logical:p.logical,price:p.price},
     color:D.tool==='fib'?'#d97706':D.tool==='measure'?'#2d7d52':'#2d7d52'};
 });
 cv.addEventListener('mousemove',e=>{
-  // Edit-drag of an existing shape (readjust endpoints / move / drag S-R line)
+  // Ghost preview line while placing wave points
+  if(['wave5','waveABC','waveABCDE'].includes(D.tool)&&D.wavePoints.length>0){
+    const r=cv.getBoundingClientRect();
+    D.waveCursorPt={x:e.clientX-r.left,y:e.clientY-r.top};
+    redrawOverlay();return;
+  }
+  // Edit-drag of an existing shape (readjust endpoints / move)
   if(D.editing){
     const sh=D.shapes[D.editing.idx];if(!sh)return;
     const p=evtPt(e);if(p.price==null)return;
@@ -1316,10 +1650,19 @@ cv.addEventListener('mousemove',e=>{
     else if(D.editing.which==='vline'){if(p.logical!=null)sh.a.logical=p.logical;}
     else if(D.editing.which==='a'){if(p.logical!=null){const keep=sh.text;sh.a={logical:p.logical,price:p.price};if(keep)sh.text=keep;}}
     else if(D.editing.which==='b'){if(p.logical!=null)sh.b={logical:p.logical,price:p.price};}
+    else if(D.editing.which.startsWith('wave-pt-')){
+      // drag a single wave point
+      const pi=parseInt(D.editing.which.split('-').pop());
+      if(p.logical!=null&&sh.points)sh.points[pi]={logical:p.logical,price:p.price};
+    }
     else if(D.editing.which==='move'){
       if(D.editing.last&&p.logical!=null){
         const dl=p.logical-D.editing.last.logical,dp=p.price-D.editing.last.price;
-        sh.a.logical+=dl;sh.a.price+=dp;if(sh.b){sh.b.logical+=dl;sh.b.price+=dp;}
+        if(sh.type==='wave'&&sh.points){
+          sh.points.forEach(pt=>{pt.logical+=dl;pt.price+=dp;});
+        }else{
+          sh.a.logical+=dl;sh.a.price+=dp;if(sh.b){sh.b.logical+=dl;sh.b.price+=dp;}
+        }
       }
       D.editing.last={logical:p.logical,price:p.price};
     }
@@ -1339,8 +1682,25 @@ window.addEventListener('mouseup',()=>{
 });
 
 function setTool(t){
+  // cancel any in-progress wave
+  if(['wave5','waveABC','waveABCDE'].includes(D.tool)&&!['wave5','waveABC','waveABCDE'].includes(t)){
+    D.wavePoints=[];redrawOverlay();
+  }
   D.tool=t;
-  ['cursor','crosshair','trend','hline','vline','rect','fib','text','measure'].forEach(x=>{const b=document.getElementById('d'+x[0].toUpperCase()+x.slice(1));if(b)b.classList.toggle('on',x===t);});
+  const allTools=['cursor','crosshair','trend','hline','vline','rect','fib','text','measure','wave5','waveABC','waveABCDE'];
+  allTools.forEach(x=>{const b=document.getElementById('d'+x[0].toUpperCase()+x.slice(1));if(b)b.classList.toggle('on',x===t);});
+  // wave options panel
+  const isWave=['wave5','waveABC','waveABCDE'].includes(t);
+  const wo=document.getElementById('waveOpts');
+  if(wo){
+    wo.style.display=isWave?'block':'none';
+    if(isWave){
+      // position near leftbar
+      const lb=document.getElementById('leftbar');
+      if(lb){const r=lb.getBoundingClientRect();wo.style.left=(r.right+8)+'px';wo.style.top=Math.min(r.top,window.innerHeight-220)+'px';}
+    }
+  }
+  updateWaveCursor();
   // select modes (cursor/crosshair): overlay ignores pointer so chart can pan; click handled on chartWrap
   cv.style.pointerEvents=isSelect()?'none':'auto';
   cv.style.cursor=isSelect()?'default':'crosshair';
@@ -1358,7 +1718,82 @@ function exportPNG(){
     out.width=base.width;out.height=base.height;const ctx=out.getContext('2d');ctx.drawImage(base,0,0);
     const sx=base.width/cv.clientWidth,sy=base.height/cv.clientHeight;
     ctx.drawImage(cv,0,0,cv.width,cv.height,0,0,cv.clientWidth*sx,cv.clientHeight*sy);
-    // Chartix watermark — centered diagonal + corner tag, so shared images advertise the site.
+    // ── Index name + username — bottom-left stamp ──
+    const idxLabel=(document.getElementById('idxName').value.trim())||'Custom Index';
+    const userName=(document.querySelector('#cloudAcct .nm')||{}).textContent||'';
+    const scale=out.width/cv.clientWidth;
+    const pad=Math.round(14*scale);
+    const nameFz=Math.round(15*scale);
+    const subFz=Math.round(11*scale);
+    const blockH=nameFz+(userName?subFz+4:0)+8;
+    const blockY=out.height-pad-blockH;
+    // semi-transparent pill background
+    const maxTw=Math.max(
+      (() => { ctx.font=`700 ${nameFz}px Sora,sans-serif`; return ctx.measureText(idxLabel).width; })(),
+      (() => { ctx.font=`600 ${subFz}px Sora,sans-serif`; return userName?ctx.measureText('by '+userName).width:0; })()
+    );
+    ctx.save();
+    ctx.fillStyle='rgba(255,255,255,0.88)';
+    const rx=pad-6,ry=blockY-4,rw=maxTw+20,rh=blockH+8;
+    if(ctx.roundRect){ctx.beginPath();ctx.roundRect(rx,ry,rw,rh,6);ctx.fill();}
+    else ctx.fillRect(rx,ry,rw,rh);
+    // index name
+    ctx.font=`700 ${nameFz}px Sora,sans-serif`;
+    ctx.fillStyle='#111827';ctx.textAlign='left';ctx.textBaseline='top';
+    ctx.fillText(idxLabel,pad,blockY);
+    // username
+    if(userName){
+      ctx.font=`600 ${subFz}px Sora,sans-serif`;
+      ctx.fillStyle='#6b7280';
+      ctx.fillText('by '+userName,pad,blockY+nameFz+4);
+    }
+    ctx.restore();
+    // ── Indicator legends — one per sub-pane, top-left of each pane ──
+    if(S.indicators.length&&S.indCache){
+      const sc=out.width/cv.clientWidth; // scale: canvas px per CSS px
+      const paneYs=[0];
+      try{const ps=S.chart.panes();for(let i=0;i<ps.length-1;i++)paneYs.push(paneYs[i]+ps[i].getHeight());}catch(e){}
+      const idx=S.times.length-1;
+      const C=S.indCache;
+      const lpad=Math.round(12*sc),ltop=Math.round(8*sc);
+      const fz=Math.round(11*sc),lh=Math.round(16*sc);
+      S.indicators.forEach(inst=>{
+        const c=C[inst.id];if(!c)return;
+        const col=inst.style.color;
+        const paneIdx=inst._pane||1;
+        const paneTop=(paneYs[paneIdx]||0)*sc;
+        // build text parts
+        let parts=[];
+        if(inst.type==='bb'&&c.up)
+          parts=[{t:pillLabel(inst),c:col},{t:' '+fmt(c.up[idx],2),c:'#111827'},{t:'  mid ',c:'#6b7280'},{t:fmt(c.mid[idx],2),c:'#111827'},{t:'  lo ',c:'#6b7280'},{t:fmt(c.lo[idx],2),c:'#111827'}];
+        else if(inst.type==='macd'&&c.macd)
+          parts=[{t:'MACD',c:col},{t:' '+fmt(c.macd[idx],2),c:'#111827'},{t:'  sig ',c:'#d97706'},{t:fmt(c.signal[idx],2),c:'#111827'},{t:'  hist ',c:'#6b7280'},{t:fmt(c.hist[idx],2),c:'#111827'}];
+        else if(c.arr)
+          parts=[{t:pillLabel(inst),c:col},{t:'  '+fmt(c.arr[idx],2),c:'#111827'}];
+        if(!parts.length)return;
+        ctx.save();
+        ctx.font=`600 ${fz}px Sora,sans-serif`;
+        // measure total text width
+        let tw=0;parts.forEach(p=>{tw+=ctx.measureText(p.t).width;});
+        const bx=lpad,by=paneTop+ltop;
+        const bw=tw+Math.round(16*sc),bh=lh+Math.round(8*sc);
+        // white pill background
+        ctx.fillStyle='rgba(255,255,255,0.90)';
+        if(ctx.roundRect){ctx.beginPath();ctx.roundRect(bx,by,bw,bh,Math.round(5*sc));ctx.fill();}
+        else ctx.fillRect(bx,by,bw,bh);
+        // draw each text part
+        let cx2=bx+Math.round(8*sc);
+        const ty=by+bh/2;
+        ctx.textAlign='left';ctx.textBaseline='middle';
+        parts.forEach(p=>{
+          ctx.fillStyle=p.c;ctx.font=`600 ${fz}px Sora,sans-serif`;
+          ctx.fillText(p.t,cx2,ty);
+          cx2+=ctx.measureText(p.t).width;
+        });
+        ctx.restore();
+      });
+    }
+    // ── Chartix watermark — centered diagonal + bottom-right corner ──
     ctx.save();
     ctx.translate(out.width/2,out.height/2);ctx.rotate(-18*Math.PI/180);
     ctx.font='700 '+Math.round(out.width/14)+'px Sora, sans-serif';
