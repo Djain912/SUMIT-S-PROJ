@@ -32,6 +32,7 @@ export async function issueInvoice(paymentId: string): Promise<void> {
     number: invoiceNumber,
     date: payment.createdAt,
     razorpayPaymentId: payment.razorpayPaymentId ?? '',
+    currency: payment.currency ?? 'INR',
     name: payment.billingName ?? 'Customer',
     phone: payment.billingPhone,
     email: payment.billingEmail ?? user?.email,

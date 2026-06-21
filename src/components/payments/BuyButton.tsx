@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Tag, X, CheckCircle, Loader2, AlertCircle, ShieldCheck, Clock, ChevronDown } from 'lucide-react';
+import { Tag, X, CheckCircle, Loader2, AlertCircle, ShieldCheck, Clock } from 'lucide-react';
 
 type RazorpayOptions = {
   key: string; amount: number; currency: string; order_id: string;
@@ -19,14 +19,6 @@ const CHECKOUT_SRC = 'https://checkout.razorpay.com/v1/checkout.js';
 const RAZORPAY_ENABLED = (process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? '').startsWith('rzp_');
 const BASE_PRICE = 699900;
 
-const INDIAN_STATES = [
-  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat',
-  'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh',
-  'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab',
-  'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand',
-  'West Bengal', 'Andaman & Nicobar Islands', 'Chandigarh', 'Dadra & Nagar Haveli and Daman & Diu',
-  'Delhi', 'Jammu & Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry',
-];
 
 function fmt(paise: number) {
   return '₹' + Math.round(paise / 100).toLocaleString('en-IN');
@@ -105,8 +97,7 @@ export function BuyButton({ userName = '', userEmail = '' }: { userName?: string
     if (!billing.phone.trim())   errs.phone   = 'Phone number is required';
     if (!billing.address.trim()) errs.address = 'Address is required';
     if (!billing.city.trim())    errs.city    = 'City is required';
-    if (!billing.state)          errs.state   = 'Please select a state';
-    if (!billing.pincode.trim()) errs.pincode = 'PIN code is required';
+    if (!billing.pincode.trim()) errs.pincode = 'Postal / PIN code is required';
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -334,7 +325,7 @@ export function BuyButton({ userName = '', userEmail = '' }: { userName?: string
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-zinc-700 mb-1.5">
-                        PIN code <span className="text-rose-500">*</span>
+                        Postal / PIN code <span className="text-rose-500">*</span>
                       </label>
                       <input
                         type="text"
@@ -352,20 +343,15 @@ export function BuyButton({ userName = '', userEmail = '' }: { userName?: string
                   {/* State */}
                   <div>
                     <label className="block text-sm font-medium text-zinc-700 mb-1.5">
-                      State <span className="text-rose-500">*</span>
+                      State / Province <span className="text-zinc-400 text-xs font-normal">(optional)</span>
                     </label>
-                    <div className="relative">
-                      <select
-                        value={billing.state}
-                        onChange={set('state')}
-                        className={`w-full appearance-none rounded-xl border px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 ${errors.state ? 'border-rose-400 focus:border-rose-400' : 'border-zinc-300 focus:border-emerald-500'} ${!billing.state ? 'text-zinc-400' : 'text-zinc-900'}`}
-                      >
-                        <option value="" disabled>Select state</option>
-                        {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-                    </div>
-                    {errors.state && <p className="mt-1 text-xs text-rose-600">{errors.state}</p>}
+                    <input
+                      type="text"
+                      value={billing.state}
+                      onChange={set('state')}
+                      placeholder="e.g. Maharashtra, California, Ontario"
+                      className="w-full rounded-xl border border-zinc-300 px-3.5 py-2.5 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    />
                   </div>
 
                   {/* GST */}

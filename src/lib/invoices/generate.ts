@@ -4,6 +4,7 @@ export type InvoiceData = {
   number: string;           // CHX-2026-0001
   date: Date;
   razorpayPaymentId: string;
+  currency?: string;        // ISO code: INR, USD, EUR … defaults to INR
   // Buyer
   name: string;
   phone?: string | null;
@@ -15,7 +16,7 @@ export type InvoiceData = {
   gst?: string | null;
   // Line item
   description: string;      // "CMT Level 1 — 6 months access"
-  originalPaise: number;    // before discount
+  originalPaise: number;    // smallest unit (paise / cents) before discount
   discountPaise: number;    // 0 if none
   couponCode?: string | null;
   finalPaise: number;       // amount actually charged
@@ -26,11 +27,22 @@ const BLACK   = rgb(0, 0, 0);
 const GREY    = rgb(0.45, 0.45, 0.45);
 const LIGHT   = rgb(0.95, 0.97, 0.96);
 
-function rupees(paise: number) {
-  return 'Rs. ' + (paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+const CURRENCY_META: Record<string, { symbol: string; locale: string }> = {
+  INR: { symbol: 'Rs. ', locale: 'en-IN' },
+  USD: { symbol: '$',    locale: 'en-US' },
+  EUR: { symbol: 'EUR ', locale: 'de-DE' },
+  GBP: { symbol: 'GBP ', locale: 'en-GB' },
+  AED: { symbol: 'AED ', locale: 'en-AE' },
+  SGD: { symbol: 'SGD ', locale: 'en-SG' },
+};
+
+function fmtAmount(units: number, currency = 'INR') {
+  const { symbol, locale } = CURRENCY_META[currency] ?? { symbol: `${currency} `, locale: 'en-US' };
+  return symbol + (units / 100).toLocaleString(locale, { minimumFractionDigits: 2 });
 }
 
 export async function generateInvoicePdf(data: InvoiceData): Promise<Uint8Array> {
+  const currency = data.currency ?? 'INR';
   const doc  = await PDFDocument.create();
   const page = doc.addPage([595, 842]); // A4
 
@@ -59,7 +71,7 @@ export async function generateInvoicePdf(data: InvoiceData): Promise<Uint8Array>
   y = height - 100;
 
   // ── Invoice meta ─────────────────────────────────────────────────
-  const dateStr = data.date.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
+  const dateStr = data.date.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
   page.drawText(`Invoice No: ${data.number}`, { x: ml, y, size: 10, font: bold, color: BLACK });
   page.drawText(`Date: ${dateStr}`,           { x: mr - 160, y, size: 10, font: reg, color: GREY });
   y -= 14;
@@ -100,14 +112,14 @@ export async function generateInvoicePdf(data: InvoiceData): Promise<Uint8Array>
 
   // Line item
   page.drawText(data.description, { x: ml + 8, y, size: 10, font: reg, color: BLACK });
-  page.drawText(rupees(data.originalPaise), { x: mr - 80, y, size: 10, font: reg, color: BLACK });
+  page.drawText(fmtAmount(data.originalPaise, currency), { x: mr - 80, y, size: 10, font: reg, color: BLACK });
   y -= 18;
 
   // Discount row
   if (data.discountPaise > 0) {
     const label = data.couponCode ? `Discount (${data.couponCode})` : 'Discount';
     page.drawText(label, { x: ml + 8, y, size: 10, font: reg, color: rgb(0.2, 0.6, 0.4) });
-    page.drawText(`-${rupees(data.discountPaise)}`, { x: mr - 80, y, size: 10, font: reg, color: rgb(0.2, 0.6, 0.4) });
+    page.drawText(`-${fmtAmount(data.discountPaise, currency)}`, { x: mr - 80, y, size: 10, font: reg, color: rgb(0.2, 0.6, 0.4) });
     y -= 18;
   }
 
@@ -117,11 +129,11 @@ export async function generateInvoicePdf(data: InvoiceData): Promise<Uint8Array>
 
   // Total
   page.drawText('Total Paid', { x: ml + 8, y, size: 11, font: bold, color: BLACK });
-  page.drawText(rupees(data.finalPaise), { x: mr - 80, y, size: 11, font: bold, color: EMERALD });
+  page.drawText(fmtAmount(data.finalPaise, currency), { x: mr - 80, y, size: 11, font: bold, color: EMERALD });
   y -= 10;
 
-  // GST note
-  page.drawText('*Educational services — GST exemption may apply as per applicable law.',
+  // Tax note
+  page.drawText('*Prices are inclusive of all applicable taxes.',
     { x: ml + 8, y, size: 7, font: reg, color: GREY });
   y -= 40;
 
@@ -131,7 +143,7 @@ export async function generateInvoicePdf(data: InvoiceData): Promise<Uint8Array>
   page.drawText('Thank you for choosing Chartix for your CMT preparation!',
     { x: ml, y, size: 9, font: bold, color: EMERALD });
   y -= 13;
-  page.drawText('For any queries: support@chartix.in  |  chartix.in',
+  page.drawText('For any queries: contact@chartix.in  |  chartix.in',
     { x: ml, y, size: 8, font: reg, color: GREY });
 
   return doc.save();
