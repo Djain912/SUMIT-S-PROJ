@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db/prisma';
+import { getChapterAccess } from '@/server/policies/access';
 
 interface NoteShell {
   id: string;
@@ -35,10 +36,11 @@ interface SectionData {
   chapters: ChapterProgress[];
 }
 
-export async function getUserDashboardData(userId: string, level: string) {
+export async function getUserDashboardData(userId: string, email: string, level: string) {
   const targetLevel = level as 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3';
 
-  const [chapters, quizAttempts, attemptItems] = await Promise.all([
+  const [chapterAccess, chapters, quizAttempts, attemptItems] = await Promise.all([
+    getChapterAccess(email),
     prisma.chapter.findMany({
       where: { level: targetLevel, isPublished: true, isDeleted: false },
       orderBy: { orderIndex: 'asc' },
@@ -126,7 +128,7 @@ export async function getUserDashboardData(userId: string, level: string) {
         id: ch.id,
         title: ch.title,
         orderIndex: ch.orderIndex,
-        isLocked: false,
+        isLocked: !chapterAccess.full && !chapterAccess.chapterIds.has(ch.id),
         progress,
         totalNotes: ch.subtopics.reduce((sum, st) => sum + st.notes.length, 0),
         totalQuestions: totalQs,
@@ -139,7 +141,7 @@ export async function getUserDashboardData(userId: string, level: string) {
             progress: stStats.total > 0 ? Math.round((stStats.correct / stStats.total) * 100) : 0,
             totalQuestions: st._count.questions,
             questionsAnswered: stStats.total,
-            isLocked: false,
+            isLocked: !chapterAccess.full && !chapterAccess.chapterIds.has(ch.id),
             notes: st.notes,
           };
         }),

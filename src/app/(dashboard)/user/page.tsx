@@ -5,7 +5,7 @@ import { TrialBanner } from '@/components/user/TrialBanner';
 
 export default async function UserDashboardPage() {
   const user = await requireAuthenticatedUser();
-  const initialData = await getUserDashboardData(user.id, 'LEVEL_1');
+  const initialData = await getUserDashboardData(user.id, user.email, 'LEVEL_1');
 
   return (
     <main className="min-h-screen bg-zinc-50/50 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">

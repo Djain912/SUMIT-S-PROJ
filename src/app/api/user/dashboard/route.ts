@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     }
 
     const level = levelParam as 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3';
-    const data = await getUserDashboardData(user.id, level);
+    const data = await getUserDashboardData(user.id, user.email, level);
 
     return NextResponse.json({ success: true, data }, {
       headers: {
