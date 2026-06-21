@@ -8,6 +8,7 @@ export const chapterInputSchema = z.object({
   description: z.string().max(1000).optional().nullable(),
   orderIndex: z.coerce.number().int().nonnegative().default(0),
   isPublished: z.boolean().default(false),
+  isTrialFree: z.boolean().default(false),
 });
 
 export const subtopicInputSchema = z.object({

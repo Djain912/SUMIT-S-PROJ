@@ -9,6 +9,7 @@ export const chapterSchema = z.object({
   description: z.string().optional().nullable(),
   orderIndex: z.coerce.number().int().nonnegative().default(0),
   isPublished: z.coerce.boolean().default(false),
+  isTrialFree: z.coerce.boolean().default(false),
 });
 
 export const subtopicSchema = z.object({

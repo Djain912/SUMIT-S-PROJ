@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { TrendingUp, CheckCircle, Lock, Clock } from 'lucide-react';
 import { auth } from '@/lib/auth/auth';
-import { hasAnyAccess } from '@/server/policies/access';
+import { getAccessByEmail, getTrialState } from '@/server/policies/access';
 import { CouponRedeemForm } from '@/components/get-access-client';
 import { BuyButton } from '@/components/payments/BuyButton';
 
@@ -30,8 +30,14 @@ export default async function GetAccessPage() {
   // Not signed in → send to sign-up, then back here.
   if (!email) redirect('/sign-up?next=/get-access');
 
-  // Already have access (full or scoped) → no need for this page.
-  if (await hasAnyAccess(email)) redirect('/user');
+  // Already have real paid/scoped access → no need for this page. (Trial users
+  // are NOT bounced here — this is their upgrade page.)
+  const access = await getAccessByEmail(email);
+  if (access?.active) redirect('/user');
+
+  const trial = await getTrialState(email);
+  const trialExpired = trial?.expired ?? false;
+  const trialActive = trial?.inTrial ?? false;
 
   return (
     <div className="min-h-screen bg-[#f0f7f4]">
@@ -51,6 +57,25 @@ export default async function GetAccessPage() {
       </nav>
 
       <main className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
+        {trialExpired && (
+          <div className="mx-auto mb-8 max-w-md rounded-2xl border border-amber-200 bg-amber-50 p-5 text-center">
+            <Clock className="mx-auto h-6 w-6 text-amber-500" />
+            <p className="mt-2 text-base font-bold text-amber-900">Your free trial has ended</p>
+            <p className="mt-1 text-sm text-amber-700">
+              Unlock full access to continue your preparation — your progress is saved.
+            </p>
+          </div>
+        )}
+        {trialActive && (
+          <div className="mx-auto mb-8 max-w-md rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-center">
+            <p className="text-base font-bold text-emerald-900">
+              {trial?.daysRemaining === 1 ? 'Last day of your free trial' : `${trial?.daysRemaining} days left in your free trial`}
+            </p>
+            <p className="mt-1 text-sm text-emerald-700">
+              Upgrade now for full access to every chapter, unlimited mock tests and Chartix Scholar.
+            </p>
+          </div>
+        )}
         <div className="text-center">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-emerald-700">
             <Lock className="h-3 w-3" /> Members Only

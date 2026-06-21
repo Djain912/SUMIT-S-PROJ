@@ -4,6 +4,7 @@ import Credentials from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db/prisma';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
+import { TRIAL_DAYS } from '@/lib/trial';
 
 function getSuperAdminEmail(): string | null {
   const raw =
@@ -23,15 +24,42 @@ async function upsertOAuthUser(email: string, providerAccountId: string, fullNam
   const existing = await prisma.user.findUnique({ where: { email } });
 
   if (existing) {
-    return prisma.user.update({
+    const user = await prisma.user.update({
       where: { email },
       data: { providerAccountId, fullName: fullName ?? existing.fullName, avatarUrl: avatarUrl ?? existing.avatarUrl, role },
     });
+    await trackLogin(user.id);
+    return user;
   }
 
-  return prisma.user.create({
-    data: { providerAccountId, email, fullName, avatarUrl, role },
+  // First sign-in: every new user starts a 7-day freemium trial. Existing
+  // premium/coupon access is never touched (this branch only runs for new rows).
+  const now = new Date();
+  const trialExpiresAt = new Date(now.getTime() + TRIAL_DAYS * 24 * 60 * 60 * 1000);
+  const user = await prisma.user.create({
+    data: {
+      providerAccountId, email, fullName, avatarUrl, role,
+      trialStartedAt: now,
+      trialExpiresAt,
+      subscriptionStatus: 'TRIAL',
+    },
   });
+  await trackLogin(user.id);
+  return user;
+}
+
+// Bumps the user's login counter + last-login timestamp, creating the
+// UserActivity row on first login. Fail-soft: never blocks sign-in.
+async function trackLogin(userId: string) {
+  try {
+    await prisma.userActivity.upsert({
+      where: { userId },
+      create: { userId, loginCount: 1, lastLoginAt: new Date() },
+      update: { loginCount: { increment: 1 }, lastLoginAt: new Date() },
+    });
+  } catch (err) {
+    console.error('[auth] trackLogin failed:', err);
+  }
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({

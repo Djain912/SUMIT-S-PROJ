@@ -41,6 +41,7 @@ export async function createChapter(formData: FormData) {
       slug,
       orderIndex: Number(formData.get('orderIndex') || 0),
       isPublished: formData.get('isPublished') === 'on',
+      isTrialFree: formData.get('isTrialFree') === 'on',
     },
   });
   revalidatePath('/admin/chapters');
@@ -59,6 +60,7 @@ export async function updateChapter(formData: FormData) {
       slug,
       orderIndex: Number(formData.get('orderIndex') || 0),
       isPublished: formData.get('isPublished') === 'on',
+      isTrialFree: formData.get('isTrialFree') === 'on',
     },
   });
   revalidatePath('/admin/chapters');

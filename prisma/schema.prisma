@@ -18,9 +18,14 @@ model User {
   isPremium         Boolean          @default(false)
   premiumUntil      DateTime?
   couponRedeemed    String?
+  // Freemium trial — set on first Google sign-in (see upsertOAuthUser).
+  trialStartedAt    DateTime?
+  trialExpiresAt    DateTime?
+  subscriptionStatus SubStatus?      // TRIAL on signup, PAID on purchase/full coupon
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
   passwordHash      String?
+  activity          UserActivity?
   mediaUploads      MediaAsset[]
   createdNotes      Note[]           @relation("NoteCreatedBy")
   updatedNotes      Note[]           @relation("NoteUpdatedBy")
@@ -33,6 +38,33 @@ model User {
   payments          Payment[]
   indices           Index[]
   summaryBookmarks  SummaryBookmark[]
+}
+
+// Per-user engagement counters powering the trial dashboard, conversion
+// prompts, and (Phase 3) the admin funnel. 1:1 with User, created lazily.
+model UserActivity {
+  id                 String    @id @default(cuid())
+  userId             String    @unique
+  loginCount         Int       @default(0)
+  lastLoginAt        DateTime?
+  chaptersViewed     Json      @default("[]") // string[] of chapterIds visited
+  mcqAttempted       Int       @default(0)
+  mockAttempted      Int       @default(0)
+  scholarUsed        Int       @default(0)
+  indicatorLabUsed   Int       @default(0)
+  firstChapterDoneAt DateTime?
+  timeSpentSeconds   Int       @default(0)
+  promptsSeen        Json      @default("[]") // string[] of dismissed conversion-prompt keys
+  lastDripDay        Int?      // Phase 2: last trial-day email sent (idempotency)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum SubStatus {
+  TRIAL
+  PAID
+  EXPIRED
 }
 
 // A user-saved custom stock index built in the Index Builder tool.
@@ -135,6 +167,8 @@ model Chapter {
   isPublished Boolean    @default(false)
   isDeleted   Boolean    @default(false)
   deletedAt   DateTime?
+  // Freemium: when true, this chapter is unlocked during a user's 7-day trial.
+  isTrialFree Boolean    @default(false)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   questions   Question[]

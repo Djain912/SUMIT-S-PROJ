@@ -10,6 +10,8 @@ import { getUserMemory, updateUserMemory } from '@/lib/ai/memory';
 import { getUserAnalyticsData } from '@/server/services/analytics.service';
 import { prisma } from '@/lib/db/prisma';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
+import { getTrialState } from '@/server/policies/access';
+import { TRIAL_SCHOLAR_DAILY } from '@/lib/trial';
 
 // Student-uploaded chart images (data URLs). The client resizes before upload,
 // so anything bigger than this is rejected rather than forwarded to OpenAI.
@@ -288,6 +290,33 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
+
+    // Trial users get a capped number of Chartix Scholar questions per day;
+    // paid/admin users are unlimited. Scoped-coupon users keep their access
+    // unchanged (not in an active trial → no cap applied here).
+    const trial = await getTrialState(user.email);
+    if (trial && !trial.hasFullAccess && trial.inTrial) {
+      const limit = await enforceRateLimit({
+        request,
+        key: 'scholar-trial-daily',
+        maxRequests: TRIAL_SCHOLAR_DAILY,
+        windowMs: 24 * 60 * 60 * 1000,
+        identifier: user.id,
+      });
+      if (!limit.allowed) {
+        return NextResponse.json(
+          {
+            success: false,
+            limit: true,
+            error: { message: `You've used your ${TRIAL_SCHOLAR_DAILY} free Chartix Scholar questions for today. Upgrade for unlimited access — your free questions reset tomorrow.` },
+          },
+          { status: 429 },
+        );
+      }
+    }
+
+    // Fail-soft engagement counter (used by the admin funnel later).
+    after(prisma.userActivity.updateMany({ where: { userId: user.id }, data: { scholarUsed: { increment: 1 } } }).catch(() => {}));
 
     // Build RAG context + admin Q&A corrections + student memory + quiz
     // performance, all in parallel.

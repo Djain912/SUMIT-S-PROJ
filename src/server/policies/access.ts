@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db/prisma';
+import { computeTrialState, type TrialState } from '@/lib/trial';
 
 // Coupons that grant free access. Add more here any time.
 // `days` = how long the access lasts, counted from the user's signup date.
@@ -64,12 +65,13 @@ export type ChapterAccess = {
 };
 
 // Resolves which chapters a user can access right now. Admins and full-premium
-// users get `full: true`. Everyone else gets the set of chapters they hold an
-// unexpired entitlement for (granted by redeeming a scoped coupon).
+// users get `full: true`. Everyone else gets the union of: chapters they hold an
+// unexpired entitlement for (scoped coupon) PLUS the admin-flagged trial-free
+// chapters while their 7-day trial is still active.
 export async function getChapterAccess(email: string): Promise<ChapterAccess> {
   const user = await prisma.user.findUnique({
     where: { email },
-    select: { id: true, role: true, isPremium: true, premiumUntil: true },
+    select: { id: true, role: true, isPremium: true, premiumUntil: true, trialStartedAt: true, trialExpiresAt: true },
   });
   if (!user) return { full: false, chapterIds: new Set() };
 
@@ -77,16 +79,47 @@ export async function getChapterAccess(email: string): Promise<ChapterAccess> {
   const full = user.role === 'ADMIN' || (user.isPremium && (!user.premiumUntil || user.premiumUntil > now));
   if (full) return { full: true, chapterIds: new Set() };
 
+  const ids = new Set<string>();
+
   const ents = await prisma.entitlement.findMany({
     where: { userId: user.id, expiresAt: { gt: now } },
     select: { chapterId: true },
   });
-  return { full: false, chapterIds: new Set(ents.map((e) => e.chapterId)) };
+  ents.forEach((e) => ids.add(e.chapterId));
+
+  // Active trial unlocks the chapters an admin marked as trial-free.
+  const trial = computeTrialState(user.trialStartedAt, user.trialExpiresAt, now);
+  if (trial.inTrial) {
+    const freeChapters = await prisma.chapter.findMany({
+      where: { isTrialFree: true, isDeleted: false, isPublished: true },
+      select: { id: true },
+    });
+    freeChapters.forEach((c) => ids.add(c.id));
+  }
+
+  return { full: false, chapterIds: ids };
 }
 
-// True when the user has ANY access at all (full OR at least one live chapter).
-// Used to decide whether to let them into the student area.
+// True when the user has ANY access at all (full premium, a live entitlement,
+// or an active trial). Used to admit users into the student area.
 export async function hasAnyAccess(email: string): Promise<boolean> {
   const access = await getChapterAccess(email);
   return access.full || access.chapterIds.size > 0;
+}
+
+// Trial status for UI (banner, dashboard, conversion prompts) — also reports
+// whether the user already holds full paid/admin access (in which case no
+// trial messaging should show).
+export type UserTrialState = TrialState & { hasFullAccess: boolean };
+
+export async function getTrialState(email: string): Promise<UserTrialState | null> {
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: { role: true, isPremium: true, premiumUntil: true, trialStartedAt: true, trialExpiresAt: true },
+  });
+  if (!user) return null;
+
+  const now = new Date();
+  const hasFullAccess = user.role === 'ADMIN' || (user.isPremium && (!user.premiumUntil || user.premiumUntil > now));
+  return { ...computeTrialState(user.trialStartedAt, user.trialExpiresAt, now), hasFullAccess };
 }

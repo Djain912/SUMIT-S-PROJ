@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { requireAuthenticatedUser } from '@/server/policies/auth';
 import { hasAnyAccess } from '@/server/policies/access';
 import { ChatWidgetGate } from '@/components/chat/ChatWidgetGate';
+import { ConversionPrompt } from '@/components/user/ConversionPrompt';
 
 export default async function UserLayout({ children }: { children: ReactNode }) {
   const user = await requireAuthenticatedUser();
@@ -19,6 +20,7 @@ export default async function UserLayout({ children }: { children: ReactNode }) 
     <>
       {children}
       <ChatWidgetGate level="LEVEL_1" />
+      <ConversionPrompt />
     </>
   );
 }

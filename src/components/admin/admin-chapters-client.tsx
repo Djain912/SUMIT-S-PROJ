@@ -12,6 +12,7 @@ type Chapter = {
   title: string;
   orderIndex: number;
   isPublished: boolean;
+  isTrialFree: boolean;
   level: Level;
   _count: { subtopics: number; questions: number };
 };
@@ -105,6 +106,9 @@ export function AdminChaptersClient({
                       ) : (
                         <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-xs text-zinc-600">Draft</span>
                       )}
+                      {chapter.isTrialFree ? (
+                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">Trial-free</span>
+                      ) : null}
                       <form action={handleDelete}>
                         <input type="hidden" name="id" value={chapter.id} />
                         <input type="hidden" name="level" value={selectedLevel} />
@@ -150,15 +154,26 @@ export function AdminChaptersClient({
                       </div>
 
                       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <label className="flex items-center gap-2 text-sm text-zinc-700">
-                          <input
-                            type="checkbox"
-                            name="isPublished"
-                            defaultChecked={chapter.isPublished}
-                            className="rounded border-zinc-300"
-                          />
-                          Published
-                        </label>
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-5">
+                          <label className="flex items-center gap-2 text-sm text-zinc-700">
+                            <input
+                              type="checkbox"
+                              name="isPublished"
+                              defaultChecked={chapter.isPublished}
+                              className="rounded border-zinc-300"
+                            />
+                            Published
+                          </label>
+                          <label className="flex items-center gap-2 text-sm text-zinc-700">
+                            <input
+                              type="checkbox"
+                              name="isTrialFree"
+                              defaultChecked={chapter.isTrialFree}
+                              className="rounded border-zinc-300"
+                            />
+                            Free during trial
+                          </label>
+                        </div>
                         <button
                           type="submit"
                           className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
@@ -202,10 +217,16 @@ export function AdminChaptersClient({
                 </div>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <label className="flex items-center gap-2 text-sm text-zinc-700">
-                  <input type="checkbox" name="isPublished" className="rounded border-zinc-300" />
-                  Published
-                </label>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-5">
+                  <label className="flex items-center gap-2 text-sm text-zinc-700">
+                    <input type="checkbox" name="isPublished" className="rounded border-zinc-300" />
+                    Published
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-zinc-700">
+                    <input type="checkbox" name="isTrialFree" className="rounded border-zinc-300" />
+                    Free during trial
+                  </label>
+                </div>
                 <button
                   type="submit"
                   className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
