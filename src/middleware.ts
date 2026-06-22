@@ -1,6 +1,35 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { decode } from 'next-auth/jwt';
 
+// Flip to false to ENFORCE the policy (blocks violations) instead of only
+// reporting them. Keep it true until the browser console shows no legitimate
+// violations on checkout, the chart tools, and sign-in — then enforce.
+const CSP_REPORT_ONLY = true;
+
+// Content-Security-Policy. Allowlists every external origin the app actually
+// loads: Razorpay checkout (payments), Cloudinary (media), Google Fonts, and
+// the chart-library CDNs used by the static tool pages (index-builder, fii-dii).
+// 'unsafe-inline'/'unsafe-eval' on scripts are required by Next.js hydration
+// and the inline-heavy static tool files; the DOMPurify layer is the primary
+// XSS defence, this CSP is defence-in-depth (locks down script/frame/connect
+// ORIGINS, object-src, base-uri, form-action).
+function buildCsp(): string {
+  return [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://cdnjs.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' data: https://fonts.gstatic.com",
+    "img-src 'self' data: blob: https:",
+    "connect-src 'self' https://api.cloudinary.com https://*.razorpay.com https://query1.finance.yahoo.com https://*.yahoo.com",
+    "frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'self'",
+    'upgrade-insecure-requests',
+  ].join('; ');
+}
+
 function applySecurityHeaders(res: NextResponse) {
   // SAMEORIGIN (not DENY): our own tools (index-builder, fii-dii) render in
   // same-origin iframes; other sites still cannot embed Chartix pages.
@@ -9,6 +38,10 @@ function applySecurityHeaders(res: NextResponse) {
   res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   res.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
+  res.headers.set(
+    CSP_REPORT_ONLY ? 'Content-Security-Policy-Report-Only' : 'Content-Security-Policy',
+    buildCsp(),
+  );
   return res;
 }
 
