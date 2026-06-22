@@ -67,7 +67,7 @@ export async function issueInvoice(paymentId: string): Promise<void> {
 <p>Thank you for your purchase! Please find your invoice <strong>${invoiceNumber}</strong> attached.</p>
 <p>You now have <strong>6 months of full access</strong> to Chartix Level 1 — all notes, quizzes, mock tests, and Chartix Scholar.</p>
 <p>Visit your dashboard: <a href="https://chartix.in/user">chartix.in/user</a></p>
-<p>For any queries, reply to this email or write to support@chartix.in.</p>
+<p>For any queries, reply to this email or write to contact@chartix.in.</p>
 <p>Happy studying!<br/>Team Chartix</p>`,
         attachments: [
           {

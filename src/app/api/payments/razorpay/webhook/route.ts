@@ -46,8 +46,8 @@ export async function POST(request: Request) {
               data: { redeemedCount: { increment: 1 } },
             }).catch(() => {});
           }
-          // Generate PDF invoice + email it (fail-soft — 200 to Razorpay regardless).
-          issueInvoice(payment.id).catch((err) => console.error('[webhook] invoice error:', err));
+          // Generate PDF invoice + email it. Must be awaited — Vercel kills the function on response.
+          await issueInvoice(payment.id).catch((err) => console.error('[webhook] invoice error:', err));
         }
       }
     }

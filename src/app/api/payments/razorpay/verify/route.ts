@@ -57,8 +57,8 @@ export async function POST(request: Request) {
       }).catch(() => {});
     }
 
-    // Generate PDF invoice + email it (fail-soft — never block the success response).
-    issueInvoice(payment.id).catch((err) => console.error('[verify] invoice error:', err));
+    // Generate PDF invoice + email it. Must be awaited — Vercel kills the function on response.
+    await issueInvoice(payment.id).catch((err) => console.error('[verify] invoice error:', err));
 
     return NextResponse.json({ success: true, data: { premiumUntil } });
   } catch (error) {
