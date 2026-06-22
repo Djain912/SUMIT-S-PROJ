@@ -11,12 +11,24 @@
  *   - inline `width:` on table/td/th → narrow columns → words break mid-character
  *
  * This function sanitises note HTML so it renders purely from our `.prose`
- * styles. It runs client-side (needs DOMParser).
+ * styles. The SECURITY sanitisation (DOMPurify) runs on both server and client;
+ * the layout normalisation below needs DOMParser so runs client-side only.
  */
-export function normalizeNoteHtml(html: string): string {
-  if (typeof window === 'undefined' || !html) return html;
+import { sanitizeHtml } from '@/lib/security/sanitize';
 
-  const doc = new DOMParser().parseFromString(html, 'text/html');
+export function normalizeNoteHtml(html: string): string {
+  if (!html) return '';
+
+  // Security first — strip active content on BOTH server and client so raw
+  // HTML never reaches the page during SSR (the old code returned it verbatim
+  // when window was undefined).
+  const safe = sanitizeHtml(html);
+
+  // Layout normalisation needs the browser DOM; on the server return the
+  // already-sanitised HTML (it re-normalises cosmetically after hydration).
+  if (typeof window === 'undefined') return safe;
+
+  const doc = new DOMParser().parseFromString(safe, 'text/html');
 
   // 0. Security: remove any active content that could have been pasted into
   //    the editor — script/embed tags, inline event handlers (onclick, onerror

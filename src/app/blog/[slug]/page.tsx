@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db/prisma';
+import { sanitizeHtml } from '@/lib/security/sanitize';
 import { TrendingUp, Clock, Calendar, ArrowLeft, Tag } from 'lucide-react';
 
 interface Props {
@@ -162,7 +163,7 @@ export default async function BlogPostPage({ params }: Props) {
             prose-pre:bg-zinc-950 prose-pre:text-zinc-100
             prose-img:rounded-xl prose-img:shadow-sm
             prose-hr:border-zinc-200"
-          dangerouslySetInnerHTML={{ __html: post.contentHtml }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.contentHtml) }}
         />
       </article>
 

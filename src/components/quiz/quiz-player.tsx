@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { Flag, AlertTriangle, CircleX, ChevronDown, ChevronUp, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { sanitizeHtml, escapeHtml } from '@/lib/security/sanitize';
 
 type Level = 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3';
 type QuizMode = 'SUBTOPIC' | 'CHAPTER' | 'CUSTOM' | 'FULL_TEST';
@@ -76,8 +77,10 @@ function tiptapToHtml(node: unknown): string {
     return text;
   }
   if (n.type === 'image') {
-    const src = n.attrs?.src ?? '';
-    const alt = n.attrs?.alt ?? '';
+    // Escape attribute values so a crafted src/alt cannot break out of the
+    // attribute and inject markup (e.g. src='x" onerror="alert(1)').
+    const src = escapeHtml(String(n.attrs?.src ?? ''));
+    const alt = escapeHtml(String(n.attrs?.alt ?? ''));
     return `<img src="${src}" alt="${alt}" class="max-w-full rounded-lg my-2" />`;
   }
   const inner = (n.content ?? []).map(tiptapToHtml).join('');
@@ -96,6 +99,13 @@ function tiptapToHtml(node: unknown): string {
 }
 
 function richJsonToHtml(input: unknown): string {
+  // Always run the result through DOMPurify: the `obj.html` and raw-string
+  // branches carry author-supplied HTML that would otherwise be injected
+  // verbatim into the page.
+  return sanitizeHtml(richJsonToHtmlRaw(input));
+}
+
+function richJsonToHtmlRaw(input: unknown): string {
   if (!input) return '';
   if (typeof input === 'string') return input;
   if (typeof input !== 'object') return '';
