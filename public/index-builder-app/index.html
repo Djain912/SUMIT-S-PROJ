@@ -1332,13 +1332,21 @@ function resizeOverlay(){
   cv.getContext('2d').setTransform(dpr,0,0,dpr,0,0);
 }
 window.addEventListener('resize',()=>{resizeOverlay();redrawOverlay();});
-function px(pt){
+function px(pt,pane){
   if(!S.chart||!S.main)return null;
+  const paneIdx=pane!=null?pane:(pt.pane||0);
   const x=S.chart.timeScale().logicalToCoordinate(pt.logical);
-  const y=S.main.priceToCoordinate(pt.price);
-  return(x==null||y==null)?null:{x,y};
+  const series=getPaneSeries(paneIdx);
+  const relY=series?series.priceToCoordinate(pt.price):null;
+  if(x==null||relY==null)return null;
+  // priceToCoordinate returns pane-relative Y; add pane top to get absolute canvas Y
+  return{x,y:relY+paneTopY(paneIdx)};
 }
 function pricePaneH(){try{return S.chart.panes()[0].getHeight();}catch(e){return cv.clientHeight;}}
+function paneTopYs(){const tops=[0];try{const ps=S.chart.panes();for(let i=0;i<ps.length-1;i++)tops.push(tops[i]+ps[i].getHeight());}catch(e){}return tops;}
+function yToPaneIdx(y){const tops=paneTopYs();let idx=0;for(let i=1;i<tops.length;i++){if(y>=tops[i])idx=i;}return idx;}
+function paneTopY(paneIdx){const tops=paneTopYs();return tops[paneIdx]||0;}
+function getPaneSeries(paneIdx){if(!paneIdx||paneIdx===0)return S.main;const inst=S.indicators.find(i=>i._pane===paneIdx);if(!inst||!inst._series||!inst._series.length)return S.main;return(inst.type==='macd'?inst._series[1]:inst._series[0])||inst._series[0];}
 function redrawOverlay(){
   if(!S.chart||!S.main)return;
   const ctx=cv.getContext('2d');ctx.clearRect(0,0,cv.clientWidth,cv.clientHeight);
@@ -1346,7 +1354,7 @@ function redrawOverlay(){
   all.forEach((sh,i)=>drawShape(ctx,sh,i===D.selected));
   // draw in-progress wave points + ghost line to cursor
   if(D.wavePoints.length>0&&['wave5','waveABC','waveABCDE'].includes(D.tool)){
-    drawShape(ctx,{type:'wave',waveType:D.tool,waveStyle:D.waveStyle,waveSize:D.waveSize,
+    drawShape(ctx,{type:'wave',pane:D.wavePoints[0]?.pane||0,waveType:D.tool,waveStyle:D.waveStyle,waveSize:D.waveSize,
       points:D.wavePoints,complete:false,color:'#2d7d52'},false);
     // ghost dashed line from last placed point to cursor
     if(D.waveCursorPt){
@@ -1367,16 +1375,18 @@ function drawShape(ctx,sh,sel){
   ctx.lineWidth=sel?lw+1:lw;
   if(sel){ctx.shadowColor='rgba(45,125,82,.35)';ctx.shadowBlur=8;}
   const col=sh.color||'#2d7d52';
+  const spane=sh.pane||0;const sseries=getPaneSeries(spane);
   if(sh.type==='hline'){
-    const y=S.main.priceToCoordinate(sh.a.price);if(y==null){ctx.restore();return;}
+    const relY=sseries?sseries.priceToCoordinate(sh.a.price):null;if(relY==null){ctx.restore();return;}
+    const y=relY+paneTopY(spane);
     ctx.strokeStyle=col;applyLineDash(ctx,sh);ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(cv.clientWidth,y);ctx.stroke();ctx.setLineDash([]);
     lbl(ctx,cv.clientWidth-88,y,fmt(sh.a.price,2),col);
   }else if(sh.type==='trend'){
-    const a=px(sh.a),b=sh.b&&px(sh.b);if(!a||!b){ctx.restore();return;}
+    const a=px(sh.a,spane),b=sh.b&&px(sh.b,spane);if(!a||!b){ctx.restore();return;}
     ctx.strokeStyle=col;applyLineDash(ctx,sh);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.setLineDash([]);
     dot(ctx,a,col);dot(ctx,b,col);lbl(ctx,b.x+6,b.y,fmt(sh.b.price,2),col);
   }else if(sh.type==='rect'){
-    const a=px(sh.a),b=sh.b&&px(sh.b);if(!a||!b){ctx.restore();return;}
+    const a=px(sh.a,spane),b=sh.b&&px(sh.b,spane);if(!a||!b){ctx.restore();return;}
     const x=Math.min(a.x,b.x),y=Math.min(a.y,b.y),w=Math.abs(b.x-a.x),h=Math.abs(b.y-a.y);
     ctx.fillStyle='rgba(45,125,82,.07)';ctx.fillRect(x,y,w,h);
     ctx.strokeStyle=col;applyLineDash(ctx,sh);ctx.strokeRect(x,y,w,h);ctx.setLineDash([]);
@@ -1391,12 +1401,12 @@ function drawShape(ctx,sh,sel){
     if(!sh.hideLines){
       ctx.strokeStyle=col;applyLineDash(ctx,sh);ctx.beginPath();
       let started=false;
-      pts.forEach(pt=>{const p=px(pt);if(!p)return;if(!started){ctx.moveTo(p.x,p.y);started=true;}else ctx.lineTo(p.x,p.y);});
+      pts.forEach(pt=>{const p=px(pt,spane);if(!p)return;if(!started){ctx.moveTo(p.x,p.y);started=true;}else ctx.lineTo(p.x,p.y);});
       ctx.stroke();ctx.setLineDash([]);
     }
     // draw each point
     pts.forEach((pt,i)=>{
-      const p=px(pt);if(!p)return;
+      const p=px(pt,spane);if(!p)return;
       if(i===0){
         // origin: tiny solid dot only, no label
         ctx.fillStyle=col;ctx.beginPath();ctx.arc(p.x,p.y,3,0,7);ctx.fill();
@@ -1417,24 +1427,25 @@ function drawShape(ctx,sh,sel){
       }
     });
   }else if(sh.type==='fib'){
-    const a=px(sh.a),b=sh.b&&px(sh.b);if(!a||!b){ctx.restore();return;}
+    const a=px(sh.a,spane),b=sh.b&&px(sh.b,spane);if(!a||!b){ctx.restore();return;}
     const hi=Math.max(sh.a.price,sh.b.price),lo=Math.min(sh.a.price,sh.b.price);
     const x0=Math.min(a.x,b.x),x1=cv.clientWidth-60;
     const lvs=[[0,'#374151'],[.236,'#dc2626'],[.382,'#d97706'],[.5,'#2d7d52'],[.618,'#0891b2'],[.786,'#7c3aed'],[1,'#374151']];
     ctx.font='10px JetBrains Mono';
-    lvs.forEach(([lv,c])=>{const p=hi-(hi-lo)*lv;const y=S.main.priceToCoordinate(p);if(y==null)return;ctx.strokeStyle=c;ctx.globalAlpha=.85;ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x1,y);ctx.stroke();ctx.globalAlpha=1;ctx.fillStyle=c;ctx.fillText((lv*100).toFixed(1)+'%  '+fmt(p,2),x0+4,y-3);});
+    const fibTop=paneTopY(spane);
+    lvs.forEach(([lv,c])=>{const p=hi-(hi-lo)*lv;const relY=sseries?sseries.priceToCoordinate(p):null;if(relY==null)return;const y=relY+fibTop;ctx.strokeStyle=c;ctx.globalAlpha=.85;ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x1,y);ctx.stroke();ctx.globalAlpha=1;ctx.fillStyle=c;ctx.fillText((lv*100).toFixed(1)+'%  '+fmt(p,2),x0+4,y-3);});
     dot(ctx,a,col);dot(ctx,b,col);
   }else if(sh.type==='vline'){
     const x=S.chart.timeScale().logicalToCoordinate(sh.a.logical);if(x==null){ctx.restore();return;}
-    ctx.strokeStyle=col;ctx.setLineDash([7,4]);ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,pricePaneH());ctx.stroke();ctx.setLineDash([]);
+    ctx.strokeStyle=col;ctx.setLineDash([7,4]);ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,cv.clientHeight);ctx.stroke();ctx.setLineDash([]);
   }else if(sh.type==='text'){
-    const a=px(sh.a);if(!a){ctx.restore();return;}
+    const a=px(sh.a,spane);if(!a){ctx.restore();return;}
     ctx.font='600 13px Sora, sans-serif';const txt=sh.text||'Text';const w=ctx.measureText(txt).width+10;
     ctx.fillStyle='rgba(255,255,255,.92)';ctx.fillRect(a.x,a.y-11,w,20);
     ctx.fillStyle=col;ctx.fillText(txt,a.x+5,a.y+3);
     if(sel)dot(ctx,a,col);
   }else if(sh.type==='measure'){
-    const a=px(sh.a),b=sh.b&&px(sh.b);if(!a||!b){ctx.restore();return;}
+    const a=px(sh.a,spane),b=sh.b&&px(sh.b,spane);if(!a||!b){ctx.restore();return;}
     const x=Math.min(a.x,b.x),y=Math.min(a.y,b.y),w=Math.abs(b.x-a.x),h=Math.abs(b.y-a.y);
     const up=sh.b.price>=sh.a.price;const fill=up?'rgba(22,163,74,.12)':'rgba(220,38,38,.12)';const line=up?'#16a34a':'#dc2626';
     ctx.fillStyle=fill;ctx.fillRect(x,y,w,h);ctx.strokeStyle=line;ctx.setLineDash([4,3]);ctx.strokeRect(x,y,w,h);ctx.setLineDash([]);
@@ -1452,19 +1463,20 @@ function dpt(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
 function dseg(p,a,b){const dx=b.x-a.x,dy=b.y-a.y,l2=dx*dx+dy*dy;if(!l2)return dpt(p,a);const t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/l2));return dpt(p,{x:a.x+t*dx,y:a.y+t*dy});}
 function hitTest(sh,x,y){
   if(!S.main)return false;
-  if(sh.type==='hline'){const cy=S.main.priceToCoordinate(sh.a.price);return cy!=null&&Math.abs(y-cy)<9;}
+  const hpane=sh.pane||0;const hseries=getPaneSeries(hpane);
+  if(sh.type==='hline'){const relY=hseries?hseries.priceToCoordinate(sh.a.price):null;const cy=relY!=null?relY+paneTopY(hpane):null;return cy!=null&&Math.abs(y-cy)<9;}
   if(sh.type==='vline'){const cx=S.chart.timeScale().logicalToCoordinate(sh.a.logical);return cx!=null&&Math.abs(x-cx)<9;}
   // wave must be checked before px(sh.a) — waves use .points[], not .a/.b
   if(sh.type==='wave'){
     const pts=sh.points||[];
     for(let i=0;i<pts.length;i++){
-      const p=px(pts[i]);if(!p)continue;
+      const p=px(pts[i],hpane);if(!p)continue;
       if(dpt({x,y},p)<14)return true;
-      if(i>0){const prev=px(pts[i-1]);if(prev&&dseg({x,y},prev,p)<9)return true;}
+      if(i>0){const prev=px(pts[i-1],hpane);if(prev&&dseg({x,y},prev,p)<9)return true;}
     }
     return false;
   }
-  const a=px(sh.a),b=sh.b?px(sh.b):null;if(!a)return false;
+  const a=px(sh.a,hpane),b=sh.b?px(sh.b,hpane):null;if(!a)return false;
   if(sh.type==='text')return dpt({x,y},a)<16;
   if(sh.type==='trend')return b&&dseg({x,y},a,b)<9;
   if(sh.type==='rect'||sh.type==='measure')return b&&x>=Math.min(a.x,b.x)&&x<=Math.max(a.x,b.x)&&y>=Math.min(a.y,b.y)&&y<=Math.max(a.y,b.y);
@@ -1557,7 +1569,12 @@ document.getElementById('chartWrap').addEventListener('click',e=>{
 /* ── OVERLAY MOUSE (drawing mode) ── */
 function evtPt(e){
   const r=cv.getBoundingClientRect();const x=e.clientX-r.left,y=e.clientY-r.top;
-  return{x,y,logical:S.chart.timeScale().coordinateToLogical(x),price:S.main.coordinateToPrice(y)};
+  const pane=yToPaneIdx(y);
+  const top=paneTopY(pane);
+  const series=getPaneSeries(pane);
+  // coordinateToPrice expects pane-relative Y, so subtract the pane's top offset
+  const price=series?series.coordinateToPrice(y-top):S.main.coordinateToPrice(y);
+  return{x,y,logical:S.chart.timeScale().coordinateToLogical(x),price,pane};
 }
 /* Detect whether the cursor is over a draggable handle/body of an existing shape,
    so already-drawn shapes (trend lines, zones, fib, S/R) can be readjusted. */
@@ -1565,25 +1582,25 @@ function isSelect(){return D.tool==='cursor'||D.tool==='crosshair';}
 function hitHandle(x,y){
   if(!S.main)return null;
   for(let i=D.shapes.length-1;i>=0;i--){
-    const sh=D.shapes[i];
+    const sh=D.shapes[i];const hpane=sh.pane||0;const hseries=getPaneSeries(hpane);
     if(sh.type==='hline'){
-      const cy=S.main.priceToCoordinate(sh.a.price);
+      const relY=hseries?hseries.priceToCoordinate(sh.a.price):null;
+      const cy=relY!=null?relY+paneTopY(hpane):null;
       if(cy!=null&&Math.abs(y-cy)<8)return{idx:i,which:'line'};
     }else if(sh.type==='vline'){
       const cx=S.chart.timeScale().logicalToCoordinate(sh.a.logical);
       if(cx!=null&&Math.abs(x-cx)<8)return{idx:i,which:'vline'};
     }else if(sh.type==='text'){
-      const a=px(sh.a);if(a&&dpt({x,y},a)<18)return{idx:i,which:'a'};
+      const a=px(sh.a,hpane);if(a&&dpt({x,y},a)<18)return{idx:i,which:'a'};
     }else if(sh.type==='wave'){
-      // check each wave point for drag handle
       const pts=sh.points||[];
       for(let pi=0;pi<pts.length;pi++){
-        const p=px(pts[pi]);
+        const p=px(pts[pi],hpane);
         if(p&&Math.hypot(x-p.x,y-p.y)<14)return{idx:i,which:'wave-pt-'+pi};
       }
       if(hitTest(sh,x,y))return{idx:i,which:'move'};
     }else if(sh.a&&sh.b){
-      const a=px(sh.a),b=px(sh.b);
+      const a=px(sh.a,hpane),b=px(sh.b,hpane);
       if(a&&Math.hypot(x-a.x,y-a.y)<13)return{idx:i,which:'a'};
       if(b&&Math.hypot(x-b.x,y-b.y)<13)return{idx:i,which:'b'};
       if(hitTest(sh,x,y))return{idx:i,which:'move'};
@@ -1611,17 +1628,17 @@ document.getElementById('chartWrap').addEventListener('mousedown',e=>{
 cv.addEventListener('mousedown',e=>{
   if(isSelect()||!S.chart||!S.main)return;
   const p=evtPt(e);if(p.logical==null||p.price==null)return;
-  if(p.y>pricePaneH())return;
-  if(D.tool==='hline'){D.shapes.push({type:'hline',a:{logical:0,price:p.price},b:null,color:'#dc2626'});redrawOverlay();setTool('cursor');return;}
-  if(D.tool==='vline'){D.shapes.push({type:'vline',a:{logical:p.logical,price:p.price},b:null,color:'#0891b2'});redrawOverlay();setTool('cursor');return;}
-  if(D.tool==='text'){const t=window.prompt('Label text:','');if(t&&t.trim()){D.shapes.push({type:'text',a:{logical:p.logical,price:p.price},b:null,text:t.trim(),color:'#374151'});redrawOverlay();}setTool('cursor');return;}
+  const pn=p.pane||0;
+  if(D.tool==='hline'){D.shapes.push({type:'hline',pane:pn,a:{logical:0,price:p.price},b:null,color:'#dc2626'});redrawOverlay();setTool('cursor');return;}
+  if(D.tool==='vline'){D.shapes.push({type:'vline',pane:pn,a:{logical:p.logical,price:p.price},b:null,color:'#0891b2'});redrawOverlay();setTool('cursor');return;}
+  if(D.tool==='text'){const t=window.prompt('Label text:','');if(t&&t.trim()){D.shapes.push({type:'text',pane:pn,a:{logical:p.logical,price:p.price,pane:pn},b:null,text:t.trim(),color:'#374151'});redrawOverlay();}setTool('cursor');return;}
   // Elliott Wave: accumulate click points
   if(['wave5','waveABC','waveABCDE'].includes(D.tool)){
     const total=WAVE_COUNTS[D.tool];
-    D.wavePoints.push({logical:p.logical,price:p.price});
+    const wavePn=D.wavePoints.length>0?(D.wavePoints[0].pane||0):pn; // lock to first-click pane
+    D.wavePoints.push({logical:p.logical,price:p.price,pane:wavePn});
     if(D.wavePoints.length>=total){
-      // wave complete — commit to shapes
-      D.shapes.push({type:'wave',waveType:D.tool,waveStyle:D.waveStyle,waveSize:D.waveSize,
+      D.shapes.push({type:'wave',pane:wavePn,waveType:D.tool,waveStyle:D.waveStyle,waveSize:D.waveSize,
         hideLines:D.hideLines,points:[...D.wavePoints],complete:true,color:'#2d7d52'});
       D.wavePoints=[];
       redrawOverlay();setTool('cursor');
@@ -1631,7 +1648,7 @@ cv.addEventListener('mousedown',e=>{
     return;
   }
   D.dragging=true;
-  D.temp={type:D.tool,a:{logical:p.logical,price:p.price},b:{logical:p.logical,price:p.price},
+  D.temp={type:D.tool,pane:pn,a:{logical:p.logical,price:p.price,pane:pn},b:{logical:p.logical,price:p.price,pane:pn},
     color:D.tool==='fib'?'#d97706':D.tool==='measure'?'#2d7d52':'#2d7d52'};
 });
 cv.addEventListener('mousemove',e=>{
@@ -1669,8 +1686,11 @@ cv.addEventListener('mousemove',e=>{
     redrawOverlay();return;
   }
   if(!D.dragging||!D.temp)return;
-  const p=evtPt(e);if(p.logical==null||p.price==null)return;
-  D.temp.b={logical:p.logical,price:p.price};redrawOverlay();
+  const p=evtPt(e);if(p.logical==null)return;
+  const tpn=D.temp.pane||0;const tseries=getPaneSeries(tpn);
+  const tprice=tseries?tseries.coordinateToPrice(p.y-paneTopY(tpn)):p.price;
+  if(tprice==null)return;
+  D.temp.b={logical:p.logical,price:tprice,pane:tpn};redrawOverlay();
 });
 window.addEventListener('mouseup',()=>{
   if(D.editing){
