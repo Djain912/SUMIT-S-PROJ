@@ -38,6 +38,23 @@ model User {
   payments          Payment[]
   indices           Index[]
   summaryBookmarks  SummaryBookmark[]
+  passwordResetTokens PasswordResetToken[]
+}
+
+// Token-based password reset. We store only a SHA-256 HASH of the token — the
+// raw token lives only in the emailed link, so a DB leak can't be used to reset
+// passwords. Tokens expire (expiresAt) and are single-use (consumedAt).
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  consumedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 // Per-user engagement counters powering the trial dashboard, conversion

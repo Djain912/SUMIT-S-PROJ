@@ -132,6 +132,47 @@ export function userAutoReplyEmail(data: Pick<ContactEmailData, 'fullName' | 'su
 </html>`;
 }
 
+/** Email with a one-time password-reset link. */
+export function passwordResetEmail(data: { resetUrl: string; firstName?: string | null }): string {
+  const hi = data.firstName ? `, ${escapeHtml(data.firstName)}` : '';
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Reset your Chartix password</title>
+<style>
+  body { margin: 0; padding: 0; background: #f4f4f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+  .wrapper { max-width: 560px; margin: 32px auto; background: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e4e4e7; }
+  .header { background: #09090b; padding: 24px 32px; }
+  .header h1 { margin: 0; color: #ffffff; font-size: 18px; font-weight: 700; }
+  .body { padding: 28px 32px; }
+  .body p { margin: 0 0 14px; font-size: 14px; color: #3f3f46; line-height: 1.7; }
+  .btn { display: inline-block; background: #09090b; color: #ffffff !important; text-decoration: none; padding: 12px 22px; border-radius: 8px; font-size: 14px; font-weight: 600; margin: 8px 0 18px; }
+  .muted { font-size: 12px; color: #a1a1aa; word-break: break-all; }
+  .footer { padding: 16px 32px; background: #f4f4f5; border-top: 1px solid #e4e4e7; }
+  .footer p { margin: 0; font-size: 12px; color: #a1a1aa; }
+</style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="header"><h1>Reset your password</h1></div>
+    <div class="body">
+      <p>Hi${hi},</p>
+      <p>We received a request to reset the password for your Chartix account. Click the button below to choose a new password. This link expires in <strong>1 hour</strong> and can be used once.</p>
+      <p><a class="btn" href="${escapeHtml(data.resetUrl)}">Reset password</a></p>
+      <p class="muted">Or paste this link into your browser:<br/>${escapeHtml(data.resetUrl)}</p>
+      <p>If you didn't request this, you can safely ignore this email — your password won't change.</p>
+      <p style="margin-bottom:0;">— The Chartix Team</p>
+    </div>
+    <div class="footer">
+      <p>Sent by Chartix · <a href="mailto:contact@chartix.in" style="color:#71717a;">contact@chartix.in</a></p>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, '&amp;')
