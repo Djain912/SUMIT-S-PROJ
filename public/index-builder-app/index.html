@@ -471,11 +471,12 @@ main{flex:1;display:flex;min-height:0}
     <div class="workspace">
       <div class="chart-wrap" id="chartWrap">
         <div id="chart"></div>
-        <!-- Chartix watermark: faint centered brand + corner tag (advertises on screenshots) -->
-        <div id="wmCenter" style="position:absolute;inset:0;z-index:4;pointer-events:none;display:flex;align-items:center;justify-content:center;overflow:hidden">
-          <span style="font-family:'Sora',sans-serif;font-weight:700;font-size:clamp(40px,9vw,96px);color:rgba(45,125,82,.07);letter-spacing:2px;transform:rotate(-18deg);white-space:nowrap">chartix.in</span>
+        <!-- Chartix watermark: faint centered logo + CMT-prep tagline + corner tag (advertises on screenshots) -->
+        <div id="wmCenter" style="position:absolute;inset:0;z-index:4;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;overflow:hidden">
+          <img src="/chartix-logo.png" alt="Chartix" style="width:clamp(170px,30vw,380px);opacity:.07;transform:rotate(-18deg)">
+          <span style="font-family:'Sora',sans-serif;font-weight:700;font-size:clamp(13px,2.1vw,22px);color:rgba(45,125,82,.09);letter-spacing:1.5px;transform:rotate(-18deg);white-space:nowrap;text-transform:uppercase">CMT Exam Prep Platform</span>
         </div>
-        <div id="wmCorner" style="position:absolute;right:14px;bottom:10px;z-index:6;pointer-events:none;font-family:'Sora',sans-serif;font-weight:700;font-size:13px;color:rgba(45,125,82,.5)">chartix.in</div>
+        <div id="wmCorner" style="position:absolute;right:14px;bottom:10px;z-index:6;pointer-events:none;font-family:'Sora',sans-serif;font-weight:700;font-size:12.5px;color:rgba(45,125,82,.5);text-align:right;line-height:1.35">chartix.in<br><span style="font-weight:600;font-size:10.5px;color:rgba(45,125,82,.42)">CMT Exam Prep Platform</span></div>
         <canvas id="overlay"></canvas>
         <div class="legend" id="legend" style="display:none"></div>
         <div class="empty" id="empty">
@@ -1731,6 +1732,8 @@ function undoDraw(){if(D.shapes.length){D.shapes.pop();D.selected=-1;hideMenu();
 function clearDraw(){D.shapes=[];D.temp=null;D.selected=-1;hideMenu();redrawOverlay();}
 
 /* ── EXPORT ── */
+// Preloaded so the watermark logo is ready to paint onto the exported PNG.
+const WM_LOGO=new Image();WM_LOGO.src='/chartix-logo.png';
 function exportPNG(){
   if(!S.chart)return;
   try{
@@ -1813,16 +1816,27 @@ function exportPNG(){
         ctx.restore();
       });
     }
-    // ── Chartix watermark — centered diagonal + bottom-right corner ──
+    // ── Chartix watermark — centered diagonal logo + CMT-prep tagline + corner tag ──
     ctx.save();
     ctx.translate(out.width/2,out.height/2);ctx.rotate(-18*Math.PI/180);
-    ctx.font='700 '+Math.round(out.width/14)+'px Sora, sans-serif';
-    ctx.fillStyle='rgba(45,125,82,0.10)';ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText('chartix.in',0,0);ctx.restore();
+    if(WM_LOGO.complete&&WM_LOGO.naturalWidth){
+      const lw=out.width*0.32,lh=lw*(WM_LOGO.naturalHeight/WM_LOGO.naturalWidth);
+      ctx.globalAlpha=0.10;ctx.drawImage(WM_LOGO,-lw/2,-lh/2-out.width*0.015,lw,lh);
+      ctx.globalAlpha=1;ctx.fillStyle='rgba(45,125,82,0.13)';
+      ctx.font='700 '+Math.round(out.width/42)+'px Sora, sans-serif';
+      ctx.textAlign='center';ctx.textBaseline='middle';ctx.letterSpacing&&(ctx.letterSpacing='2px');
+      ctx.fillText('CMT EXAM PREP PLATFORM',0,lh/2+out.width*0.005);
+    }else{
+      // Logo not ready — fall back to text wordmark.
+      ctx.font='700 '+Math.round(out.width/14)+'px Sora, sans-serif';
+      ctx.fillStyle='rgba(45,125,82,0.10)';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText('chartix.in',0,0);
+    }
+    ctx.restore();
     ctx.save();
     ctx.font='700 '+Math.round(out.width/55)+'px Sora, sans-serif';
     ctx.fillStyle='rgba(45,125,82,0.55)';ctx.textAlign='right';ctx.textBaseline='bottom';
-    ctx.fillText('chartix.in',out.width-16,out.height-12);ctx.restore();
+    ctx.fillText('chartix.in · CMT Exam Prep',out.width-16,out.height-12);ctx.restore();
     const a=document.createElement('a');a.download='chartix_'+(S.title.replace(/[^\w]+/g,'_')||'index')+'.png';a.href=out.toDataURL('image/png');a.click();
   }catch(e){console.error(e);}
 }
