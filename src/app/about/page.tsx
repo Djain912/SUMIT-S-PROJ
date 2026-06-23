@@ -47,7 +47,7 @@ const levels = [
   {
     level: 'CMT Level I',
     description: 'Foundational principles of technical analysis — theory, charting, trend analysis, and core methods.',
-    meta: '13 chapters · 3,450+ questions',
+    meta: '13 chapters · 3,500+ questions',
     available: true,
   },
   {
@@ -150,7 +150,7 @@ export default function AboutPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 {[
-                  { value: '3,450+', label: 'Exam-level MCQs' },
+                  { value: '3,500+', label: 'MCQs per level' },
                   { value: 'Unlimited', label: 'Mock tests' },
                   { value: '13', label: 'Level I chapters' },
                   { value: '100%', label: 'Syllabus covered' },
