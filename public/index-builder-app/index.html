@@ -1191,7 +1191,7 @@ function renderIndicators(){
     const baseLine={color:col,lineWidth:st.lineWidth,lineStyle:lwStyle(st.lineStyle),priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false};
     if(inst.type==='sma'||inst.type==='ema'){
       const arr=(inst.type==='sma'?SMA:EMA)(srcArr(inst.source),inst.params.length);
-      const s=S.chart.addSeries(LWC.LineSeries,baseLine,0);s.setData(pack(arr));inst._series=[s];
+      const s=S.chart.addSeries(LWC.LineSeries,baseLine,0);s.setData(pack(arr));inst._series=[s];inst._pane=0;
       S.indCache[inst.id]={arr};
     }else if(inst.type==='bb'){
       const src=srcArr(inst.source),p=inst.params.length,mult=inst.params.mult;
@@ -1201,11 +1201,11 @@ function renderIndicators(){
       const su=S.chart.addSeries(LWC.LineSeries,band,0);su.setData(pack(up));
       const sl=S.chart.addSeries(LWC.LineSeries,band,0);sl.setData(pack(lo));
       const sm=S.chart.addSeries(LWC.LineSeries,baseLine,0);sm.setData(pack(mid));
-      inst._series=[su,sl,sm];S.indCache[inst.id]={up,mid,lo};
+      inst._series=[su,sl,sm];inst._pane=0;S.indCache[inst.id]={up,mid,lo};
     }else if(inst.type==='vol'){
       if(!S.vol)return;
       const s=S.chart.addSeries(LWC.HistogramSeries,{priceScaleId:'vol',priceFormat:{type:'volume'},color:col},0);
-      s.priceScale().applyOptions({scaleMargins:{top:0.82,bottom:0}});s.setData(S.vol);inst._series=[s];
+      s.priceScale().applyOptions({scaleMargins:{top:0.82,bottom:0}});s.setData(S.vol);inst._series=[s];inst._pane=0;
       const vm={};S.vol.forEach(x=>vm[x.time]=x.value);S.indCache[inst.id]={arr:S.times.map(t=>vm[t]??null)};
     }else if(inst.type==='rsi'){
       const arr=RSI(v,inst.params.length);
@@ -1275,34 +1275,40 @@ function onCrosshair(param){
   else main=`<b style="color:#111827">${fmt(S.closes[idx],2)}</b>`;
   lg.innerHTML=`<div class="ttl">${S.title}</div><div class="row"><span class="k">${date}</span> &nbsp; ${main}</div>`;
   // ── Per-pane indicator legends ──
-  // compute cumulative Y top of each pane
   const paneYs=[0];
   try{const ps=S.chart.panes();for(let i=0;i<ps.length-1;i++)paneYs.push(paneYs[i]+ps[i].getHeight());}catch(e){}
-  // update or create a legend div per indicator
-  const seen=new Set();
+  // Overlay indicators (pane 0) → append inline in main legend, TradingView-style
+  let overlayRows='';
   S.indicators.forEach(inst=>{
+    if((inst._pane||0)!==0)return;
     const c=C[inst.id];if(!c)return;
     const col=inst.style.color;
-    const paneIdx=inst._pane||1;
-    const paneTop=paneYs[paneIdx]||0;
-    let valHtml='';
+    let val='';
     if(inst.type==='bb'&&c.up)
-      valHtml=`<b>${fmt(c.up[idx],2)}</b> <span style="color:#6b7280">mid</span> ${fmt(c.mid[idx],2)} <span style="color:#6b7280">lo</span> ${fmt(c.lo[idx],2)}`;
-    else if(inst.type==='macd'&&c.macd)
-      valHtml=`<b>${fmt(c.macd[idx],2)}</b> <span style="color:#d97706">sig</span> ${fmt(c.signal[idx],2)} <span style="color:#6b7280">hist</span> ${fmt(c.hist[idx],2)}`;
-    else if(c.arr)
-      valHtml=`<b>${fmt(c.arr[idx],2)}</b>`;
+      val=`${fmt(c.up[idx],2)}<span style="color:#6b7280;margin-left:5px;font-size:10px">mid</span> ${fmt(c.mid[idx],2)}<span style="color:#6b7280;margin-left:5px;font-size:10px">lo</span> ${fmt(c.lo[idx],2)}`;
+    else if(c.arr)val=fmt(c.arr[idx],2);
+    if(!val)return;
+    overlayRows+=`<div class="row"><span style="color:${col}">●</span> <span style="color:${col};font-weight:700">${pillLabel(inst)}</span>&nbsp;&nbsp;${val}</div>`;
+  });
+  lg.innerHTML=`<div class="ttl">${S.title}</div><div class="row"><span class="k">${date}</span> &nbsp; ${main}</div>${overlayRows}`;
+  // Sub-pane indicators → own legend div at top of their pane
+  const seen=new Set();
+  S.indicators.forEach(inst=>{
+    if((inst._pane||0)===0)return;
+    const c=C[inst.id];if(!c)return;
+    const col=inst.style.color;
+    const paneTop=paneYs[inst._pane]||0;
+    let val='';
+    if(inst.type==='macd'&&c.macd)
+      val=`<b>${fmt(c.macd[idx],2)}</b> <span style="color:#d97706">sig</span> ${fmt(c.signal[idx],2)} <span style="color:#6b7280">hist</span> ${fmt(c.hist[idx],2)}`;
+    else if(c.arr)val=`<b>${fmt(c.arr[idx],2)}</b>`;
     const key='ind-lg-'+inst.id;
     seen.add(key);
     let el=wrap.querySelector('.ind-legend[data-key="'+key+'"]');
-    if(!el){
-      el=document.createElement('div');el.className='ind-legend';el.dataset.key=key;
-      wrap.appendChild(el);
-    }
+    if(!el){el=document.createElement('div');el.className='ind-legend';el.dataset.key=key;wrap.appendChild(el);}
     el.style.top=(paneTop+8)+'px';
-    el.innerHTML=`<span class="ik" style="color:${col}">${pillLabel(inst)}</span> ${valHtml}`;
+    el.innerHTML=`<span class="ik" style="color:${col}">● ${pillLabel(inst)}</span>&nbsp;&nbsp;${val}`;
   });
-  // remove legends for indicators that no longer exist
   wrap.querySelectorAll('.ind-legend').forEach(el=>{if(!seen.has(el.dataset.key))el.remove();});
 }
 function clearIndLegends(){document.getElementById('chartWrap').querySelectorAll('.ind-legend').forEach(el=>el.remove());}
@@ -1781,31 +1787,29 @@ function exportPNG(){
       const C=S.indCache;
       const lpad=Math.round(12*sc),ltop=Math.round(8*sc);
       const fz=Math.round(11*sc),lh=Math.round(16*sc);
+      let overlayPNGY=ltop; // stacks overlay legends vertically in main pane
       S.indicators.forEach(inst=>{
         const c=C[inst.id];if(!c)return;
         const col=inst.style.color;
-        const paneIdx=inst._pane||1;
-        const paneTop=(paneYs[paneIdx]||0)*sc;
-        // build text parts
+        const isOverlay=(inst._pane||0)===0;
+        const paneTop=isOverlay?0:(paneYs[inst._pane]||0)*sc;
+        // build text parts — leading ● dot for quick visual ID
         let parts=[];
         if(inst.type==='bb'&&c.up)
-          parts=[{t:pillLabel(inst),c:col},{t:' '+fmt(c.up[idx],2),c:'#111827'},{t:'  mid ',c:'#6b7280'},{t:fmt(c.mid[idx],2),c:'#111827'},{t:'  lo ',c:'#6b7280'},{t:fmt(c.lo[idx],2),c:'#111827'}];
+          parts=[{t:'● '+pillLabel(inst),c:col},{t:' '+fmt(c.up[idx],2),c:'#111827'},{t:'  mid ',c:'#6b7280'},{t:fmt(c.mid[idx],2),c:'#111827'},{t:'  lo ',c:'#6b7280'},{t:fmt(c.lo[idx],2),c:'#111827'}];
         else if(inst.type==='macd'&&c.macd)
-          parts=[{t:'MACD',c:col},{t:' '+fmt(c.macd[idx],2),c:'#111827'},{t:'  sig ',c:'#d97706'},{t:fmt(c.signal[idx],2),c:'#111827'},{t:'  hist ',c:'#6b7280'},{t:fmt(c.hist[idx],2),c:'#111827'}];
+          parts=[{t:'● MACD',c:col},{t:' '+fmt(c.macd[idx],2),c:'#111827'},{t:'  sig ',c:'#d97706'},{t:fmt(c.signal[idx],2),c:'#111827'},{t:'  hist ',c:'#6b7280'},{t:fmt(c.hist[idx],2),c:'#111827'}];
         else if(c.arr)
-          parts=[{t:pillLabel(inst),c:col},{t:'  '+fmt(c.arr[idx],2),c:'#111827'}];
+          parts=[{t:'● '+pillLabel(inst),c:col},{t:'  '+fmt(c.arr[idx],2),c:'#111827'}];
         if(!parts.length)return;
         ctx.save();
         ctx.font=`600 ${fz}px Sora,sans-serif`;
-        // measure total text width
         let tw=0;parts.forEach(p=>{tw+=ctx.measureText(p.t).width;});
-        const bx=lpad,by=paneTop+ltop;
+        const bx=lpad,by=isOverlay?paneTop+overlayPNGY:paneTop+ltop;
         const bw=tw+Math.round(16*sc),bh=lh+Math.round(8*sc);
-        // white pill background
         ctx.fillStyle='rgba(255,255,255,0.90)';
         if(ctx.roundRect){ctx.beginPath();ctx.roundRect(bx,by,bw,bh,Math.round(5*sc));ctx.fill();}
         else ctx.fillRect(bx,by,bw,bh);
-        // draw each text part
         let cx2=bx+Math.round(8*sc);
         const ty=by+bh/2;
         ctx.textAlign='left';ctx.textBaseline='middle';
@@ -1815,6 +1819,7 @@ function exportPNG(){
           cx2+=ctx.measureText(p.t).width;
         });
         ctx.restore();
+        if(isOverlay)overlayPNGY+=bh+Math.round(4*sc);
       });
     }
     // ── Chartix watermark — centered straight wordmark + CMT-prep tagline + corner tag ──
