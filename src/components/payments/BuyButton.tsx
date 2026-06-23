@@ -141,7 +141,7 @@ export function BuyButton({
     } finally {
       setCouponLoading(false);
     }
-  }, [couponInput]);
+  }, [couponInput, currency]);
 
   const removeCoupon = () => { setApplied(null); setCouponInput(''); setCouponError(''); };
 
