@@ -292,9 +292,17 @@ export async function POST(request: Request) {
     }
 
     // Trial users get a capped number of Chartix Scholar questions per day;
-    // paid/admin users are unlimited. Scoped-coupon users keep their access
-    // unchanged (not in an active trial → no cap applied here).
+    // paid/admin users are unlimited.
     const trial = await getTrialState(user.email);
+
+    // Block users whose trial has ended and who have not paid.
+    if (trial && !trial.hasFullAccess && !trial.inTrial) {
+      return NextResponse.json(
+        { success: false, error: { message: 'Your free trial has ended. Upgrade to continue using Chartix Scholar.' } },
+        { status: 403 },
+      );
+    }
+
     if (trial && !trial.hasFullAccess && trial.inTrial) {
       const limit = await enforceRateLimit({
         request,
