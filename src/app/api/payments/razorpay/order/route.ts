@@ -62,14 +62,17 @@ export async function POST(request: Request) {
     let chargeAmount = basePrice;
     let discountPaise: number | null = null;
 
-    // Coupons are INR-only (fixed amounts in paise).
-    if (couponCode && currency === 'INR') {
+    if (couponCode) {
       const coupon = await prisma.coupon.findUnique({ where: { code: couponCode } });
       if (!coupon || !coupon.isActive || !coupon.discountType || coupon.discountValue == null) {
         return NextResponse.json({ success: false, error: { message: 'Coupon is no longer valid.' } }, { status: 400 });
       }
       if (coupon.maxRedemptions !== null && coupon.redeemedCount >= coupon.maxRedemptions) {
         return NextResponse.json({ success: false, error: { message: 'Coupon has reached its limit.' } }, { status: 400 });
+      }
+      // Fixed-amount coupons are defined in paise and cannot apply to USD orders.
+      if (coupon.discountType === 'FIXED' && currency === 'USD') {
+        return NextResponse.json({ success: false, error: { message: 'This coupon is only valid for INR payments.' } }, { status: 400 });
       }
       const result = applyDiscount(basePrice, coupon.discountType, coupon.discountValue);
       chargeAmount = result.finalPaise;

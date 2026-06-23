@@ -127,7 +127,7 @@ export function BuyButton({
       const res = await fetch('/api/payments/coupon-validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ code, currency }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
@@ -389,53 +389,51 @@ export function BuyButton({
                 </div>
               </div>
 
-              {/* ── Promo Code — India only ── */}
-              {isINR && (
-                <div>
-                  <p className="mb-3 text-[11px] font-bold uppercase tracking-widest text-zinc-400">Promo Code</p>
-                  {applied ? (
-                    <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4 shrink-0 text-emerald-600" />
-                        <span className="text-sm font-bold text-emerald-800">{applied.code}</span>
-                        <span className="text-xs text-emerald-700">{applied.label}</span>
+              {/* ── Promo Code ── */}
+              <div>
+                <p className="mb-3 text-[11px] font-bold uppercase tracking-widest text-zinc-400">Promo Code</p>
+                {applied ? (
+                  <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 shrink-0 text-emerald-600" />
+                      <span className="text-sm font-bold text-emerald-800">{applied.code}</span>
+                      <span className="text-xs text-emerald-700">{applied.label}</span>
+                    </div>
+                    <button type="button" onClick={removeCoupon} className="text-emerald-500 hover:text-emerald-700">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Tag className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                        <input
+                          type="text"
+                          value={couponInput}
+                          onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponError(''); }}
+                          onKeyDown={(e) => e.key === 'Enter' && applyCode()}
+                          placeholder="PROMO CODE"
+                          className="w-full rounded-xl border border-zinc-300 py-2.5 pl-9 pr-3 font-mono text-sm tracking-wide focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                        />
                       </div>
-                      <button type="button" onClick={removeCoupon} className="text-emerald-500 hover:text-emerald-700">
-                        <X className="h-4 w-4" />
+                      <button
+                        type="button"
+                        onClick={applyCode}
+                        disabled={!couponInput.trim() || couponLoading}
+                        className="shrink-0 rounded-xl border border-zinc-300 bg-white px-4 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
+                      >
+                        {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
                       </button>
                     </div>
-                  ) : (
-                    <div className="space-y-1.5">
-                      <div className="flex gap-2">
-                        <div className="relative flex-1">
-                          <Tag className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-                          <input
-                            type="text"
-                            value={couponInput}
-                            onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponError(''); }}
-                            onKeyDown={(e) => e.key === 'Enter' && applyCode()}
-                            placeholder="PROMO CODE"
-                            className="w-full rounded-xl border border-zinc-300 py-2.5 pl-9 pr-3 font-mono text-sm tracking-wide focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          onClick={applyCode}
-                          disabled={!couponInput.trim() || couponLoading}
-                          className="shrink-0 rounded-xl border border-zinc-300 bg-white px-4 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
-                        >
-                          {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
-                        </button>
-                      </div>
-                      {couponError && (
-                        <p className="flex items-center gap-1.5 text-xs text-rose-600">
-                          <AlertCircle className="h-3.5 w-3.5 shrink-0" />{couponError}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
+                    {couponError && (
+                      <p className="flex items-center gap-1.5 text-xs text-rose-600">
+                        <AlertCircle className="h-3.5 w-3.5 shrink-0" />{couponError}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Sticky footer */}
@@ -444,7 +442,7 @@ export function BuyButton({
               <div className="rounded-xl border border-zinc-100 bg-zinc-50 px-4 py-3 mb-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-zinc-500">CMT Level 1 · 6 months</span>
-                  {applied && isINR ? (
+                  {applied ? (
                     <span className="flex items-center gap-2">
                       <span className="text-xs text-zinc-400 line-through">{fmt(baseAmountUnits, currency)}</span>
                       <span className="font-bold text-emerald-700">{fmt(finalAmount, currency)}</span>
@@ -453,7 +451,7 @@ export function BuyButton({
                     <span className="font-bold text-zinc-900">{fmt(baseAmountUnits, currency)}</span>
                   )}
                 </div>
-                {applied && isINR && (
+                {applied && (
                   <p className="mt-1 text-xs text-emerald-600">You save {fmt(applied.discountPaise, currency)}</p>
                 )}
               </div>

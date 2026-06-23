@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { AuthError, requireAuthenticatedUser } from '@/server/policies/auth';
 import { prisma } from '@/lib/db/prisma';
-import { LEVEL1_PRICE_PAISE, applyDiscount } from '@/lib/payments/razorpay';
+import { getPriceUnits, applyDiscount, type SupportedCurrency } from '@/lib/payments/razorpay';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,6 +13,7 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const code = String(body?.code ?? '').trim().toUpperCase();
+    const currency: SupportedCurrency = body?.currency === 'USD' ? 'USD' : 'INR';
     if (!code) {
       return NextResponse.json({ success: false, error: { message: 'Enter a coupon code.' } }, { status: 400 });
     }
@@ -23,27 +24,40 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: { message: 'Invalid or expired coupon code.' } }, { status: 400 });
     }
     if (!coupon.discountType || coupon.discountValue == null) {
-      // It's a free-access coupon, not a checkout discount
       return NextResponse.json({ success: false, error: { message: 'This code grants free access — use the "Have a coupon?" box below instead.' } }, { status: 400 });
     }
     if (coupon.maxRedemptions !== null && coupon.redeemedCount >= coupon.maxRedemptions) {
       return NextResponse.json({ success: false, error: { message: 'This coupon has reached its redemption limit.' } }, { status: 400 });
     }
-    if (coupon.minOrderPaise && LEVEL1_PRICE_PAISE < coupon.minOrderPaise) {
-      const minRupees = Math.round(coupon.minOrderPaise / 100);
-      return NextResponse.json({ success: false, error: { message: `This coupon requires a minimum order of ₹${minRupees.toLocaleString('en-IN')}.` } }, { status: 400 });
+    // Fixed-amount coupons are defined in paise and only apply to INR orders.
+    if (coupon.discountType === 'FIXED' && currency === 'USD') {
+      return NextResponse.json({ success: false, error: { message: 'This coupon is only valid for INR payments.' } }, { status: 400 });
+    }
+    // Minimum order check only applies to INR (minOrderPaise is an INR field).
+    if (currency === 'INR' && coupon.minOrderPaise) {
+      const baseINR = getPriceUnits('INR');
+      if (baseINR < coupon.minOrderPaise) {
+        const minRupees = Math.round(coupon.minOrderPaise / 100);
+        return NextResponse.json({ success: false, error: { message: `This coupon requires a minimum order of ₹${minRupees.toLocaleString('en-IN')}.` } }, { status: 400 });
+      }
     }
 
-    const { discountPaise, finalPaise } = applyDiscount(
-      LEVEL1_PRICE_PAISE,
-      coupon.discountType,
-      coupon.discountValue,
-    );
+    const basePrice = getPriceUnits(currency);
+    const { discountPaise, finalPaise } = applyDiscount(basePrice, coupon.discountType, coupon.discountValue);
 
-    const savingsRupees = Math.round(discountPaise / 100);
-    const label = coupon.discountType === 'PERCENT'
-      ? `${coupon.discountValue}% off — you save ₹${savingsRupees.toLocaleString('en-IN')}`
-      : `₹${savingsRupees.toLocaleString('en-IN')} off`;
+    let label: string;
+    if (coupon.discountType === 'PERCENT') {
+      if (currency === 'USD') {
+        const savingsUSD = (discountPaise / 100).toFixed(2).replace(/\.00$/, '');
+        label = `${coupon.discountValue}% off — you save $${savingsUSD}`;
+      } else {
+        const savingsRupees = Math.round(discountPaise / 100);
+        label = `${coupon.discountValue}% off — you save ₹${savingsRupees.toLocaleString('en-IN')}`;
+      }
+    } else {
+      const savingsRupees = Math.round(discountPaise / 100);
+      label = `₹${savingsRupees.toLocaleString('en-IN')} off`;
+    }
 
     return NextResponse.json({
       success: true,
