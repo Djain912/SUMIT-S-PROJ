@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { ArrowRight, CheckCircle, TrendingUp, Clock, AlertCircle, Lock } from 'lucide-react';
+import Image from 'next/image';
+import { ArrowRight, CheckCircle, Clock, AlertCircle, Lock } from 'lucide-react';
 import { getVisitorCurrency } from '@/lib/geo/country';
 
 const plansData = [
@@ -108,11 +109,8 @@ export default async function PricingPage() {
       {/* Nav */}
       <nav className="sticky top-0 z-50 border-b border-emerald-100 bg-white/90 backdrop-blur shadow-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-700">
-              <TrendingUp className="h-4 w-4 text-white" />
-            </div>
-            <span className="text-base font-bold tracking-tight text-emerald-900">Chartix</span>
+          <Link href="/" className="flex items-center gap-2">
+            <Image src="/chartix-wordmark.png" alt="Chartix" width={132} height={34} priority />
           </Link>
           <Link href="/sign-up" className="inline-flex items-center gap-1.5 rounded-full bg-emerald-700 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600">
             Get started free <ArrowRight className="h-3.5 w-3.5" />
