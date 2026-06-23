@@ -46,23 +46,20 @@ const values = [
 const levels = [
   {
     level: 'CMT Level I',
-    description: 'Foundational concepts in technical analysis — theory, history, and core charting principles.',
-    chapters: 12,
-    questions: '70+',
+    description: 'Foundational principles of technical analysis — theory, charting, trend analysis, and core methods.',
+    meta: '13 chapters · 3,450+ questions',
     available: true,
   },
   {
     level: 'CMT Level II',
-    description: 'Advanced analysis, intermarket analysis, trading systems, and risk management.',
-    chapters: 12,
-    questions: '70+',
+    description: 'Application of technical analysis — intermarket analysis, trading systems, volatility, and risk management.',
+    meta: 'In development',
     available: false,
   },
   {
     level: 'CMT Level III',
-    description: 'Portfolio management, behavioral finance, and integration of technical methods.',
-    chapters: 12,
-    questions: '70+',
+    description: 'The work of a technical analyst — portfolio management, behavioral finance, and integrating methods.',
+    meta: 'In development',
     available: false,
   },
 ];
@@ -117,7 +114,7 @@ export default function AboutPage() {
               {/* Trust pills */}
               <div className="mt-8 flex flex-wrap items-center justify-center gap-2.5">
                 {[
-                  { icon: BookOpen, label: 'All 3 CMT levels' },
+                  { icon: BookOpen, label: 'Level I live now' },
                   { icon: Target, label: 'Syllabus-mapped' },
                   { icon: Brain, label: 'AI tutor included' },
                 ].map((pill) => {
@@ -153,10 +150,10 @@ export default function AboutPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 {[
-                  { value: '3', label: 'Exam levels covered' },
-                  { value: '200+', label: 'Practice questions' },
-                  { value: '46', label: 'Structured subtopics' },
-                  { value: '500+', label: 'Active candidates' },
+                  { value: '3,450+', label: 'Practice questions' },
+                  { value: '13', label: 'Level I chapters' },
+                  { value: '47', label: 'Structured subtopics' },
+                  { value: '100%', label: 'Syllabus-mapped' },
                 ].map((stat) => (
                   <div key={stat.label} className="rounded-2xl border border-zinc-200 bg-white p-6 text-center shadow-sm">
                     <p className="text-3xl font-bold text-zinc-950 font-heading">{stat.value}</p>
@@ -198,9 +195,9 @@ export default function AboutPage() {
         <section className="border-y border-zinc-100 bg-zinc-50 py-20 sm:py-24">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <div className="mx-auto max-w-2xl text-center">
-              <h2 className="text-3xl font-bold tracking-tight text-zinc-950 sm:text-4xl font-heading">Full CMT coverage</h2>
+              <h2 className="text-3xl font-bold tracking-tight text-zinc-950 sm:text-4xl font-heading">CMT exam coverage</h2>
               <p className="mt-4 text-base leading-7 text-zinc-500">
-                Content for all three levels, organized to match the actual exam structure.
+                Level I is live now. Levels II and III are in active development — all organized to match the actual exam structure.
               </p>
             </div>
             <div className="mt-12 grid gap-5 sm:grid-cols-3">
@@ -217,8 +214,7 @@ export default function AboutPage() {
                   <h3 className="mt-4 text-base font-semibold text-zinc-950">{l.level}</h3>
                   <p className="mt-2 text-sm leading-6 text-zinc-500">{l.description}</p>
                   <div className="mt-4 flex gap-4 text-xs text-zinc-400">
-                    <span>{l.chapters} chapters</span>
-                    <span>{l.questions} questions</span>
+                    <span>{l.meta}</span>
                   </div>
                 </div>
               ))}
