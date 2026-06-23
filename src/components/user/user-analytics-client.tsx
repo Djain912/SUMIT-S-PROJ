@@ -239,13 +239,38 @@ const COACH_SUGGESTIONS = [
   'Which chapter is my weakest?',
 ];
 
+// Renders **bold** markdown inline without page-level side-effects
+function MarkdownText({ text }: { text: string }) {
+  const lines = text.split('\n');
+  return (
+    <>
+      {lines.map((line, i) => {
+        const parts: React.ReactNode[] = [];
+        const re = /\*\*([^*]+)\*\*/g;
+        let last = 0, k = 0;
+        let m: RegExpExecArray | null;
+        while ((m = re.exec(line)) !== null) {
+          if (m.index > last) parts.push(line.slice(last, m.index));
+          parts.push(<strong key={k++} className="font-semibold">{m[1]}</strong>);
+          last = re.lastIndex;
+        }
+        if (last < line.length) parts.push(line.slice(last));
+        return <span key={i}>{i > 0 && <br />}{parts}</span>;
+      })}
+    </>
+  );
+}
+
 function CoachChat() {
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
-  const endRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+  // Scroll only within the chat container — not the whole page
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [messages]);
 
   const send = useCallback(async (text: string) => {
     const q = text.trim();
@@ -288,19 +313,22 @@ function CoachChat() {
       <p className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-zinc-400">Ask about your performance</p>
 
       {messages.length > 0 && (
-        <div className="mb-3 max-h-72 space-y-2.5 overflow-y-auto pr-1">
+        <div ref={scrollRef} className="mb-3 max-h-72 space-y-2.5 overflow-y-auto pr-1">
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[88%] whitespace-pre-wrap rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed ${
+              <div className={`max-w-[88%] rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed ${
                 m.role === 'user'
                   ? 'rounded-br-md bg-emerald-700 text-white'
                   : 'rounded-bl-md border border-zinc-200 bg-white text-zinc-800'
               }`}>
-                {m.content || (busy ? <span className="inline-flex gap-1"><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-400" /><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-400 [animation-delay:-0.15s]" /><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-400 [animation-delay:-0.3s]" /></span> : '')}
+                {m.content
+                  ? <MarkdownText text={m.content} />
+                  : busy
+                    ? <span className="inline-flex gap-1"><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-400" /><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-400 [animation-delay:-0.15s]" /><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-400 [animation-delay:-0.3s]" /></span>
+                    : null}
               </div>
             </div>
           ))}
-          <div ref={endRef} />
         </div>
       )}
 
