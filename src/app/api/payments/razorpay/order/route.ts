@@ -5,7 +5,8 @@ import { enforceRateLimit } from '@/server/policies/rate-limit';
 import { getAccessByEmail } from '@/server/policies/access';
 import { prisma } from '@/lib/db/prisma';
 import {
-  getRazorpay, razorpayConfigured, LEVEL1_PRICE_PAISE, PLAN_LEVEL, applyDiscount,
+  getRazorpay, razorpayConfigured, PLAN_LEVEL, applyDiscount, getPriceUnits,
+  type SupportedCurrency,
 } from '@/lib/payments/razorpay';
 
 export const dynamic = 'force-dynamic';
@@ -39,6 +40,7 @@ export async function POST(request: Request) {
 
     // Optional discount coupon — re-validate server-side even if client already checked.
     const body = await request.json().catch(() => ({})) as {
+      currency?: string;
       couponCode?: string;
       billingName?: string;
       billingPhone?: string;
@@ -49,12 +51,19 @@ export async function POST(request: Request) {
       billingPincode?: string;
       billingGst?: string;
     };
+
+    // Validate currency — only INR and USD are supported.
+    const currency: SupportedCurrency =
+      body.currency === 'USD' ? 'USD' : 'INR';
+
     const couponCode = body.couponCode ? String(body.couponCode).trim().toUpperCase() : null;
 
-    let chargeAmount = LEVEL1_PRICE_PAISE;
+    const basePrice = getPriceUnits(currency);
+    let chargeAmount = basePrice;
     let discountPaise: number | null = null;
 
-    if (couponCode) {
+    // Coupons are INR-only (fixed amounts in paise).
+    if (couponCode && currency === 'INR') {
       const coupon = await prisma.coupon.findUnique({ where: { code: couponCode } });
       if (!coupon || !coupon.isActive || !coupon.discountType || coupon.discountValue == null) {
         return NextResponse.json({ success: false, error: { message: 'Coupon is no longer valid.' } }, { status: 400 });
@@ -62,14 +71,14 @@ export async function POST(request: Request) {
       if (coupon.maxRedemptions !== null && coupon.redeemedCount >= coupon.maxRedemptions) {
         return NextResponse.json({ success: false, error: { message: 'Coupon has reached its limit.' } }, { status: 400 });
       }
-      const result = applyDiscount(LEVEL1_PRICE_PAISE, coupon.discountType, coupon.discountValue);
+      const result = applyDiscount(basePrice, coupon.discountType, coupon.discountValue);
       chargeAmount = result.finalPaise;
       discountPaise = result.discountPaise;
     }
 
     const order = await getRazorpay().orders.create({
       amount: chargeAmount,
-      currency: 'INR',
+      currency,
       receipt: `cmt1_${user.id.slice(-10)}_${Date.now().toString(36)}`,
       notes: { userId: user.id, level: PLAN_LEVEL },
     });
@@ -79,7 +88,7 @@ export async function POST(request: Request) {
         userId: user.id,
         level: PLAN_LEVEL,
         amount: chargeAmount,
-        currency: 'INR',
+        currency,
         razorpayOrderId: order.id,
         status: 'CREATED',
         ...(couponCode ? { couponCode, discountPaise } : {}),

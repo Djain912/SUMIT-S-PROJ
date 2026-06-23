@@ -1,7 +1,6 @@
 import { prisma } from '@/lib/db/prisma';
 import { generateInvoicePdf } from './generate';
 import { resend, FROM_EMAIL } from '@/lib/email/resend';
-import { LEVEL1_PRICE_PAISE } from '@/lib/payments/razorpay';
 
 function pad(n: number) {
   return String(n).padStart(4, '0');
@@ -27,12 +26,29 @@ export async function issueInvoice(paymentId: string): Promise<void> {
   const invoiceNumber = `CHX-${year}-${pad(n)}`;
 
   const discountPaise = payment.discountPaise ?? 0;
+  // Reconstruct original (pre-discount) price from what was actually charged.
+  const originalUnits = payment.amount + discountPaise;
+
+  const levelDescriptions: Record<string, string> = {
+    LEVEL_1: 'Chartix CMT Level 1 Material — 6 months access',
+    LEVEL_2: 'Chartix CMT Level 2 Material — 6 months access',
+    LEVEL_3: 'Chartix CMT Level 3 Material — 6 months access',
+  };
+  const levelLabels: Record<string, string> = {
+    LEVEL_1: 'CMT Level 1',
+    LEVEL_2: 'CMT Level 2',
+    LEVEL_3: 'CMT Level 3',
+  };
+  const level = payment.level ?? 'LEVEL_1';
+  const description = levelDescriptions[level] ?? 'Chartix CMT Material — 6 months access';
+  const levelLabel = levelLabels[level] ?? 'CMT Level 1';
 
   const pdfBytes = await generateInvoicePdf({
     number: invoiceNumber,
     date: payment.createdAt,
     razorpayPaymentId: payment.razorpayPaymentId ?? '',
     currency: payment.currency ?? 'INR',
+    level,
     name: payment.billingName ?? 'Customer',
     phone: payment.billingPhone,
     email: payment.billingEmail ?? user?.email,
@@ -41,8 +57,8 @@ export async function issueInvoice(paymentId: string): Promise<void> {
     state: payment.billingState,
     pincode: payment.billingPincode,
     gst: payment.billingGst,
-    description: 'CMT Level 1 — 6 months access',
-    originalPaise: LEVEL1_PRICE_PAISE,
+    description,
+    originalPaise: originalUnits,
     discountPaise,
     couponCode: payment.couponCode,
     finalPaise: payment.amount,
@@ -65,7 +81,7 @@ export async function issueInvoice(paymentId: string): Promise<void> {
         subject: `Your Chartix invoice ${invoiceNumber}`,
         html: `<p>Hi ${payment.billingName ?? ''},</p>
 <p>Thank you for your purchase! Please find your invoice <strong>${invoiceNumber}</strong> attached.</p>
-<p>You now have <strong>6 months of full access</strong> to Chartix Level 1 — all notes, quizzes, mock tests, and Chartix Scholar.</p>
+<p>You now have <strong>6 months of full access</strong> to <strong>Chartix ${levelLabel}</strong> — all notes, quizzes, mock tests, and Chartix Scholar.</p>
 <p>Visit your dashboard: <a href="https://chartix.in/user">chartix.in/user</a></p>
 <p>For any queries, reply to this email or write to contact@chartix.in.</p>
 <p>Happy studying!<br/>Team Chartix</p>`,

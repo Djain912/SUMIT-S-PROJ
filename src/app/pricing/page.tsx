@@ -1,16 +1,14 @@
-'use client';
-
 import Link from 'next/link';
-import { useState } from 'react';
 import { ArrowRight, CheckCircle, TrendingUp, Clock, AlertCircle, Lock } from 'lucide-react';
+import { getVisitorCurrency } from '@/lib/geo/country';
 
-const plans = [
+const plansData = [
   {
     level: 'CMT Level 1',
     badge: 'L1',
     comingSoon: false,
     priceINR: '₹6,999',
-    priceUSD: '$89',
+    priceUSD: '$99',
     period: 'per level',
     description: 'Foundational Principles of Technical Analysis. Ideal for first-time CMT candidates.',
     features: [
@@ -30,7 +28,7 @@ const plans = [
     badge: 'L2',
     comingSoon: true,
     priceINR: '₹6,999',
-    priceUSD: '$89',
+    priceUSD: '$99',
     period: 'per level',
     description: 'Application of Technical Analysis Methods. For candidates advancing to Level 2.',
     features: [
@@ -51,7 +49,7 @@ const plans = [
     badge: 'L3',
     comingSoon: true,
     priceINR: '₹6,999',
-    priceUSD: '$89',
+    priceUSD: '$99',
     period: 'per level',
     description: 'The Work of a Technical Analyst. For advanced candidates completing the CMT charter.',
     features: [
@@ -89,7 +87,7 @@ const faqs = [
   },
   {
     q: 'What payment methods are accepted?',
-    a: 'We accept UPI, credit/debit cards, net banking, and wallets via Razorpay. International cards are accepted — Razorpay handles currency conversion automatically.',
+    a: 'Payments are processed via Razorpay. Indian users can pay via UPI, credit/debit cards, net banking, and wallets. International users can pay with any major credit or debit card.',
   },
   {
     q: 'What is the refund policy?',
@@ -101,8 +99,9 @@ const faqs = [
   },
 ];
 
-export default function PricingPage() {
-  const [currency, setCurrency] = useState<'INR' | 'USD'>('INR');
+export default async function PricingPage() {
+  const currency = await getVisitorCurrency();
+  const isUSD = currency === 'USD';
 
   return (
     <div className="min-h-screen bg-[#f0f7f4]">
@@ -145,35 +144,9 @@ export default function PricingPage() {
       {/* Pricing cards */}
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
 
-        {/* Currency toggle */}
-        <div className="flex justify-center mb-8">
-          <div className="inline-flex items-center rounded-full border border-emerald-200 bg-white p-1 shadow-sm">
-            <button
-              onClick={() => setCurrency('INR')}
-              className={`rounded-full px-5 py-2 text-sm font-semibold transition ${
-                currency === 'INR'
-                  ? 'bg-emerald-700 text-white shadow-sm'
-                  : 'text-zinc-500 hover:text-emerald-700'
-              }`}
-            >
-              ₹ INR
-            </button>
-            <button
-              onClick={() => setCurrency('USD')}
-              className={`rounded-full px-5 py-2 text-sm font-semibold transition ${
-                currency === 'USD'
-                  ? 'bg-emerald-700 text-white shadow-sm'
-                  : 'text-zinc-500 hover:text-emerald-700'
-              }`}
-            >
-              $ USD
-            </button>
-          </div>
-        </div>
-
         {/* Cards — all equal, no "most popular" */}
         <div className="grid gap-6 sm:grid-cols-3">
-          {plans.map((plan) => (
+          {plansData.map((plan) => (
             <div
               key={plan.level}
               className={`relative rounded-2xl border p-7 flex flex-col shadow-sm transition ${
@@ -199,15 +172,10 @@ export default function PricingPage() {
               </p>
               <div className="flex items-end gap-1.5 mb-2">
                 <span className={`text-4xl font-extrabold ${plan.comingSoon ? 'text-zinc-400' : 'text-emerald-900'}`}>
-                  {currency === 'INR' ? plan.priceINR : plan.priceUSD}
+                  {isUSD ? plan.priceUSD : plan.priceINR}
                 </span>
                 <span className="mb-1 text-sm text-zinc-400">{plan.period}</span>
               </div>
-              {currency === 'USD' && !plan.comingSoon && (
-                <p className="text-[11px] text-zinc-400 -mt-1 mb-1">
-                  International cards accepted via Razorpay
-                </p>
-              )}
               <p className="text-sm leading-6 text-zinc-500 mb-2">{plan.description}</p>
 
               {/* Access duration pill */}

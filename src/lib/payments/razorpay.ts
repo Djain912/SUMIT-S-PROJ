@@ -2,10 +2,17 @@ import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import { prisma } from '@/lib/db/prisma';
 
-// Level I plan: ₹6,999 for 6 months of premium access (matches the pricing page).
-export const LEVEL1_PRICE_PAISE = 699900;
+// Level I plan pricing — matches the pricing page.
+export const LEVEL1_PRICE_PAISE     = 699900; // ₹6,999 for Indian users
+export const LEVEL1_PRICE_USD_CENTS =   9900; // $99.00 for international users
 export const ACCESS_MONTHS = 6;
 export const PLAN_LEVEL = 'LEVEL_1' as const;
+
+export type SupportedCurrency = 'INR' | 'USD';
+
+export function getPriceUnits(currency: SupportedCurrency): number {
+  return currency === 'USD' ? LEVEL1_PRICE_USD_CENTS : LEVEL1_PRICE_PAISE;
+}
 
 let client: Razorpay | null = null;
 

@@ -5,6 +5,8 @@ import { auth } from '@/lib/auth/auth';
 import { getAccessByEmail, getTrialState } from '@/server/policies/access';
 import { CouponRedeemForm } from '@/components/get-access-client';
 import { BuyButton } from '@/components/payments/BuyButton';
+import { getVisitorCurrency } from '@/lib/geo/country';
+import { getPriceUnits } from '@/lib/payments/razorpay';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,6 +27,8 @@ const LEVEL_1_FEATURES = [
 export default async function GetAccessPage() {
   const session = await auth();
   const email = session?.user?.email;
+  const currency = await getVisitorCurrency();
+  const baseAmountUnits = getPriceUnits(currency);
 
   // Not signed in → send to sign-up, then back here.
   if (!email) redirect('/sign-up?next=/get-access');
@@ -78,7 +82,9 @@ export default async function GetAccessPage() {
             <div>
               <p className="text-xs font-semibold uppercase tracking-widest text-emerald-600">CMT Level 1</p>
               <div className="mt-1 flex items-end gap-1.5">
-                <span className="text-3xl font-extrabold text-emerald-900">₹6,999</span>
+                <span className="text-3xl font-extrabold text-emerald-900">
+                  {currency === 'USD' ? '$99' : '₹6,999'}
+                </span>
                 <span className="mb-1 text-sm text-zinc-400">per level</span>
               </div>
             </div>
@@ -100,7 +106,12 @@ export default async function GetAccessPage() {
           </ul>
 
           {/* Buy (shows live button once Razorpay keys are set, else a notice) */}
-          <BuyButton userName={session?.user?.name ?? ''} userEmail={session?.user?.email ?? ''} />
+          <BuyButton
+            userName={session?.user?.name ?? ''}
+            userEmail={session?.user?.email ?? ''}
+            currency={currency}
+            baseAmountUnits={baseAmountUnits}
+          />
 
           {/* Coupon */}
           <div className="mt-5 border-t border-zinc-100 pt-5">

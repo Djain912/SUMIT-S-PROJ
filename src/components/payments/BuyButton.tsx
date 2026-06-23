@@ -17,11 +17,15 @@ declare global {
 
 const CHECKOUT_SRC = 'https://checkout.razorpay.com/v1/checkout.js';
 const RAZORPAY_ENABLED = (process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? '').startsWith('rzp_');
-const BASE_PRICE = 699900;
 
-
-function fmt(paise: number) {
+function fmtINR(paise: number) {
   return '₹' + Math.round(paise / 100).toLocaleString('en-IN');
+}
+function fmtUSD(cents: number) {
+  return '$' + (cents / 100).toFixed(2).replace(/\.00$/, '');
+}
+function fmt(units: number, currency: 'INR' | 'USD') {
+  return currency === 'USD' ? fmtUSD(units) : fmtINR(units);
 }
 
 function loadCheckout(): Promise<boolean> {
@@ -50,7 +54,17 @@ type Billing = {
 
 type FieldErrors = Partial<Record<keyof Billing, string>>;
 
-export function BuyButton({ userName = '', userEmail = '' }: { userName?: string; userEmail?: string }) {
+export function BuyButton({
+  userName = '',
+  userEmail = '',
+  currency = 'INR',
+  baseAmountUnits,
+}: {
+  userName?: string;
+  userEmail?: string;
+  currency?: 'INR' | 'USD';
+  baseAmountUnits: number;
+}) {
   const [open, setOpen] = useState(false);
   const [billing, setBilling] = useState<Billing>({
     name: userName,
@@ -70,6 +84,8 @@ export function BuyButton({ userName = '', userEmail = '' }: { userName?: string
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState('');
   const nameRef = useRef<HTMLInputElement>(null);
+
+  const isINR = currency === 'INR';
 
   useEffect(() => {
     if (open) {
@@ -97,7 +113,7 @@ export function BuyButton({ userName = '', userEmail = '' }: { userName?: string
     if (!billing.phone.trim())   errs.phone   = 'Phone number is required';
     if (!billing.address.trim()) errs.address = 'Address is required';
     if (!billing.city.trim())    errs.city    = 'City is required';
-    if (!billing.pincode.trim()) errs.pincode = 'Postal / PIN code is required';
+    if (!billing.pincode.trim()) errs.pincode = 'Postal code is required';
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -141,6 +157,7 @@ export function BuyButton({ userName = '', userEmail = '' }: { userName?: string
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          currency,
           couponCode: applied?.code ?? null,
           billingName: billing.name.trim(),
           billingPhone: billing.phone.trim(),
@@ -155,11 +172,11 @@ export function BuyButton({ userName = '', userEmail = '' }: { userName?: string
       const payload = await res.json();
       if (!res.ok || !payload.success) throw new Error(payload.error?.message ?? 'Could not start payment.');
 
-      const { orderId, amount, currency, keyId } = payload.data;
+      const { orderId, amount, currency: orderCurrency, keyId } = payload.data;
       const rzp = new window.Razorpay({
         key: keyId,
         amount,
-        currency,
+        currency: orderCurrency,
         order_id: orderId,
         name: 'Chartix',
         description: 'CMT Level 1 — 6 months access',
@@ -192,7 +209,7 @@ export function BuyButton({ userName = '', userEmail = '' }: { userName?: string
       setPaying(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [billing, applied]);
+  }, [billing, applied, currency]);
 
   if (!RAZORPAY_ENABLED) {
     return (
@@ -202,7 +219,7 @@ export function BuyButton({ userName = '', userEmail = '' }: { userName?: string
     );
   }
 
-  const finalAmount = applied ? applied.finalPaise : BASE_PRICE;
+  const finalAmount = applied ? applied.finalPaise : baseAmountUnits;
 
   return (
     <>
@@ -212,7 +229,7 @@ export function BuyButton({ userName = '', userEmail = '' }: { userName?: string
         onClick={() => setOpen(true)}
         className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600"
       >
-        Get instant access — {fmt(BASE_PRICE)}
+        Get instant access — {fmt(baseAmountUnits, currency)}
       </button>
 
       {/* Modal */}
@@ -267,7 +284,7 @@ export function BuyButton({ userName = '', userEmail = '' }: { userName?: string
                       type="tel"
                       value={billing.phone}
                       onChange={set('phone')}
-                      placeholder="+91 98765 43210"
+                      placeholder={isINR ? '+91 98765 43210' : '+1 555 000 0000'}
                       className={`w-full rounded-xl border px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 ${errors.phone ? 'border-rose-400 focus:border-rose-400' : 'border-zinc-300 focus:border-emerald-500'}`}
                     />
                     {errors.phone && <p className="mt-1 text-xs text-rose-600">{errors.phone}</p>}
@@ -302,13 +319,13 @@ export function BuyButton({ userName = '', userEmail = '' }: { userName?: string
                       type="text"
                       value={billing.address}
                       onChange={set('address')}
-                      placeholder="House no., street, area"
+                      placeholder={isINR ? 'House no., street, area' : 'Street address'}
                       className={`w-full rounded-xl border px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 ${errors.address ? 'border-rose-400 focus:border-rose-400' : 'border-zinc-300 focus:border-emerald-500'}`}
                     />
                     {errors.address && <p className="mt-1 text-xs text-rose-600">{errors.address}</p>}
                   </div>
 
-                  {/* City + PIN */}
+                  {/* City + postal code */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-sm font-medium text-zinc-700 mb-1.5">
@@ -318,22 +335,22 @@ export function BuyButton({ userName = '', userEmail = '' }: { userName?: string
                         type="text"
                         value={billing.city}
                         onChange={set('city')}
-                        placeholder="Mumbai"
+                        placeholder={isINR ? 'Mumbai' : 'New York'}
                         className={`w-full rounded-xl border px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 ${errors.city ? 'border-rose-400 focus:border-rose-400' : 'border-zinc-300 focus:border-emerald-500'}`}
                       />
                       {errors.city && <p className="mt-1 text-xs text-rose-600">{errors.city}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-zinc-700 mb-1.5">
-                        Postal / PIN code <span className="text-rose-500">*</span>
+                        {isINR ? 'PIN code' : 'Postal code'} <span className="text-rose-500">*</span>
                       </label>
                       <input
                         type="text"
                         inputMode="numeric"
-                        maxLength={6}
+                        maxLength={isINR ? 6 : 10}
                         value={billing.pincode}
                         onChange={set('pincode')}
-                        placeholder="400001"
+                        placeholder={isINR ? '400001' : '10001'}
                         className={`w-full rounded-xl border px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 ${errors.pincode ? 'border-rose-400 focus:border-rose-400' : 'border-zinc-300 focus:border-emerald-500'}`}
                       />
                       {errors.pincode && <p className="mt-1 text-xs text-rose-600">{errors.pincode}</p>}
@@ -349,72 +366,76 @@ export function BuyButton({ userName = '', userEmail = '' }: { userName?: string
                       type="text"
                       value={billing.state}
                       onChange={set('state')}
-                      placeholder="e.g. Maharashtra, California, Ontario"
+                      placeholder={isINR ? 'e.g. Maharashtra' : 'e.g. New York, Ontario'}
                       className="w-full rounded-xl border border-zinc-300 px-3.5 py-2.5 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                     />
                   </div>
 
-                  {/* GST */}
-                  <div>
-                    <label className="block text-sm font-medium text-zinc-700 mb-1.5">
-                      GSTIN <span className="text-zinc-400 text-xs font-normal">(optional — for business invoices)</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={billing.gst}
-                      onChange={set('gst')}
-                      placeholder="22AAAAA0000A1Z5"
-                      className="w-full rounded-xl border border-zinc-300 px-3.5 py-2.5 font-mono text-sm uppercase focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                    />
-                  </div>
+                  {/* GSTIN — India only */}
+                  {isINR && (
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                        GSTIN <span className="text-zinc-400 text-xs font-normal">(optional — for business invoices)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={billing.gst}
+                        onChange={set('gst')}
+                        placeholder="22AAAAA0000A1Z5"
+                        className="w-full rounded-xl border border-zinc-300 px-3.5 py-2.5 font-mono text-sm uppercase focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* ── Promo Code ── */}
-              <div>
-                <p className="mb-3 text-[11px] font-bold uppercase tracking-widest text-zinc-400">Promo Code</p>
-                {applied ? (
-                  <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 shrink-0 text-emerald-600" />
-                      <span className="text-sm font-bold text-emerald-800">{applied.code}</span>
-                      <span className="text-xs text-emerald-700">{applied.label}</span>
-                    </div>
-                    <button type="button" onClick={removeCoupon} className="text-emerald-500 hover:text-emerald-700">
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-1.5">
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <Tag className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-                        <input
-                          type="text"
-                          value={couponInput}
-                          onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponError(''); }}
-                          onKeyDown={(e) => e.key === 'Enter' && applyCode()}
-                          placeholder="PROMO CODE"
-                          className="w-full rounded-xl border border-zinc-300 py-2.5 pl-9 pr-3 font-mono text-sm tracking-wide focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                        />
+              {/* ── Promo Code — India only ── */}
+              {isINR && (
+                <div>
+                  <p className="mb-3 text-[11px] font-bold uppercase tracking-widest text-zinc-400">Promo Code</p>
+                  {applied ? (
+                    <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 shrink-0 text-emerald-600" />
+                        <span className="text-sm font-bold text-emerald-800">{applied.code}</span>
+                        <span className="text-xs text-emerald-700">{applied.label}</span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={applyCode}
-                        disabled={!couponInput.trim() || couponLoading}
-                        className="shrink-0 rounded-xl border border-zinc-300 bg-white px-4 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
-                      >
-                        {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
+                      <button type="button" onClick={removeCoupon} className="text-emerald-500 hover:text-emerald-700">
+                        <X className="h-4 w-4" />
                       </button>
                     </div>
-                    {couponError && (
-                      <p className="flex items-center gap-1.5 text-xs text-rose-600">
-                        <AlertCircle className="h-3.5 w-3.5 shrink-0" />{couponError}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <Tag className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                          <input
+                            type="text"
+                            value={couponInput}
+                            onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponError(''); }}
+                            onKeyDown={(e) => e.key === 'Enter' && applyCode()}
+                            placeholder="PROMO CODE"
+                            className="w-full rounded-xl border border-zinc-300 py-2.5 pl-9 pr-3 font-mono text-sm tracking-wide focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={applyCode}
+                          disabled={!couponInput.trim() || couponLoading}
+                          className="shrink-0 rounded-xl border border-zinc-300 bg-white px-4 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
+                        >
+                          {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
+                        </button>
+                      </div>
+                      {couponError && (
+                        <p className="flex items-center gap-1.5 text-xs text-rose-600">
+                          <AlertCircle className="h-3.5 w-3.5 shrink-0" />{couponError}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Sticky footer */}
@@ -423,17 +444,17 @@ export function BuyButton({ userName = '', userEmail = '' }: { userName?: string
               <div className="rounded-xl border border-zinc-100 bg-zinc-50 px-4 py-3 mb-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-zinc-500">CMT Level 1 · 6 months</span>
-                  {applied ? (
+                  {applied && isINR ? (
                     <span className="flex items-center gap-2">
-                      <span className="text-xs text-zinc-400 line-through">{fmt(BASE_PRICE)}</span>
-                      <span className="font-bold text-emerald-700">{fmt(finalAmount)}</span>
+                      <span className="text-xs text-zinc-400 line-through">{fmt(baseAmountUnits, currency)}</span>
+                      <span className="font-bold text-emerald-700">{fmt(finalAmount, currency)}</span>
                     </span>
                   ) : (
-                    <span className="font-bold text-zinc-900">{fmt(BASE_PRICE)}</span>
+                    <span className="font-bold text-zinc-900">{fmt(baseAmountUnits, currency)}</span>
                   )}
                 </div>
-                {applied && (
-                  <p className="mt-1 text-xs text-emerald-600">You save {fmt(applied.discountPaise)}</p>
+                {applied && isINR && (
+                  <p className="mt-1 text-xs text-emerald-600">You save {fmt(applied.discountPaise, currency)}</p>
                 )}
               </div>
 
@@ -451,13 +472,16 @@ export function BuyButton({ userName = '', userEmail = '' }: { userName?: string
               >
                 {paying
                   ? <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> Opening payment…</>
-                  : `Pay ${fmt(finalAmount)} securely`}
+                  : `Pay ${fmt(finalAmount, currency)} securely`}
               </button>
 
               <div className="mt-2.5 flex items-center justify-center gap-3 text-[11px] text-zinc-400">
                 <span className="flex items-center gap-1"><ShieldCheck className="h-3 w-3" /> Razorpay secured</span>
                 <span>·</span>
-                <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> UPI · Cards · Net banking</span>
+                <span className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {isINR ? 'UPI · Cards · Net banking' : 'Credit / Debit cards'}
+                </span>
               </div>
             </div>
           </div>
