@@ -33,11 +33,11 @@ const INFO_ITEMS = [
 const FAQ_ITEMS = [
   {
     q: 'Which CMT levels does Chartix cover?',
-    a: 'Chartix covers all three CMT levels — Level I, Level II, and Level III — with structured notes, quizzes, and analytics for each.',
+    a: 'CMT Level I is live now — with structured notes, 3,500+ MCQs, unlimited mock tests, and performance analytics. Level II and Level III are in active development.',
   },
   {
     q: 'How do I access study notes and quizzes?',
-    a: 'Create a free account to get started. Premium access unlocks all levels, detailed analytics, and the AI-powered tutor.',
+    a: 'Create a free account to get 7 days of free access. After the trial, purchase a level plan to continue with full access, analytics, and the AI-powered tutor.',
   },
   {
     q: 'I found an error in a question or note. What should I do?',
@@ -45,7 +45,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'Is there a refund policy?',
-    a: "Yes. If you're not satisfied within 7 days of purchase, contact us and we'll process a full refund — no questions asked.",
+    a: 'There is NO refund once enrollment is confirmed. We offer a 7-day free trial so you can explore the platform — notes, questions, and analytics — before making any payment. Please evaluate the content during the trial before purchasing.',
   },
 ];
 
