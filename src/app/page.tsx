@@ -3,7 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import {
   BookOpen, ListChecks, BarChart2, ArrowRight,
-  TrendingUp, ChevronRight, Brain, FlaskConical, Linkedin,
+  TrendingUp, ChevronRight, Brain, FlaskConical, Linkedin, Instagram, Twitter,
 } from 'lucide-react';
 import { auth } from '@/lib/auth/auth';
 import { siteConfig } from '@/lib/site';
@@ -468,14 +468,32 @@ export default async function HomePage() {
                   <p className="mt-2 text-xs leading-6 text-zinc-500">
                     Built by <Link href="/about" className="font-semibold text-zinc-700 hover:text-emerald-700 transition">Sumit Jain</Link> — CMT Level 3 cleared. Have a question? Reach out anytime.
                   </p>
-                  <a
-                    href="https://www.linkedin.com/in/sumitjain-9749041a7"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-[#0A66C2] hover:underline"
-                  >
-                    <Linkedin className="h-3.5 w-3.5" /> Connect on LinkedIn
-                  </a>
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <a
+                      href="https://www.linkedin.com/in/sumitjain-9749041a7"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0A66C2] hover:underline"
+                    >
+                      <Linkedin className="h-3.5 w-3.5" /> LinkedIn
+                    </a>
+                    <a
+                      href="https://www.instagram.com/chartix.in"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#E1306C] hover:underline"
+                    >
+                      <Instagram className="h-3.5 w-3.5" /> Instagram
+                    </a>
+                    <a
+                      href="https://x.com/Sumit_jain01"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-800 hover:underline"
+                    >
+                      <Twitter className="h-3.5 w-3.5" /> X / Twitter
+                    </a>
+                  </div>
                 </div>
               </div>
 
@@ -525,9 +543,15 @@ export default async function HomePage() {
               </div>
             </div>
 
-            <div className="mt-10 border-t border-emerald-50 pt-6 flex flex-col items-center justify-between gap-3 sm:flex-row">
+            <div className="mt-10 border-t border-emerald-50 pt-6 flex flex-col items-center justify-between gap-4 sm:flex-row">
               <p className="text-xs text-zinc-400">© {new Date().getFullYear()} Chartix. All rights reserved.</p>
-              <div className="flex gap-5">
+              <div className="flex items-center gap-5">
+                <a href="https://www.instagram.com/chartix.in" target="_blank" rel="noopener noreferrer" aria-label="Chartix on Instagram">
+                  <Instagram className="h-4 w-4 text-zinc-400 hover:text-[#E1306C] transition" />
+                </a>
+                <a href="https://x.com/Sumit_jain01" target="_blank" rel="noopener noreferrer" aria-label="Chartix on X / Twitter">
+                  <Twitter className="h-4 w-4 text-zinc-400 hover:text-zinc-900 transition" />
+                </a>
                 <Link href="/privacy-policy" className="text-xs text-zinc-400 hover:text-emerald-700 transition">Privacy</Link>
                 <Link href="/terms" className="text-xs text-zinc-400 hover:text-emerald-700 transition">Terms</Link>
                 <Link href="/refund-policy" className="text-xs text-zinc-400 hover:text-emerald-700 transition">Refund Policy</Link>

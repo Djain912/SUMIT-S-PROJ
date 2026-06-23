@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowRight, BookOpen, Target, TrendingUp, Shield, Zap, Linkedin, Mail, Brain } from 'lucide-react';
+import { ArrowRight, BookOpen, Target, TrendingUp, Shield, Zap, Linkedin, Mail, Brain, Instagram, Twitter } from 'lucide-react';
 import { siteConfig } from '@/lib/site';
 
 const aboutDescription =
@@ -314,7 +314,13 @@ export default function AboutPage() {
         <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
             <p className="text-xs text-zinc-400">© {new Date().getFullYear()} Chartix. All rights reserved.</p>
-            <div className="flex gap-6">
+            <div className="flex items-center gap-5">
+              <a href="https://www.instagram.com/chartix.in" target="_blank" rel="noopener noreferrer" aria-label="Chartix on Instagram">
+                <Instagram className="h-4 w-4 text-zinc-400 hover:text-[#E1306C] transition" />
+              </a>
+              <a href="https://x.com/Sumit_jain01" target="_blank" rel="noopener noreferrer" aria-label="Chartix on X / Twitter">
+                <Twitter className="h-4 w-4 text-zinc-400 hover:text-zinc-900 transition" />
+              </a>
               <Link href="/" className="text-xs text-zinc-400 hover:text-zinc-950 transition">Home</Link>
               <Link href="/about" className="text-xs text-zinc-400 hover:text-zinc-950 transition">About</Link>
               <Link href="/sign-in" className="text-xs text-zinc-400 hover:text-zinc-950 transition">Sign in</Link>
