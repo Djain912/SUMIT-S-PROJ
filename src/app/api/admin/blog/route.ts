@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth/auth';
 import { prisma } from '@/lib/db/prisma';
+import { resend, FROM_EMAIL } from '@/lib/email/resend';
 
 function requireAdmin() {
   return auth().then((session) => {
@@ -18,6 +19,63 @@ function slugify(title: string): string {
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
     .slice(0, 80);
+}
+
+async function notifySubscribers(post: { title: string; slug: string; excerpt: string }) {
+  try {
+    const subscribers = await prisma.blogSubscriber.findMany({
+      select: { email: true, unsubscribeToken: true },
+    });
+    if (!subscribers.length) return;
+
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://chartix.in';
+    const postUrl = `${baseUrl}/blog/${post.slug}`;
+
+    await Promise.allSettled(
+      subscribers.map(({ email, unsubscribeToken }) =>
+        resend.emails.send({
+          from: FROM_EMAIL,
+          to: email,
+          subject: `New post: ${post.title}`,
+          html: `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;padding:32px 16px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;">
+        <!-- Header -->
+        <tr><td style="background:#064e3b;padding:24px 32px;">
+          <p style="margin:0;color:#ffffff;font-size:20px;font-weight:700;letter-spacing:-0.3px;">Chartix</p>
+          <p style="margin:4px 0 0;color:#6ee7b7;font-size:12px;">CMT Exam Prep Platform</p>
+        </td></tr>
+        <!-- Body -->
+        <tr><td style="padding:32px;">
+          <p style="margin:0 0 8px;color:#6b7280;font-size:12px;text-transform:uppercase;letter-spacing:.08em;">New Blog Post</p>
+          <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#111827;line-height:1.3;">${post.title}</h1>
+          ${post.excerpt ? `<p style="margin:0 0 24px;color:#6b7280;font-size:15px;line-height:1.6;">${post.excerpt}</p>` : ''}
+          <a href="${postUrl}" style="display:inline-block;background:#047857;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:12px 24px;border-radius:8px;">Read the post →</a>
+        </td></tr>
+        <!-- Footer -->
+        <tr><td style="padding:20px 32px;border-top:1px solid #f3f4f6;">
+          <p style="margin:0;color:#9ca3af;font-size:12px;">
+            You're receiving this because you subscribed to Chartix blog updates.<br>
+            <a href="${baseUrl}/api/blog/unsubscribe?token=${unsubscribeToken}" style="color:#9ca3af;">Unsubscribe</a>
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+        })
+      )
+    );
+    console.log(`[blog] Notified ${subscribers.length} subscriber(s) about "${post.title}"`);
+  } catch (err) {
+    console.error('[blog] notifySubscribers failed:', err);
+  }
 }
 
 // GET /api/admin/blog — list all posts (admin only)
@@ -84,6 +142,10 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    if (isPublished) {
+      void notifySubscribers({ title: post.title, slug: post.slug, excerpt: post.excerpt });
+    }
+
     return NextResponse.json({ post }, { status: 201 });
   } catch (err) {
     console.error('[blog POST]', err);
@@ -123,6 +185,11 @@ export async function PATCH(req: NextRequest) {
         ...(Array.isArray(tags) && { tags }),
       },
     });
+
+    // Notify subscribers only on the first-ever publish (draft → live)
+    if (!wasPublished && nowPublished) {
+      void notifySubscribers({ title: post.title, slug: post.slug, excerpt: post.excerpt });
+    }
 
     return NextResponse.json({ post });
   } catch (err) {

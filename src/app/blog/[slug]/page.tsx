@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db/prisma';
 import { sanitizeHtml } from '@/lib/security/sanitize';
 import { TrendingUp, Clock, Calendar, ArrowLeft, Tag } from 'lucide-react';
+import { BlogSubscribeForm } from '@/components/blog/BlogSubscribeForm';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -166,6 +167,11 @@ export default async function BlogPostPage({ params }: Props) {
           dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.contentHtml) }}
         />
       </article>
+
+      {/* Subscribe */}
+      <section className="mx-auto max-w-3xl px-4 pb-12 sm:px-6 lg:px-8">
+        <BlogSubscribeForm />
+      </section>
 
       {/* CTA */}
       <section className="border-t border-zinc-100 bg-zinc-50 py-12 text-center px-4">

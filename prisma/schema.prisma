@@ -542,6 +542,15 @@ model BlogPost {
   @@index([isPublished, publishedAt])
 }
 
+model BlogSubscriber {
+  id               String   @id @default(cuid())
+  email            String   @unique
+  unsubscribeToken String   @unique @default(cuid())
+  subscribedAt     DateTime @default(now())
+
+  @@index([email])
+}
+
 // ── Admin-written Q&A corrections (injected as mandatory facts into both bots) ──
 model BotQAPair {
   id        String   @id @default(cuid())
