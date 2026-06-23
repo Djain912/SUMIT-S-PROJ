@@ -150,10 +150,10 @@ export default function AboutPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 {[
-                  { value: '3,450+', label: 'Practice questions' },
+                  { value: '3,450+', label: 'Exam-level MCQs' },
+                  { value: 'Unlimited', label: 'Mock tests' },
                   { value: '13', label: 'Level I chapters' },
-                  { value: '47', label: 'Structured subtopics' },
-                  { value: '100%', label: 'Syllabus-mapped' },
+                  { value: '100%', label: 'Syllabus covered' },
                 ].map((stat) => (
                   <div key={stat.label} className="rounded-2xl border border-zinc-200 bg-white p-6 text-center shadow-sm">
                     <p className="text-3xl font-bold text-zinc-950 font-heading">{stat.value}</p>
