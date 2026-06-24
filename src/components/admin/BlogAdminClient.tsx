@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { TinyMceEditor } from './tinymce-editor';
 import {
   Plus, Pencil, Trash2, Eye, EyeOff, X, Save,
-  FileText, Calendar, Clock, Tag, Loader2, Globe, CheckCircle,
+  FileText, Calendar, Clock, Tag, Loader2, Globe, CheckCircle, Upload,
 } from 'lucide-react';
 
 interface BlogPost {
@@ -45,6 +45,29 @@ export function BlogAdminClient({ initialPosts }: Props) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const coverFileRef = useRef<HTMLInputElement>(null);
+
+  async function handleCoverUpload(file: File) {
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    if (!cloudName) { showToast('error', 'Cloudinary not configured'); return; }
+    setIsUploadingCover(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('upload_preset', 'ml_default');
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, { method: 'POST', body: fd });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setForm((prev) => ({ ...prev, coverImageUrl: data.secure_url }));
+      showToast('success', 'Cover image uploaded');
+    } catch (err) {
+      showToast('error', 'Upload failed — try again');
+      console.error(err);
+    } finally {
+      setIsUploadingCover(false);
+    }
+  }
 
   function showToast(type: 'success' | 'error', msg: string) {
     setToast({ type, msg });
@@ -245,14 +268,32 @@ export function BlogAdminClient({ initialPosts }: Props) {
             </div>
 
             <div className="rounded-2xl border border-zinc-200 bg-white p-5">
-              <label className="block text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-2">Cover Image URL</label>
-              <input
-                type="url"
-                value={form.coverImageUrl}
-                onChange={(e) => setForm((prev) => ({ ...prev, coverImageUrl: e.target.value }))}
-                placeholder="https://..."
-                className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-950 placeholder:text-zinc-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition"
-              />
+              <label className="block text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-2">Cover Image</label>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={form.coverImageUrl}
+                  onChange={(e) => setForm((prev) => ({ ...prev, coverImageUrl: e.target.value }))}
+                  placeholder="https://... or upload below"
+                  className="flex-1 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-950 placeholder:text-zinc-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition"
+                />
+                <button
+                  type="button"
+                  onClick={() => coverFileRef.current?.click()}
+                  disabled={isUploadingCover}
+                  className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium text-zinc-700 hover:bg-zinc-100 transition disabled:opacity-50"
+                >
+                  {isUploadingCover ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  {isUploadingCover ? 'Uploading…' : 'Upload'}
+                </button>
+                <input
+                  ref={coverFileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleCoverUpload(f); e.target.value = ''; }}
+                />
+              </div>
               {form.coverImageUrl && (
                 <div className="mt-3 h-32 rounded-lg overflow-hidden bg-zinc-100">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
