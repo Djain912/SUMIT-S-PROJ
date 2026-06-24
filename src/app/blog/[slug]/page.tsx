@@ -2,9 +2,9 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db/prisma';
-import { sanitizeHtml } from '@/lib/security/sanitize';
 import { TrendingUp, Clock, Calendar, ArrowLeft, Tag } from 'lucide-react';
 import { BlogSubscribeForm } from '@/components/blog/BlogSubscribeForm';
+import { BlogContent } from '@/components/blog/BlogContent';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -149,7 +149,8 @@ export default async function BlogPostPage({ params }: Props) {
         </div>
 
         {/* Content */}
-        <div
+        <BlogContent
+          html={post.contentHtml}
           className="mt-8 prose prose-zinc max-w-none
             prose-headings:font-semibold prose-headings:tracking-tight
             prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4
@@ -164,7 +165,6 @@ export default async function BlogPostPage({ params }: Props) {
             prose-pre:bg-zinc-950 prose-pre:text-zinc-100
             prose-img:rounded-xl prose-img:shadow-sm
             prose-hr:border-zinc-200"
-          dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.contentHtml) }}
         />
       </article>
 
