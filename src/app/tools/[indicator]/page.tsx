@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { TrendingUp, ArrowRight, ChevronLeft } from 'lucide-react';
+import Image from 'next/image';
+import { ArrowRight, ChevronLeft } from 'lucide-react';
 import { type IndicatorKey } from '@/components/tools/indicator-tool';
 import { IndicatorLab } from '@/components/tools/indicator-lab';
 import { ScrollPopup } from '@/components/marketing/ScrollPopup';
@@ -55,11 +56,8 @@ export default async function PublicIndicatorPage({ params }: { params: Promise<
               <ChevronLeft className="h-4 w-4" /> All Tools
             </Link>
             <span className="text-zinc-200">|</span>
-            <Link href="/" className="flex items-center gap-1.5">
-              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-600">
-                <TrendingUp className="h-3.5 w-3.5 text-white" />
-              </div>
-              <span className="text-sm font-bold text-emerald-900">Chartix</span>
+            <Link href="/">
+              <Image src="/chartix-wordmark.png" alt="Chartix" width={110} height={28} priority />
             </Link>
           </div>
           <div className="flex items-center gap-3">
