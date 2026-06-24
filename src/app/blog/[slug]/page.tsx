@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db/prisma';
-import { TrendingUp, Clock, Calendar, ArrowLeft, Tag } from 'lucide-react';
+import { Clock, Calendar, ArrowLeft, Tag } from 'lucide-react';
 import { BlogSubscribeForm } from '@/components/blog/BlogSubscribeForm';
 import { BlogContent } from '@/components/blog/BlogContent';
 
@@ -84,11 +85,8 @@ export default async function BlogPostPage({ params }: Props) {
       {/* Nav */}
       <nav className="border-b border-zinc-100 bg-white/80 backdrop-blur sticky top-0 z-10">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-900">
-              <TrendingUp className="h-3.5 w-3.5 text-white" />
-            </div>
-            <span className="text-sm font-bold text-zinc-950">Chartix</span>
+          <Link href="/">
+            <Image src="/chartix-wordmark.png" alt="Chartix" width={110} height={28} priority />
           </Link>
           <div className="flex items-center gap-3">
             <Link href="/blog" className="text-sm text-zinc-500 hover:text-zinc-900 transition">← Blog</Link>
