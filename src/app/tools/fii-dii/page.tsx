@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 import { siteConfig } from '@/lib/site';
+import { ScrollPopup } from '@/components/marketing/ScrollPopup';
+import { IndexBuilderTimedBanner } from '@/components/marketing/IndexBuilderTimedBanner';
 
 export const metadata: Metadata = {
   title: 'FII / DII Data Terminal — Live Institutional Flows (NSE) | Chartix',
@@ -155,19 +158,22 @@ export default function FiiDiiPage() {
           ))}
         </div>
 
-        {/* Funnel CTA back to the core product */}
-        <div className="mt-12 rounded-2xl border border-emerald-100 bg-emerald-50 p-6 text-center">
-          <h2 className="text-lg font-bold text-emerald-900">Preparing for the CMT exam?</h2>
-          <p className="mt-2 text-sm leading-6 text-zinc-600">
-            Chartix is a focused CMT exam-prep platform — structured notes, 10,000+ practice questions, and an AI tutor for
-            Levels I, II and III.
+        {/* Funnel CTA — upgraded */}
+        <div className="mt-12 overflow-hidden rounded-2xl bg-emerald-900 p-6 sm:p-8 text-center">
+          <p className="text-xs font-semibold uppercase tracking-widest text-emerald-400 mb-2">CMT Exam Prep</p>
+          <h2 className="text-xl font-bold text-white sm:text-2xl">
+            Using FII/DII data to study market structure?
+          </h2>
+          <p className="mt-3 text-sm leading-6 text-emerald-200 max-w-md mx-auto">
+            Your free trial includes chapter-wise CMT notes, 3,500+ practice questions, mock tests and Chartix Scholar — our AI tutor trained on the CMT curriculum. No credit card needed.
           </p>
           <Link
             href="/sign-up"
-            className="mt-4 inline-flex items-center gap-2 rounded-full bg-emerald-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-emerald-700"
+            className="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-7 py-3 text-sm font-bold text-emerald-900 transition hover:bg-emerald-50"
           >
-            Start free
+            Start Free — Notes, Questions, Mock Tests &amp; AI Tutor Included <ArrowRight className="h-4 w-4 shrink-0" />
           </Link>
+          <p className="mt-3 text-xs text-emerald-400">No credit card required · 7-day free trial</p>
         </div>
 
         {/* Open-source attribution (MIT) */}
@@ -188,6 +194,12 @@ export default function FiiDiiPage() {
           </Link>
         </p>
       </article>
+
+      {/* Scroll popup at 60% depth */}
+      <ScrollPopup />
+
+      {/* 3-minute timed banner — users park on this page watching the data */}
+      <IndexBuilderTimedBanner />
     </>
   );
 }
