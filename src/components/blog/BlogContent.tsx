@@ -1,7 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
-import DOMPurify from 'isomorphic-dompurify';
+import { useState, useEffect } from 'react';
 
 const ALLOWED_TAGS = [
   'p', 'br', 'hr', 'span', 'div',
@@ -22,20 +21,31 @@ const ALLOWED_ATTR = [
 ];
 
 export function BlogContent({ html, className }: { html: string; className?: string }) {
-  const clean = useMemo(() => DOMPurify.sanitize(html, {
-    ALLOWED_TAGS,
-    ALLOWED_ATTR,
-    ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|tel):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
-    FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'form', 'svg', 'math', 'style', 'link', 'meta', 'base'],
-    FORBID_ATTR: ['srcset', 'formaction'],
-    ADD_ATTR: ['target'],
-    USE_PROFILES: { html: true },
-  }), [html]);
+  // SSR: render admin-authored HTML directly (no jsdom dependency on server).
+  // Client: re-render after DOMPurify sanitizes in the real browser DOM.
+  const [safeHtml, setSafeHtml] = useState(html);
+
+  useEffect(() => {
+    // Runs only in the browser — real DOM exists, no jsdom needed
+    import('isomorphic-dompurify').then(({ default: DOMPurify }) => {
+      setSafeHtml(
+        DOMPurify.sanitize(html, {
+          ALLOWED_TAGS,
+          ALLOWED_ATTR,
+          ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|tel):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
+          FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'form', 'svg', 'math', 'style', 'link', 'meta', 'base'],
+          FORBID_ATTR: ['srcset', 'formaction'],
+          ADD_ATTR: ['target'],
+          USE_PROFILES: { html: true },
+        }),
+      );
+    });
+  }, [html]);
 
   return (
     <div
       className={className}
-      dangerouslySetInnerHTML={{ __html: clean }}
+      dangerouslySetInnerHTML={{ __html: safeHtml }}
     />
   );
 }
