@@ -48,11 +48,6 @@ export function BlogAdminClient({ initialPosts }: Props) {
   const [isUploadingCover, setIsUploadingCover] = useState(false);
   const coverFileRef = useRef<HTMLInputElement>(null);
 
-  function showToast(type: 'success' | 'error', msg: string) {
-    setToast({ type, msg });
-    setTimeout(() => setToast(null), 3500);
-  }
-
   async function handleCoverUpload(file: File) {
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
     if (!cloudName) { showToast('error', 'Cloudinary not configured'); return; }
@@ -72,6 +67,11 @@ export function BlogAdminClient({ initialPosts }: Props) {
     } finally {
       setIsUploadingCover(false);
     }
+  }
+
+  function showToast(type: 'success' | 'error', msg: string) {
+    setToast({ type, msg });
+    setTimeout(() => setToast(null), 3500);
   }
 
   function openNew() {
@@ -274,32 +274,26 @@ export function BlogAdminClient({ initialPosts }: Props) {
                   type="url"
                   value={form.coverImageUrl}
                   onChange={(e) => setForm((prev) => ({ ...prev, coverImageUrl: e.target.value }))}
-                  placeholder="https://... or upload →"
-                  className="flex-1 min-w-0 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-950 placeholder:text-zinc-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition"
+                  placeholder="https://... or upload below"
+                  className="flex-1 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-950 placeholder:text-zinc-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition"
                 />
                 <button
                   type="button"
                   onClick={() => coverFileRef.current?.click()}
                   disabled={isUploadingCover}
-                  className="flex shrink-0 items-center gap-1.5 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm font-medium text-zinc-700 hover:bg-zinc-100 transition disabled:opacity-50"
+                  className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium text-zinc-700 hover:bg-zinc-100 transition disabled:opacity-50"
                 >
-                  {isUploadingCover
-                    ? <Loader2 className="h-4 w-4 animate-spin" />
-                    : <Upload className="h-4 w-4" />}
+                  {isUploadingCover ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                   {isUploadingCover ? 'Uploading…' : 'Upload'}
                 </button>
+                <input
+                  ref={coverFileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleCoverUpload(f); e.target.value = ''; }}
+                />
               </div>
-              <input
-                ref={coverFileRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) handleCoverUpload(f);
-                  e.target.value = '';
-                }}
-              />
               {form.coverImageUrl && (
                 <div className="mt-3 h-32 rounded-lg overflow-hidden bg-zinc-100">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -494,3 +488,4 @@ export function BlogAdminClient({ initialPosts }: Props) {
     </div>
   );
 }
+
