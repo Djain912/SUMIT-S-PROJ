@@ -10,6 +10,7 @@ import { siteConfig } from '@/lib/site';
 import { HomepageChatWidget } from '@/components/public/HomepageChatWidget';
 import { QuizWidget, type QuizQuestion } from '@/components/marketing/QuizWidget';
 import { StickyCTABar } from '@/components/marketing/StickyCTABar';
+import { getDailyQuestion } from '@/lib/qod/daily-question';
 
 export const metadata: Metadata = {
   title: 'Chartix CMT Exam Prep | Technical Analysis Notes, Quizzes & Analytics',
@@ -52,8 +53,8 @@ const steps = [
   { step: '03', title: 'Study, practise & pass', description: 'Work through notes, take quizzes, track your progress, repeat.' },
 ];
 
-// Question of the Day
-const QOD: QuizQuestion = {
+// Fallback QoD shown if the DB has no published questions yet
+const QOD_FALLBACK: QuizQuestion = {
   question: 'Which of the following best describes the primary purpose of a Point & Figure chart?',
   options: [
     { label: 'A', text: 'Track volume alongside price over time' },
@@ -118,6 +119,8 @@ export default async function HomePage() {
   const user = session?.user as { name?: string | null; role?: string } | undefined;
   const isLoggedIn = !!user;
   const isAdmin = user?.role === 'ADMIN';
+
+  const dailyQuestion = await getDailyQuestion();
 
   return (
     <>
@@ -355,7 +358,7 @@ export default async function HomePage() {
                   </h2>
                   <p className="mt-2 text-sm text-zinc-500">Click an option to reveal the answer and explanation.</p>
                 </div>
-                <QuizWidget question={QOD} analyticsPrefix="qod" />
+                <QuizWidget question={dailyQuestion ?? QOD_FALLBACK} analyticsPrefix="qod" />
               </div>
             </section>
           )}
