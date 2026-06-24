@@ -8,6 +8,7 @@ import { BlogSubscribeForm } from '@/components/blog/BlogSubscribeForm';
 import { BlogContent } from '@/components/blog/BlogContent';
 import { generateBlogMetadata } from '@/lib/seo/blog-metadata';
 import { siteConfig } from '@/lib/site';
+import { ScrollPopup } from '@/components/marketing/ScrollPopup';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -177,6 +178,9 @@ export default async function BlogPostPage({ params }: Props) {
         </div>
         <p className="mt-3">© {new Date().getFullYear()} Chartix. All rights reserved.</p>
       </footer>
+
+      {/* Scroll-triggered popup — fires at 60% scroll depth */}
+      <ScrollPopup />
     </div>
   );
 }

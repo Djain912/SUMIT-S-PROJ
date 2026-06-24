@@ -8,6 +8,8 @@ import {
 import { auth } from '@/lib/auth/auth';
 import { siteConfig } from '@/lib/site';
 import { HomepageChatWidget } from '@/components/public/HomepageChatWidget';
+import { QuizWidget, type QuizQuestion } from '@/components/marketing/QuizWidget';
+import { StickyCTABar } from '@/components/marketing/StickyCTABar';
 
 export const metadata: Metadata = {
   title: 'Chartix CMT Exam Prep | Technical Analysis Notes, Quizzes & Analytics',
@@ -48,6 +50,45 @@ const steps = [
   { step: '01', title: 'Create your free account', description: 'Sign up in seconds — no credit card required.' },
   { step: '02', title: 'Choose your CMT level', description: 'Pick Level I, II, or III and get instant access to your curriculum.' },
   { step: '03', title: 'Study, practise & pass', description: 'Work through notes, take quizzes, track your progress, repeat.' },
+];
+
+// Question of the Day
+const QOD: QuizQuestion = {
+  question: 'Which of the following best describes the primary purpose of a Point & Figure chart?',
+  options: [
+    { label: 'A', text: 'Track volume alongside price over time' },
+    { label: 'B', text: 'Filter minor price fluctuations and focus on significant trends' },
+    { label: 'C', text: 'Display open, high, low and close for each period' },
+    { label: 'D', text: 'Measure rate of change in momentum' },
+  ],
+  correctIndex: 1,
+  explanation: 'P&F charts ignore time entirely and only record price moves exceeding a set box size — filtering noise and revealing the underlying trend clearly.',
+};
+
+// Sample questions for "See What's Inside"
+const SAMPLE_QUESTIONS: QuizQuestion[] = [
+  {
+    question: 'Dow Theory identifies three trends in the market. Which is the PRIMARY trend?',
+    options: [
+      { label: 'A', text: 'Intraday price swings lasting hours' },
+      { label: 'B', text: 'Secondary reactions retracing the primary trend by 33–66%' },
+      { label: 'C', text: 'The major trend lasting months to years' },
+      { label: 'D', text: 'Seasonal patterns tied to quarterly earnings cycles' },
+    ],
+    correctIndex: 2,
+    explanation: 'Dow Theory defines three trends: Primary (months to years), Secondary (weeks), and Minor (days). Most technical analysts align positions with the primary trend.',
+  },
+  {
+    question: 'When RSI crosses above 70, what does this conventionally signal?',
+    options: [
+      { label: 'A', text: 'A confirmed buy signal in an uptrend' },
+      { label: 'B', text: 'The stock is entering overbought territory' },
+      { label: 'C', text: 'A guaranteed price reversal to the downside' },
+      { label: 'D', text: 'Volume is confirming the price move' },
+    ],
+    correctIndex: 1,
+    explanation: 'RSI above 70 signals overbought conditions — price has moved up strongly relative to recent history. It does not guarantee a reversal; confirmation from other indicators is advisable.',
+  },
 ];
 
 const homeStructuredData = {
@@ -122,7 +163,7 @@ export default async function HomePage() {
                     Log In
                   </Link>
                   <Link href="/sign-up" className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700">
-                    Enroll Now <ArrowRight className="h-3.5 w-3.5" />
+                    Start Free <ArrowRight className="h-3.5 w-3.5" />
                   </Link>
                 </>
               )}
@@ -154,15 +195,18 @@ export default async function HomePage() {
                       In-depth notes, 3,500+ exam-grade MCQs per level (10,000+ in all), unlimited mock tests, and the Chartix Scholar AI tutor — everything you need to crack Level I, II &amp; III.
                     </p>
 
-                    <div className="mt-8 flex flex-wrap items-center gap-4">
-                      <Link href="/sign-up" className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-7 py-3.5 text-sm font-bold text-white shadow-md transition hover:bg-emerald-700">
-                        Start free <ArrowRight className="h-4 w-4" />
+                    <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                      <Link
+                        href="/sign-up"
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-emerald-600 px-7 py-3.5 text-sm font-bold text-white shadow-md transition hover:bg-emerald-700 sm:w-auto"
+                      >
+                        Start Free — Notes, Questions, Mock Tests &amp; AI Tutor Included <ArrowRight className="h-4 w-4 shrink-0" />
                       </Link>
-                      <Link href="/pricing" className="inline-flex items-center gap-2 rounded-full border-2 border-emerald-200 px-7 py-3.5 text-sm font-bold text-emerald-700 transition hover:border-emerald-400">
+                      <Link href="/pricing" className="inline-flex w-full items-center justify-center gap-2 rounded-full border-2 border-emerald-200 px-7 py-3.5 text-sm font-bold text-emerald-700 transition hover:border-emerald-400 sm:w-auto">
                         View pricing
                       </Link>
                     </div>
-                    <p className="mt-3 text-xs text-zinc-400">Free trial available · No credit card required</p>
+                    <p className="mt-3 text-xs text-zinc-400">No credit card required · Cancel anytime</p>
                   </div>
 
                   {/* Right – browser mockup */}
@@ -298,6 +342,24 @@ export default async function HomePage() {
             </section>
           )}
 
+          {/* ── QUESTION OF THE DAY ── */}
+          {!isLoggedIn && (
+            <section className="bg-white py-16 sm:py-20 border-b border-zinc-100">
+              <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+                <div className="mb-6 text-center">
+                  <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-emerald-600">
+                    CMT Question of the Day
+                  </span>
+                  <h2 className="mt-3 text-2xl font-extrabold tracking-tight text-emerald-900">
+                    Test yourself
+                  </h2>
+                  <p className="mt-2 text-sm text-zinc-500">Click an option to reveal the answer and explanation.</p>
+                </div>
+                <QuizWidget question={QOD} analyticsPrefix="qod" />
+              </div>
+            </section>
+          )}
+
           {/* ── INDICATOR LAB ── */}
           {!isAdmin && (
             <section className="bg-white py-20 sm:py-24 border-t border-zinc-100">
@@ -378,6 +440,43 @@ export default async function HomePage() {
             </section>
           )}
 
+          {/* ── SEE WHAT'S INSIDE (sample MCQs) ── */}
+          {!isLoggedIn && (
+            <section className="border-t border-zinc-100 bg-zinc-50 py-20 sm:py-24">
+              <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+                <div className="mb-10 text-center">
+                  <span className="inline-flex items-center rounded-full border border-emerald-200 bg-white px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-emerald-600">
+                    See What&apos;s Inside
+                  </span>
+                  <h2 className="mt-4 text-3xl font-extrabold tracking-tight text-emerald-900 sm:text-4xl">
+                    Try a few CMT questions
+                  </h2>
+                  <p className="mt-3 text-base text-zinc-500">
+                    Click any option to reveal the answer and explanation — exactly how it works in the platform.
+                  </p>
+                </div>
+
+                <div className="space-y-5">
+                  {SAMPLE_QUESTIONS.map((q, i) => (
+                    <QuizWidget key={i} question={q} analyticsPrefix="sample_q" showCtaAfterAnswer={i === SAMPLE_QUESTIONS.length - 1} />
+                  ))}
+                </div>
+
+                <div className="mt-10 rounded-2xl border border-emerald-100 bg-white p-6 text-center shadow-sm">
+                  <p className="text-sm text-zinc-600 max-w-lg mx-auto">
+                    Your free trial includes chapter-wise notes, practice questions, a full mock test, and Chartix Scholar — our AI tutor trained on the CMT curriculum. No credit card needed.
+                  </p>
+                  <Link
+                    href="/sign-up"
+                    className="mt-5 inline-flex items-center gap-2 rounded-full bg-emerald-600 px-8 py-3.5 text-sm font-bold text-white shadow-md transition hover:bg-emerald-700"
+                  >
+                    Start Your Free Trial <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
+              </div>
+            </section>
+          )}
+
           {/* ── HOW IT WORKS ── */}
           {!isLoggedIn && (
             <section className="border-t border-emerald-100 bg-emerald-50 py-20 sm:py-24">
@@ -411,11 +510,14 @@ export default async function HomePage() {
                   Ready to start?
                 </h2>
                 <p className="mt-4 text-emerald-300 text-base">
-                  Free trial available. No credit card needed. Pick your level and begin today.
+                  No credit card needed. Pick your level and begin today.
                 </p>
-                <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-                  <Link href="/sign-up" className="inline-flex items-center gap-2 rounded-full bg-white px-8 py-3.5 text-sm font-bold text-emerald-900 transition hover:bg-emerald-50">
-                    Create free account <ArrowRight className="h-4 w-4" />
+                <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center sm:flex-wrap">
+                  <Link
+                    href="/sign-up"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-8 py-3.5 text-sm font-bold text-emerald-900 transition hover:bg-emerald-50 sm:w-auto"
+                  >
+                    Start Free — Notes, Questions, Mock Tests &amp; AI Tutor Included <ArrowRight className="h-4 w-4 shrink-0" />
                   </Link>
                   <Link href="/pricing" className="inline-flex items-center gap-2 rounded-full border-2 border-emerald-600 px-8 py-3.5 text-sm font-bold text-emerald-200 transition hover:border-emerald-400 hover:text-white">
                     See pricing <ChevronRight className="h-4 w-4" />
@@ -521,7 +623,7 @@ export default async function HomePage() {
                     { label: 'Analytics', href: '/user/analytics' },
                     { label: 'Free Indicator Lab', href: '/tools' },
                     { label: 'Sign In', href: '/sign-in' },
-                    { label: 'Get Started', href: '/sign-up' },
+                    { label: 'Get Started Free', href: '/sign-up' },
                   ].map((l) => (
                     <li key={l.href}><Link href={l.href} className="text-sm text-zinc-400 hover:text-emerald-700 transition">{l.label}</Link></li>
                   ))}
@@ -561,6 +663,9 @@ export default async function HomePage() {
         </footer>
 
         <HomepageChatWidget />
+
+        {/* Sticky CTA bar — appears after scrolling past hero (logged-out only) */}
+        {!isLoggedIn && <StickyCTABar />}
       </div>
     </>
   );

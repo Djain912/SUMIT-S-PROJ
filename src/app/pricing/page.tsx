@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, CheckCircle, Clock, AlertCircle, Lock } from 'lucide-react';
+import { ArrowRight, CheckCircle, Clock, AlertCircle, Lock, Shield, X } from 'lucide-react';
 import { getVisitorCurrency } from '@/lib/geo/country';
 
 const plansData = [
@@ -71,33 +71,43 @@ const plansData = [
 
 const faqs = [
   {
-    q: 'Is there a free trial?',
-    a: 'Yes — you can access a limited set of notes and questions for free after signing up. No credit card required.',
+    q: "What's included in the free trial?",
+    a: "Your free trial gives you 7 days of access to chapter-wise notes, practice MCQs, one full mock test, and 10 daily questions on Chartix Scholar — our AI tutor. No credit card required. You'll see exactly what the platform is like before committing.",
+  },
+  {
+    q: 'What if Level 2 content is not ready when I need it?',
+    a: "Level 2 and 3 are listed as Coming Soon. If you've purchased Level 1 and need Level 2 content, reach out — we'll notify you the moment it's available and honour any early-adopter pricing.",
+  },
+  {
+    q: 'Is there a refund policy?',
+    a: 'There is no refund once enrollment is confirmed. Please use the free trial to thoroughly evaluate the platform before purchasing. Exceptions are made only for verified duplicate charges or platform-wide technical failures.',
+  },
+  {
+    q: 'How is Chartix different from reading the official CMT books?',
+    a: 'The official books cover the breadth of the curriculum but are dense and exam-format practice is limited. Chartix distils each chapter into focused study notes, gives you 3,500+ exam-grade MCQs (not generic questions), tracks exactly which topics you are weak in, and gives you an AI tutor that explains concepts instantly — accelerating your revision significantly.',
+  },
+  {
+    q: 'Can I access on mobile?',
+    a: 'Yes. Chartix is fully responsive and works on any device — phone, tablet, or desktop. Study on your commute, at your desk, or anywhere in between.',
   },
   {
     q: 'Can I access all three levels with one payment?',
     a: 'Each level is priced and sold separately. You purchase access to the specific CMT level you are currently preparing for. There is no bundled plan.',
   },
   {
-    q: 'If I buy Level 1, can I access Level 2 content?',
-    a: "No. Each purchase gives access only to that level's content. To access Level 2, you would need to purchase the Level 2 plan separately.",
-  },
-  {
     q: 'How long is the access valid?',
-    a: 'Access is valid for 6 months from the date of purchase. This gives you ample time to prepare for any CMT exam window.',
+    a: 'Access is valid for 6 months from the date of purchase — ample time for any CMT exam window.',
   },
-  {
-    q: 'What payment methods are accepted?',
-    a: 'Payments are processed via Razorpay. Indian users can pay via UPI, credit/debit cards, net banking, and wallets. International users can pay with any major credit or debit card.',
-  },
-  {
-    q: 'What is the refund policy?',
-    a: 'There is NO refund once enrollment is confirmed. Please review the free trial content before purchasing. Exceptions are made only for verified duplicate charges or platform-wide technical failures. See our full Refund Policy for details.',
-  },
-  {
-    q: 'Is Chartix affiliated with the CMT Association?',
-    a: 'No. Chartix is an independent preparation platform and is not affiliated with or endorsed by the CMT Association.',
-  },
+];
+
+const comparisonRows = [
+  { feature: 'Chapter-wise Notes', free: 'First few chapters', paid: 'All chapters — all levels' },
+  { feature: 'Practice Questions', free: 'Limited', paid: '3,500+ per level' },
+  { feature: 'Mock Tests', free: '1 full mock test', paid: 'Unlimited' },
+  { feature: 'Chartix Scholar AI', free: '10 questions/day', paid: 'Unlimited' },
+  { feature: 'Performance Analytics', free: 'Limited', paid: 'Full chapter-by-chapter' },
+  { feature: 'CMT Levels', free: 'Level 1 only', paid: 'Level 1, 2 & 3' },
+  { feature: 'Price', free: '₹0', paid: '₹6,999 / $99 per level' },
 ];
 
 export default async function PricingPage() {
@@ -106,6 +116,14 @@ export default async function PricingPage() {
 
   return (
     <div className="min-h-screen bg-[#f0f7f4]">
+
+      {/* Early Adopter Banner */}
+      <div className="bg-emerald-700 text-white text-center px-4 py-3 text-sm font-medium">
+        🎓 Early Adopter Pricing — First 10 students get 50% off. Use code{' '}
+        <span className="font-bold bg-white/20 rounded px-2 py-0.5 mx-1 tracking-widest">CHARTIX10</span>
+        {' '}at checkout.
+      </div>
+
       {/* Nav */}
       <nav className="sticky top-0 z-50 border-b border-emerald-100 bg-white/90 backdrop-blur shadow-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8">
@@ -113,7 +131,7 @@ export default async function PricingPage() {
             <Image src="/chartix-wordmark.png" alt="Chartix" width={132} height={34} priority />
           </Link>
           <Link href="/sign-up" className="inline-flex items-center gap-1.5 rounded-full bg-emerald-700 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600">
-            Get started free <ArrowRight className="h-3.5 w-3.5" />
+            Start Free Trial <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
       </nav>
@@ -127,8 +145,18 @@ export default async function PricingPage() {
           Pay only for your level
         </h1>
         <p className="mt-4 mx-auto max-w-xl text-base leading-7 text-zinc-500">
-          No bundles, no confusion. Choose the CMT level you&apos;re preparing for and get full access to everything you need to pass.
+          No bundles, no confusion. Try free first — then choose the CMT level you&apos;re preparing for.
         </p>
+
+        <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <Link
+            href="/sign-up"
+            className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-full bg-emerald-700 px-8 py-3.5 text-sm font-bold text-white shadow-md transition hover:bg-emerald-600"
+          >
+            Start Free — Notes, Questions, Mock Tests &amp; AI Tutor Included <ArrowRight className="h-4 w-4 shrink-0" />
+          </Link>
+        </div>
+        <p className="mt-3 text-xs text-zinc-400">No credit card required · 7-day free trial</p>
 
         {/* Important notice */}
         <div className="mt-6 inline-flex items-start gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3 text-left max-w-lg mx-auto">
@@ -139,10 +167,64 @@ export default async function PricingPage() {
         </div>
       </section>
 
+      {/* Free vs Paid comparison table */}
+      <section className="bg-white border-t border-zinc-100 py-14 px-4">
+        <div className="mx-auto max-w-3xl">
+          <h2 className="text-2xl font-extrabold text-emerald-900 text-center mb-2">What&apos;s Free vs Paid</h2>
+          <p className="text-center text-sm text-zinc-500 mb-8">Try everything for free, then upgrade when you&apos;re ready.</p>
+          <div className="overflow-hidden rounded-2xl border border-emerald-100 shadow-sm">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-emerald-50">
+                  <th className="px-5 py-3.5 text-left font-semibold text-emerald-900"></th>
+                  <th className="px-5 py-3.5 text-center font-semibold text-emerald-700">Free Trial</th>
+                  <th className="px-5 py-3.5 text-center font-semibold text-emerald-900 bg-emerald-100/60">Full Access</th>
+                </tr>
+              </thead>
+              <tbody>
+                {comparisonRows.map((row, i) => (
+                  <tr key={row.feature} className={i % 2 === 0 ? 'bg-white' : 'bg-zinc-50/50'}>
+                    <td className="px-5 py-3.5 font-medium text-zinc-800">{row.feature}</td>
+                    <td className="px-5 py-3.5 text-center text-zinc-500">{row.free}</td>
+                    <td className="px-5 py-3.5 text-center font-semibold text-emerald-700 bg-emerald-50/40">{row.paid}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {/* Cost comparison callout */}
+      <section className="bg-[#f0f7f4] py-10 px-4">
+        <div className="mx-auto max-w-3xl rounded-2xl border border-emerald-200 bg-white p-6 sm:p-8 shadow-sm">
+          <h3 className="text-lg font-bold text-emerald-900 mb-3">The math is simple</h3>
+          <p className="text-sm leading-7 text-zinc-600">
+            CMT exam registration costs roughly <strong className="text-zinc-800">$875–$1,475</strong> per level (plus a $250 enrollment fee and $325/year membership). If you fail and retake, that&apos;s another $875–$1,475 out of pocket. Chartix costs{' '}
+            <strong className="text-emerald-700">₹6,999 / $99</strong> — a fraction of one retake fee. Pass first time and you&apos;ve already saved thousands.
+          </p>
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 text-center text-xs">
+            {[
+              { label: 'CMT Enrollment', value: '$250', note: 'one-time' },
+              { label: 'CMT Membership', value: '$325', note: 'per year' },
+              { label: 'Exam fee (early)', value: '$875', note: 'per level' },
+              { label: 'Chartix', value: isUSD ? '$99' : '₹6,999', note: 'per level', highlight: true },
+            ].map((item) => (
+              <div
+                key={item.label}
+                className={`rounded-xl border px-3 py-3 ${item.highlight ? 'border-emerald-300 bg-emerald-50 text-emerald-800' : 'border-zinc-100 bg-zinc-50 text-zinc-600'}`}
+              >
+                <div className={`text-lg font-extrabold ${item.highlight ? 'text-emerald-700' : 'text-zinc-800'}`}>{item.value}</div>
+                <div className="font-semibold mt-0.5">{item.label}</div>
+                <div className={`mt-0.5 ${item.highlight ? 'text-emerald-600' : 'text-zinc-400'}`}>{item.note}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Pricing cards */}
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-
-        {/* Cards — all equal, no "most popular" */}
         <div className="grid gap-6 sm:grid-cols-3">
           {plansData.map((plan) => (
             <div
@@ -153,14 +235,12 @@ export default async function PricingPage() {
                   : 'border-emerald-100 bg-white hover:shadow-md hover:border-emerald-200'
               }`}
             >
-              {/* Coming Soon ribbon */}
               {plan.comingSoon && (
                 <span className="absolute right-5 top-5 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-700">
                   <Lock className="h-3 w-3" /> Coming Soon
                 </span>
               )}
 
-              {/* Badge */}
               <div className={`inline-flex h-10 w-10 items-center justify-center rounded-xl font-bold text-sm text-white mb-5 ${plan.comingSoon ? 'bg-zinc-400' : 'bg-emerald-700'}`}>
                 {plan.badge}
               </div>
@@ -176,7 +256,6 @@ export default async function PricingPage() {
               </div>
               <p className="text-sm leading-6 text-zinc-500 mb-2">{plan.description}</p>
 
-              {/* Access duration pill */}
               <div className="flex items-center gap-1.5 mb-6">
                 <Clock className={`h-3.5 w-3.5 ${plan.comingSoon ? 'text-zinc-400' : 'text-emerald-600'}`} />
                 <span className={`text-xs font-semibold ${plan.comingSoon ? 'text-zinc-400' : 'text-emerald-700'}`}>6 months access</span>
@@ -196,22 +275,35 @@ export default async function PricingPage() {
                   <Lock className="h-4 w-4" /> Coming Soon
                 </div>
               ) : (
-                <Link
-                  href="/sign-up"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-600"
-                >
-                  Get started <ArrowRight className="h-4 w-4" />
-                </Link>
+                <div className="space-y-2">
+                  <Link
+                    href="/sign-up"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-600"
+                  >
+                    Start Free Trial <ArrowRight className="h-4 w-4" />
+                  </Link>
+                  <Link
+                    href="/get-access"
+                    className="block w-full text-center text-xs text-zinc-400 hover:text-zinc-600 transition py-1"
+                  >
+                    or Purchase Full Access — {isUSD ? '$99' : '₹6,999'}
+                  </Link>
+                  {/* Guarantee badge */}
+                  <div className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 mt-1">
+                    <Shield className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                    <span className="text-[11px] font-medium text-emerald-700">7-Day Money-Back Guarantee — Full refund, no questions asked</span>
+                  </div>
+                </div>
               )}
             </div>
           ))}
         </div>
 
-        {/* No refund notice */}
+        {/* No refund notice — kept for transparency */}
         <div className="mt-8 flex items-start gap-2.5 rounded-2xl border border-red-100 bg-red-50 px-5 py-4 max-w-2xl mx-auto">
           <AlertCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
           <p className="text-sm text-red-700">
-            <strong>No refund once enrollment is confirmed.</strong> Please use the free trial to evaluate the platform before purchasing.{' '}
+            <strong>7-day money-back guarantee.</strong> After 7 days, no refund once enrollment is confirmed. Please use the free trial to evaluate the platform before purchasing.{' '}
             <Link href="/refund-policy" className="underline hover:text-red-900">Read our Refund Policy</Link>
           </p>
         </div>
@@ -263,10 +355,13 @@ export default async function PricingPage() {
       {/* CTA */}
       <section className="bg-emerald-900 py-14 text-center px-4">
         <h2 className="text-2xl font-extrabold text-white sm:text-3xl">Try it free before you pay</h2>
-        <p className="mt-3 text-emerald-300 text-sm">Create a free account to access sample notes and questions — no credit card required.</p>
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-          <Link href="/sign-up" className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-bold text-emerald-900 transition hover:bg-emerald-50">
-            Create free account <ArrowRight className="h-4 w-4" />
+        <p className="mt-3 text-emerald-300 text-sm">Chapter notes, practice questions, mock test & Chartix Scholar AI — all included in your free trial.</p>
+        <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+          <Link
+            href="/sign-up"
+            className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-full bg-white px-7 py-3 text-sm font-bold text-emerald-900 transition hover:bg-emerald-50"
+          >
+            Start Free Trial <ArrowRight className="h-4 w-4" />
           </Link>
           <Link href="/contact" className="inline-flex items-center gap-2 rounded-full border border-emerald-600 px-6 py-3 text-sm font-semibold text-emerald-200 transition hover:border-white hover:text-white">
             Contact us

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight, BookOpen, Scale, BarChart3, Download, Rocket } from 'lucide-react';
 import { siteConfig } from '@/lib/site';
+import { IndexBuilderTimedBanner } from '@/components/marketing/IndexBuilderTimedBanner';
 
 export const metadata: Metadata = {
   title: 'Custom Index Builder — Build Market-Cap & Equal-Weight Indices | Chartix',
@@ -208,6 +209,9 @@ export default function IndexBuilderPage() {
           </Link>
         </p>
       </footer>
+
+      {/* 3-minute timed CMT promo banner */}
+      <IndexBuilderTimedBanner />
     </div>
   );
 }

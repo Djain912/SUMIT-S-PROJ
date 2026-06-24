@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { TrendingUp, ArrowRight, ChevronLeft } from 'lucide-react';
 import { type IndicatorKey } from '@/components/tools/indicator-tool';
 import { IndicatorLab } from '@/components/tools/indicator-lab';
+import { ScrollPopup } from '@/components/marketing/ScrollPopup';
 
 export const dynamic = 'force-dynamic';
 
@@ -93,6 +94,8 @@ export default async function PublicIndicatorPage({ params }: { params: Promise<
       <footer className="mt-10 border-t border-zinc-100 py-6 text-center text-xs text-zinc-400">
         © {new Date().getFullYear()} Chartix · <Link href="/" className="hover:text-emerald-700">Home</Link> · <Link href="/pricing" className="hover:text-emerald-700">Pricing</Link> · <Link href="/sign-up" className="hover:text-emerald-700">Sign Up</Link>
       </footer>
+
+      <ScrollPopup />
     </div>
   );
 }

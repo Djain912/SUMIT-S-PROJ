@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight, ChevronRight, Calculator } from 'lucide-react';
+import { ScrollPopup } from '@/components/marketing/ScrollPopup';
 
 export const metadata: Metadata = {
   title: 'Chartix Indicator Lab | Free Interactive Technical Analysis Tools',
@@ -125,6 +126,8 @@ export default function ToolsIndexPage() {
       <footer className="border-t border-zinc-100 py-6 text-center text-xs text-zinc-400">
         © {new Date().getFullYear()} Chartix · <Link href="/" className="hover:text-emerald-700">Home</Link> · <Link href="/pricing" className="hover:text-emerald-700">Pricing</Link>
       </footer>
+
+      <ScrollPopup />
     </div>
   );
 }
