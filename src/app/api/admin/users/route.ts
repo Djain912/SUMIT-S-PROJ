@@ -37,6 +37,8 @@ export async function GET(request: Request) {
           premiumUntil: true,
           couponRedeemed: true,
           passwordHash: true, // used only to detect sign-in method — not sent to client
+          trialStartedAt: true,
+          trialExpiresAt: true,
           createdAt: true,
           _count: { select: { quizAttempts: true } },
           entitlements: {
@@ -69,6 +71,8 @@ export async function GET(request: Request) {
         signInMethod: u.passwordHash ? 'Email' : 'Google',
         quizAttempts: u._count.quizAttempts,
         joinedAt: u.createdAt.toISOString(),
+        trialStartedAt: u.trialStartedAt ? u.trialStartedAt.toISOString() : null,
+        trialExpiresAt: u.trialExpiresAt ? u.trialExpiresAt.toISOString() : null,
       };
     });
 

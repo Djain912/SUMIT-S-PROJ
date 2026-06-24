@@ -18,6 +18,8 @@ export default async function AdminUsersPage() {
         premiumUntil: true,
         couponRedeemed: true,
         passwordHash: true,
+        trialStartedAt: true,
+        trialExpiresAt: true,
         createdAt: true,
         _count: { select: { quizAttempts: true } },
         entitlements: {
@@ -48,6 +50,8 @@ export default async function AdminUsersPage() {
       signInMethod: (u.passwordHash ? 'Email' : 'Google') as 'Email' | 'Google',
       quizAttempts: u._count.quizAttempts,
       joinedAt: u.createdAt.toISOString(),
+      trialStartedAt: u.trialStartedAt ? u.trialStartedAt.toISOString() : null,
+      trialExpiresAt: u.trialExpiresAt ? u.trialExpiresAt.toISOString() : null,
     };
   });
 

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Download, Users, Mail, Chrome, RefreshCw, Crown, Shield, Infinity as InfinityIcon, Loader2, Ticket, Trash2 } from 'lucide-react';
+import { Search, Download, Users, Mail, Chrome, RefreshCw, Crown, Shield, Infinity as InfinityIcon, Loader2, Ticket, Trash2, Timer } from 'lucide-react';
+import { computeTrialState, TRIAL_DAYS } from '@/lib/trial';
 
 type User = {
   id: string;
@@ -16,6 +17,8 @@ type User = {
   signInMethod: 'Email' | 'Google';
   quizAttempts: number;
   joinedAt: string;
+  trialStartedAt: string | null;
+  trialExpiresAt: string | null;
 };
 
 // Works out a user's current access state for display.
@@ -65,7 +68,7 @@ export function UsersTable({ initialUsers, initialMeta }: { initialUsers: User[]
   const [meta, setMeta] = useState<Meta>(initialMeta);
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'Email' | 'Google' | 'premium' | 'coupon' | 'free'>('all');
+  const [filter, setFilter] = useState<'all' | 'Email' | 'Google' | 'premium' | 'coupon' | 'free' | 'trial'>('all');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState<User | null>(null);
 
@@ -134,12 +137,20 @@ export function UsersTable({ initialUsers, initialMeta }: { initialUsers: User[]
     return () => clearTimeout(t);
   }, [search, fetchUsers]);
 
+  function getTrialState(u: User) {
+    return computeTrialState(
+      u.trialStartedAt ? new Date(u.trialStartedAt) : null,
+      u.trialExpiresAt ? new Date(u.trialExpiresAt) : null,
+    );
+  }
+
   const filtered = users.filter((u) => {
     if (filter === 'Email') return u.signInMethod === 'Email';
     if (filter === 'Google') return u.signInMethod === 'Google';
     if (filter === 'premium') return u.isPremium;
     if (filter === 'coupon') return !!(u.entitlementCoupon || (u.couponRedeemed && u.couponRedeemed !== 'LIFETIME_ADMIN'));
     if (filter === 'free') return !u.isPremium && !u.entitlementCoupon;
+    if (filter === 'trial') return getTrialState(u).inTrial;
     return true;
   });
 
@@ -147,6 +158,7 @@ export function UsersTable({ initialUsers, initialMeta }: { initialUsers: User[]
   const emailCount = users.filter((u) => u.signInMethod === 'Email').length;
   const premiumCount = users.filter((u) => u.isPremium).length;
   const couponCount = users.filter((u) => !!(u.entitlementCoupon || (u.couponRedeemed && u.couponRedeemed !== 'LIFETIME_ADMIN'))).length;
+  const trialCount = users.filter((u) => getTrialState(u).inTrial).length;
 
   // CSV export
   const exportCSV = () => {
@@ -217,12 +229,13 @@ export function UsersTable({ initialUsers, initialMeta }: { initialUsers: User[]
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-6">
         <StatCard icon={Users} label="Total Users" value={meta.total} color="bg-emerald-700" />
         <StatCard icon={Mail} label="Email Sign-ups" value={emailCount} color="bg-zinc-700" />
         <StatCard icon={Chrome} label="Google Sign-ups" value={googleCount} color="bg-blue-600" />
         <StatCard icon={Crown} label="Premium Users" value={premiumCount} color="bg-amber-500" />
         <StatCard icon={Ticket} label="Coupon Users" value={couponCount} color="bg-violet-600" />
+        <StatCard icon={Timer} label="In Free Trial" value={trialCount} color="bg-orange-500" />
       </div>
 
       {/* Search + Filter */}
@@ -240,7 +253,7 @@ export function UsersTable({ initialUsers, initialMeta }: { initialUsers: User[]
 
         {/* Filter pills */}
         <div className="flex flex-wrap gap-1.5">
-          {(['all', 'Email', 'Google', 'premium', 'coupon', 'free'] as const).map((f) => (
+          {(['all', 'Email', 'Google', 'premium', 'coupon', 'free', 'trial'] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
@@ -250,7 +263,7 @@ export function UsersTable({ initialUsers, initialMeta }: { initialUsers: User[]
                   : 'border border-zinc-200 bg-white text-zinc-500 hover:border-zinc-300 hover:text-zinc-800'
               }`}
             >
-              {f === 'all' ? 'All' : f === 'premium' ? '⭐ Premium' : f === 'coupon' ? '🎟️ Coupon' : f === 'free' ? 'Free' : f}
+              {f === 'all' ? 'All' : f === 'premium' ? '⭐ Premium' : f === 'coupon' ? '🎟️ Coupon' : f === 'free' ? 'Free' : f === 'trial' ? '🔥 Trial' : f}
             </button>
           ))}
         </div>
@@ -276,7 +289,7 @@ export function UsersTable({ initialUsers, initialMeta }: { initialUsers: User[]
           <table className="min-w-full divide-y divide-zinc-100">
             <thead className="bg-zinc-50">
               <tr>
-                {['#', 'Email', 'Name', 'Sign-in', 'Access', 'Coupon', 'Expiry', 'Quizzes', 'Joined', 'Action'].map((h) => (
+                {['#', 'Email', 'Name', 'Sign-in', 'Access', 'Coupon', 'Expiry', 'Trial', 'Quizzes', 'Joined', 'Action'].map((h) => (
                   <th key={h} className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
                     {h}
                   </th>
@@ -286,7 +299,7 @@ export function UsersTable({ initialUsers, initialMeta }: { initialUsers: User[]
             <tbody className="divide-y divide-zinc-50">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-12 text-center text-sm text-zinc-400">
+                  <td colSpan={11} className="py-12 text-center text-sm text-zinc-400">
                     No users found
                   </td>
                 </tr>
@@ -365,6 +378,30 @@ export function UsersTable({ initialUsers, initialMeta }: { initialUsers: User[]
                         ) : (
                           <span className="text-zinc-300">—</span>
                         )}
+                      </td>
+
+                      {/* Trial */}
+                      <td className="px-4 py-3">
+                        {(() => {
+                          if (u.role === 'ADMIN' || u.isPremium || u.entitlementExpiry) {
+                            return <span className="text-zinc-300 text-[11px]">—</span>;
+                          }
+                          const ts = getTrialState(u);
+                          if (ts.inTrial) {
+                            return (
+                              <span className="inline-flex flex-col gap-0.5">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-semibold text-orange-600">
+                                  <Timer className="h-3 w-3" /> Day {ts.dayOfTrial} of {TRIAL_DAYS}
+                                </span>
+                                <span className="text-[10px] text-zinc-400">{ts.daysRemaining}d left</span>
+                              </span>
+                            );
+                          }
+                          if (ts.expired) {
+                            return <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-500">Expired</span>;
+                          }
+                          return <span className="text-zinc-300 text-[11px]">Not started</span>;
+                        })()}
                       </td>
 
                       <td className="px-4 py-3 text-sm tabular-nums text-zinc-500">{u.quizAttempts}</td>
