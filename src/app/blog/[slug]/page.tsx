@@ -6,6 +6,8 @@ import { prisma } from '@/lib/db/prisma';
 import { Clock, Calendar, ArrowLeft, Tag } from 'lucide-react';
 import { BlogSubscribeForm } from '@/components/blog/BlogSubscribeForm';
 import { BlogContent } from '@/components/blog/BlogContent';
+import { generateBlogMetadata } from '@/lib/seo/blog-metadata';
+import { siteConfig } from '@/lib/site';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -24,38 +26,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const post = await getPost(slug);
   if (!post) return { title: 'Post Not Found | Chartix Blog' };
 
-  const description = post.excerpt ?? undefined;
-  const images = post.coverImageUrl ? [{ url: post.coverImageUrl, alt: post.title }] : [];
-
-  return {
+  return generateBlogMetadata({
     title: post.title,
-    description,
-    keywords: post.tags.length ? post.tags : undefined,
-    alternates: { canonical: `/blog/${slug}` },
-    openGraph: {
-      type: 'article',
-      title: post.title,
-      description,
-      url: `/blog/${slug}`,
-      images,
-      publishedTime: post.publishedAt?.toISOString(),
-      modifiedTime: post.updatedAt?.toISOString(),
-      authors: ['https://chartix.in'],
-      tags: post.tags,
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: post.title,
-      description,
-      images: post.coverImageUrl ? [post.coverImageUrl] : undefined,
-    },
-  };
+    description: post.excerpt,
+    slug,
+    coverImageUrl: post.coverImageUrl,
+    publishedAt: post.publishedAt,
+    updatedAt: post.updatedAt,
+    tags: post.tags,
+  });
 }
 
 export default async function BlogPostPage({ params }: Props) {
   const { slug } = await params;
   const post = await getPost(slug);
   if (!post) notFound();
+
+  const canonicalUrl = `${siteConfig.url}/blog/${slug}`;
 
   const articleJsonLd = {
     '@context': 'https://schema.org',
@@ -65,14 +52,14 @@ export default async function BlogPostPage({ params }: Props) {
     image: post.coverImageUrl ?? undefined,
     datePublished: post.publishedAt?.toISOString(),
     dateModified: post.updatedAt?.toISOString(),
-    author: { '@type': 'Organization', name: 'Chartix', url: 'https://chartix.in' },
+    author: { '@type': 'Organization', name: 'Chartix', url: siteConfig.url },
     publisher: {
       '@type': 'Organization',
       name: 'Chartix',
-      url: 'https://chartix.in',
-      logo: { '@type': 'ImageObject', url: 'https://chartix.in/chartix-wordmark.png' },
+      url: siteConfig.url,
+      logo: { '@type': 'ImageObject', url: `${siteConfig.url}/chartix-wordmark.png` },
     },
-    mainEntityOfPage: { '@type': 'WebPage', '@id': `https://chartix.in/blog/${slug}` },
+    mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalUrl },
     keywords: post.tags.join(', ') || undefined,
   };
 
@@ -146,7 +133,7 @@ export default async function BlogPostPage({ params }: Props) {
           </span>
         </div>
 
-        {/* Content */}
+        {/* Content — sanitized client-side to avoid jsdom in Vercel serverless */}
         <BlogContent
           html={post.contentHtml}
           className="mt-8 prose prose-zinc max-w-none
