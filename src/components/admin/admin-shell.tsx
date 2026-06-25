@@ -30,7 +30,7 @@ const navItems = [
   { label: 'Bot Feedback', href: '/admin/bot-feedback', icon: ThumbsUp },
   { label: 'Blog', href: '/admin/blog', icon: Newspaper },
   { label: 'Users / Leads', href: '/admin/users', icon: Users },
-  { label: 'Analytics ↗', href: 'https://analytics.google.com/analytics/web/#/p541762615/reports/intelligenthome', icon: BarChart2, external: true },
+  { label: 'Analytics', href: '/admin/analytics', icon: BarChart2 },
   { label: 'Coupons', href: '/admin/coupons', icon: Ticket },
 ];
 
