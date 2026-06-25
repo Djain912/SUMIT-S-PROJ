@@ -1,14 +1,16 @@
 "use client";
 
 import type { ReactNode } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { LayoutDashboard, BookOpen, FileText, ListChecks, Flag, ShieldCheck, Menu, X, LogOut, MessageSquare, Bot, Globe, ThumbsUp, Newspaper, Users, LineChart, Ticket, Sparkles, BarChart2 } from 'lucide-react';
+import { LayoutDashboard, BookOpen, FileText, ListChecks, Flag, ShieldCheck, Menu, X, LogOut, MessageSquare, Bot, Globe, ThumbsUp, Newspaper, Users, LineChart, Ticket, Sparkles, BarChart2, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { signOut } from 'next-auth/react';
 
 type Level = 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3';
+type NavItem = { label: string; href: string; icon: React.ElementType; external?: boolean };
 
 const levels: Level[] = ['LEVEL_1', 'LEVEL_2', 'LEVEL_3'];
 
@@ -28,7 +30,7 @@ const navItems = [
   { label: 'Bot Feedback', href: '/admin/bot-feedback', icon: ThumbsUp },
   { label: 'Blog', href: '/admin/blog', icon: Newspaper },
   { label: 'Users / Leads', href: '/admin/users', icon: Users },
-  { label: 'Analytics', href: '/admin/analytics', icon: BarChart2 },
+  { label: 'Analytics ↗', href: 'https://analytics.google.com/analytics/web/#/p541762615/reports/intelligenthome', icon: BarChart2, external: true },
   { label: 'Coupons', href: '/admin/coupons', icon: Ticket },
 ];
 
@@ -91,22 +93,25 @@ export function AdminShell({ children }: { children: ReactNode }) {
           </div>
 
           <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-            {navItems.map((item) => {
+            {(navItems as NavItem[]).map((item) => {
               const isActive = pathname === item.href;
               const Icon = item.icon;
+              const cls = cn(
+                'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition',
+                isActive ? 'bg-zinc-950 text-white' : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'
+              );
+
+              if (item.external) {
+                return (
+                  <a key={item.href} href={item.href} target="_blank" rel="noopener noreferrer" onClick={handleNavClick} className={cls}>
+                    <Icon className="h-4 w-4" />
+                    {item.label}
+                  </a>
+                );
+              }
 
               return (
-                <Link
-                  key={item.href}
-                  href={getHref(item.href)}
-                  onClick={handleNavClick}
-                  className={cn(
-                    'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition',
-                    isActive
-                      ? 'bg-zinc-950 text-white'
-                      : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'
-                  )}
-                >
+                <Link key={item.href} href={getHref(item.href)} onClick={handleNavClick} className={cls}>
                   <Icon className="h-4 w-4" />
                   {item.label}
                 </Link>
