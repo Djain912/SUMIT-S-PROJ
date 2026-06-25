@@ -4,7 +4,9 @@ const PROPERTY_ID = process.env.GA4_PROPERTY_ID ?? '541762615';
 
 async function getToken(): Promise<string> {
   const email = process.env.GA4_CLIENT_EMAIL;
-  const key = process.env.GA4_PRIVATE_KEY?.replace(/\\n/g, '\n');
+  const key = process.env.GA4_PRIVATE_KEY
+    ?.replace(/^["']|["']$/g, '')
+    ?.replace(/\\n/g, '\n');
   if (!email || !key) throw new Error('MISSING_CREDENTIALS');
 
   const now = Math.floor(Date.now() / 1000);

@@ -462,6 +462,7 @@ main{flex:1;display:flex;min-height:0}
       <div class="lb-sep"></div>
       <button class="lb-tool" onclick="undoDraw()" data-tip="Undo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10H9"/></svg><span class="tl-txt">Undo</span></button>
       <button class="lb-tool" onclick="clearDraw()" data-tip="Delete all drawings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg><span class="tl-txt">Delete all</span></button>
+      <button class="lb-tool on" id="dPriceLbl" onclick="togglePriceLabels()" data-tip="Show/hide price labels on drawings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="10" height="6" rx="1"/><path d="M13 10h8M17 7l4 3-4 3"/></svg><span class="tl-txt">Price labels</span></button>
       <button class="lb-tool" onclick="fitChart()" data-tip="Fit to screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="tl-txt">Fit</span></button>
       <button class="lb-tool" onclick="exportPNG()" data-tip="Download PNG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg><span class="tl-txt">Export</span></button>
       <div class="lb-sep"></div>
@@ -618,7 +619,7 @@ function setWeight(mode){
     }
   }
 }
-const D = { tool:'cursor', shapes:[], dragging:false, temp:null, selected:-1, editing:null, justEdited:false, waveStyle:'arabic', waveSize:'md', hideLines:false, wavePoints:[], waveCursorPt:null };
+const D = { tool:'cursor', shapes:[], dragging:false, temp:null, selected:-1, editing:null, justEdited:false, waveStyle:'arabic', waveSize:'md', hideLines:false, wavePoints:[], waveCursorPt:null, showPriceLabels:true };
 
 /* ── ELLIOTT WAVE CONSTANTS ── */
 const WAVE_MOTIVE   = ['1','2','3','4','5'];
@@ -1387,17 +1388,17 @@ function drawShape(ctx,sh,sel){
     const relY=sseries?sseries.priceToCoordinate(sh.a.price):null;if(relY==null){ctx.restore();return;}
     const y=relY+paneTopY(spane);
     ctx.strokeStyle=col;applyLineDash(ctx,sh);ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(cv.clientWidth,y);ctx.stroke();ctx.setLineDash([]);
-    lbl(ctx,cv.clientWidth-88,y,fmt(sh.a.price,2),col);
+    if(D.showPriceLabels)lbl(ctx,cv.clientWidth-88,y,fmt(sh.a.price,2),col);
   }else if(sh.type==='trend'){
     const a=px(sh.a,spane),b=sh.b&&px(sh.b,spane);if(!a||!b){ctx.restore();return;}
     ctx.strokeStyle=col;applyLineDash(ctx,sh);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.setLineDash([]);
-    dot(ctx,a,col);dot(ctx,b,col);lbl(ctx,b.x+6,b.y,fmt(sh.b.price,2),col);
+    dot(ctx,a,col);dot(ctx,b,col);if(D.showPriceLabels)lbl(ctx,b.x+6,b.y,fmt(sh.b.price,2),col);
   }else if(sh.type==='rect'){
     const a=px(sh.a,spane),b=sh.b&&px(sh.b,spane);if(!a||!b){ctx.restore();return;}
     const x=Math.min(a.x,b.x),y=Math.min(a.y,b.y),w=Math.abs(b.x-a.x),h=Math.abs(b.y-a.y);
     ctx.fillStyle='rgba(45,125,82,.07)';ctx.fillRect(x,y,w,h);
     ctx.strokeStyle=col;applyLineDash(ctx,sh);ctx.strokeRect(x,y,w,h);ctx.setLineDash([]);
-    lbl(ctx,x+4,y-3,fmt(Math.max(sh.a.price,sh.b.price),2)+' / '+fmt(Math.min(sh.a.price,sh.b.price),2),'#374151');
+    if(D.showPriceLabels)lbl(ctx,x+4,y-3,fmt(Math.max(sh.a.price,sh.b.price),2)+' / '+fmt(Math.min(sh.a.price,sh.b.price),2),'#374151');
   }else if(sh.type==='wave'){
     // Elliott Wave: pts[0] = unlabeled origin, pts[1..n] = labeled wave points
     const pts=sh.points||[];if(pts.length===0){ctx.restore();return;}
@@ -1736,6 +1737,7 @@ function setTool(t){
 }
 function undoDraw(){if(D.shapes.length){D.shapes.pop();D.selected=-1;hideMenu();redrawOverlay();}}
 function clearDraw(){D.shapes=[];D.temp=null;D.selected=-1;hideMenu();redrawOverlay();}
+function togglePriceLabels(){D.showPriceLabels=!D.showPriceLabels;var b=document.getElementById('dPriceLbl');if(b)b.classList.toggle('on',D.showPriceLabels);redrawOverlay();}
 
 /* ── EXPORT ── */
 // Preloaded so the watermark logo is ready to paint onto the exported PNG.
@@ -2409,7 +2411,17 @@ new ResizeObserver(()=>{resizeOverlay();redrawOverlay();}).observe(document.getE
     document.getElementById('rmCat').addEventListener('change',renderReadyMade);
     initTopSearch(); initRange(); initSettings();
     // change detection for autosave + keep chips in sync with the hidden row store
-    document.getElementById('idxName').addEventListener('input',scheduleAutosave);
+    document.getElementById('idxName').addEventListener('input',function(){
+      scheduleAutosave();
+      var nm=this.value.trim();
+      if(nm&&S.times&&S.times.length){
+        S.title=nm;
+        var lg=document.getElementById('legend');
+        if(lg){var ttl=lg.querySelector('.ttl');if(ttl)ttl.textContent=nm;}
+        var chip=document.getElementById('srcChip');
+        if(chip)chip.textContent=nm+' · '+S.times.length+' bars';
+      }
+    });
     document.getElementById('wMcap').addEventListener('click',scheduleAutosave);
     document.getElementById('wEqual').addEventListener('click',scheduleAutosave);
     var sl=document.getElementById('stockList');

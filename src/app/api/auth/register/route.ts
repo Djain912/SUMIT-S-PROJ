@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db/prisma';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
 import { TRIAL_DAYS } from '@/lib/trial';
+import { sendTrialWelcomeEmail } from '@/lib/email/welcome';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -64,6 +65,8 @@ export async function POST(request: Request) {
         subscriptionStatus: 'TRIAL',
       },
     });
+
+    sendTrialWelcomeEmail(email, fullName).catch((err) => console.error('[register] welcome email failed:', err));
 
     return NextResponse.json({ success: true });
   } catch {

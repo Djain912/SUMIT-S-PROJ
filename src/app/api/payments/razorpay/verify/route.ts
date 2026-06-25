@@ -4,6 +4,7 @@ import { validateCsrfOrigin } from '@/server/policies/csrf';
 import { prisma } from '@/lib/db/prisma';
 import { verifySignature, grantPremiumAccess } from '@/lib/payments/razorpay';
 import { issueInvoice } from '@/lib/invoices/send';
+import { sendPremiumWelcomeEmail } from '@/lib/email/welcome';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -59,6 +60,9 @@ export async function POST(request: Request) {
 
     // Generate PDF invoice + email it. Must be awaited — Vercel kills the function on response.
     await issueInvoice(payment.id).catch((err) => console.error('[verify] invoice error:', err));
+
+    const fullUser = await prisma.user.findUnique({ where: { id: user.id }, select: { email: true, fullName: true } });
+    sendPremiumWelcomeEmail(fullUser?.email ?? user.email, fullUser?.fullName).catch((err) => console.error('[verify] welcome email failed:', err));
 
     return NextResponse.json({ success: true, data: { premiumUntil } });
   } catch (error) {

@@ -5,6 +5,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db/prisma';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
 import { TRIAL_DAYS } from '@/lib/trial';
+import { sendTrialWelcomeEmail } from '@/lib/email/welcome';
 
 function getSuperAdminEmail(): string | null {
   const raw =
@@ -45,6 +46,7 @@ async function upsertOAuthUser(email: string, providerAccountId: string, fullNam
     },
   });
   await trackLogin(user.id);
+  sendTrialWelcomeEmail(email, fullName).catch((err) => console.error('[oauth] welcome email failed:', err));
   return user;
 }
 
