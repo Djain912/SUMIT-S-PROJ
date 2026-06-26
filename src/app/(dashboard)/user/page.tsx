@@ -2,6 +2,7 @@ import { requireAuthenticatedUser } from '@/server/policies/auth';
 import { getUserDashboardData } from '@/server/services/dashboard.service';
 import { UserDashboardClient } from '@/components/user/user-dashboard';
 import { TrialBanner } from '@/components/user/TrialBanner';
+import { OnboardingChecklist } from '@/components/user/OnboardingChecklist';
 
 export default async function UserDashboardPage() {
   const user = await requireAuthenticatedUser();
@@ -15,6 +16,7 @@ export default async function UserDashboardPage() {
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-zinc-950 sm:text-3xl">Dashboard</h1>
         </div>
         <TrialBanner email={user.email} />
+        <OnboardingChecklist userId={user.id} email={user.email} />
         <UserDashboardClient initialData={initialData} />
       </div>
     </main>

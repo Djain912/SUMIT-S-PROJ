@@ -91,7 +91,7 @@ function buildHtml({
 
       <!-- CTA -->
       <tr><td style="padding:24px 0;text-align:center">
-        <a href="https://chartix.in" style="display:inline-block;background:${GREEN};color:#fff;text-decoration:none;font-size:14px;font-weight:600;padding:13px 32px;border-radius:8px">Go to Chartix →</a>
+        <a href="https://chartix.in/user/notes" style="display:inline-block;background:${GREEN};color:#fff;text-decoration:none;font-size:14px;font-weight:600;padding:13px 32px;border-radius:8px">Start with Chapter 1 →</a>
       </td></tr>
 
       <!-- Offer (trial only) -->
@@ -146,6 +146,38 @@ export async function sendTrialWelcomeEmail(email: string, fullName: string | nu
       headline: 'Your free trial is live. 🎉',
       subline: 'Your 7-day access starts now — everything you need to prepare for the CMT exam is ready.',
       introLine: 'Thank you for starting your free trial. We\'re excited to have you on board and look forward to helping you prepare with confidence.',
+      showOffer: true,
+    }),
+  });
+}
+
+export async function sendTrialNudgeEmail(email: string, fullName: string | null | undefined, daysRemaining: number) {
+  const firstName = extractFirstName(fullName);
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to: email,
+    subject: `You haven't started yet — ${daysRemaining} days left on your trial`,
+    html: buildHtml({
+      firstName,
+      headline: 'Your trial is running. Have you started?',
+      subline: `You still have ${daysRemaining} days left — enough time to get a real feel for CMT preparation.`,
+      introLine: `You signed up a couple of days ago but haven't opened any notes yet. No pressure — but your trial clock is running, and we don't want you to miss out.<br><br>Here's the quickest way to get started: open the first chapter, read for 10 minutes, then try a few practice questions. That's it.`,
+      showOffer: true,
+    }),
+  });
+}
+
+export async function sendTrialUrgencyEmail(email: string, fullName: string | null | undefined) {
+  const firstName = extractFirstName(fullName);
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to: email,
+    subject: '1 day left on your Chartix trial',
+    html: buildHtml({
+      firstName,
+      headline: '1 day left on your trial.',
+      subline: 'Your 7-day free trial ends tomorrow. Here\'s how to make the most of it — or upgrade to keep going.',
+      introLine: `Your free trial expires in about 24 hours. If you haven't had a chance to explore yet, today is the day.<br><br>If you've been using Chartix and want to continue, upgrading takes 2 minutes and keeps all your progress intact.`,
       showOffer: true,
     }),
   });
