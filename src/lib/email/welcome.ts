@@ -1,4 +1,4 @@
-import { resend, FROM_EMAIL } from './resend';
+import { resend, FROM_EMAIL, BCC_EMAIL } from './resend';
 
 const GREEN = '#0f5c35';
 const GRAY = '#6b7280';
@@ -140,6 +140,7 @@ export async function sendTrialWelcomeEmail(email: string, fullName: string | nu
   await resend.emails.send({
     from: FROM_EMAIL,
     to: email,
+    bcc: [BCC_EMAIL],
     subject: 'Your Chartix free trial is live 🎉',
     html: buildHtml({
       firstName,
@@ -156,6 +157,7 @@ export async function sendTrialNudgeEmail(email: string, fullName: string | null
   await resend.emails.send({
     from: FROM_EMAIL,
     to: email,
+    bcc: [BCC_EMAIL],
     subject: `You haven't started yet — ${daysRemaining} days left on your trial`,
     html: buildHtml({
       firstName,
@@ -172,6 +174,7 @@ export async function sendTrialUrgencyEmail(email: string, fullName: string | nu
   await resend.emails.send({
     from: FROM_EMAIL,
     to: email,
+    bcc: [BCC_EMAIL],
     subject: '1 day left on your Chartix trial',
     html: buildHtml({
       firstName,
@@ -188,6 +191,7 @@ export async function sendPremiumWelcomeEmail(email: string, fullName: string | 
   await resend.emails.send({
     from: FROM_EMAIL,
     to: email,
+    bcc: [BCC_EMAIL],
     subject: 'Welcome to Chartix Premium 🎉',
     html: buildHtml({
       firstName,
