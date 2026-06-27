@@ -53,7 +53,12 @@ export default async function BlogPostPage({ params }: Props) {
     image: post.coverImageUrl ?? undefined,
     datePublished: post.publishedAt?.toISOString(),
     dateModified: post.updatedAt?.toISOString(),
-    author: { '@type': 'Organization', name: 'Chartix', url: siteConfig.url },
+    author: {
+      '@type': 'Person',
+      name: 'Sumit Jain',
+      url: siteConfig.url,
+      jobTitle: 'CMT Level III Cleared · Co-founder, Chartix.in',
+    },
     publisher: {
       '@type': 'Organization',
       name: 'Chartix',
@@ -64,12 +69,37 @@ export default async function BlogPostPage({ params }: Props) {
     keywords: post.tags.join(', ') || undefined,
   };
 
+  // Extract h3 questions from the FAQ section for Google's "People Also Ask" boxes
+  const faqMatches = [...post.contentHtml.matchAll(/<h3[^>]*>(.*?)<\/h3>\s*<p[^>]*>([\s\S]*?)<\/p>/g)];
+  const faqItems = faqMatches
+    .map((m) => ({
+      q: m[1].replace(/<[^>]+>/g, '').trim(),
+      a: m[2].replace(/<[^>]+>/g, '').trim(),
+    }))
+    .filter((item) => item.q.endsWith('?'));
+
+  const faqJsonLd = faqItems.length > 0 ? {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqItems.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: { '@type': 'Answer', text: item.a },
+    })),
+  } : null;
+
   return (
     <div className="min-h-screen bg-white">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
       />
+      {faqJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        />
+      )}
       {/* Nav */}
       <nav className="border-b border-zinc-100 bg-white/80 backdrop-blur sticky top-0 z-10">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
@@ -152,6 +182,22 @@ export default async function BlogPostPage({ params }: Props) {
             prose-img:rounded-xl prose-img:shadow-sm
             prose-hr:border-zinc-200"
         />
+
+        {/* Post-article CTA — shown on every blog post */}
+        <div className="mt-12 rounded-2xl bg-emerald-50 border border-emerald-100 px-6 py-8 text-center not-prose">
+          <p className="text-xs font-semibold uppercase tracking-widest text-emerald-700 mb-2">Preparing for CMT?</p>
+          <h3 className="text-xl font-bold text-zinc-900 mb-2">Study smarter with Chartix</h3>
+          <p className="text-sm text-zinc-500 mb-6 max-w-md mx-auto">
+            Structured notes, topic-wise practice questions, and an AI tutor trained on the full CMT curriculum — built by someone who cleared all three levels.
+          </p>
+          <Link
+            href="/sign-up"
+            className="inline-flex items-center gap-2 rounded-full bg-emerald-700 px-6 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800"
+          >
+            Start your free 7-day trial →
+          </Link>
+          <p className="mt-3 text-xs text-zinc-400">No credit card required</p>
+        </div>
       </article>
 
       {/* Subscribe */}
