@@ -1,11 +1,689 @@
 {
+  "nifty_50": {
+    "id": "nifty_50",
+    "name": "Nifty 50",
+    "category": "Broad Market",
+    "description": "India's 50 largest blue-chip companies — the headline NSE benchmark.",
+    "icon": "crown",
+    "constituents": [
+      "ADANIENT",
+      "ADANIPORTS",
+      "APOLLOHOSP",
+      "ASIANPAINT",
+      "AXISBANK",
+      "BAJAJ-AUTO",
+      "BAJFINANCE",
+      "BAJAJFINSV",
+      "BPCL",
+      "BHARTIARTL",
+      "BRITANNIA",
+      "CIPLA",
+      "COALINDIA",
+      "DIVISLAB",
+      "DRREDDY",
+      "EICHERMOT",
+      "GRASIM",
+      "HCLTECH",
+      "HDFCBANK",
+      "HDFCLIFE",
+      "HEROMOTOCO",
+      "HINDALCO",
+      "HINDUNILVR",
+      "ICICIBANK",
+      "ITC",
+      "INDUSINDBK",
+      "INFY",
+      "JSWSTEEL",
+      "JIOFIN",
+      "KOTAKBANK",
+      "LT",
+      "LTIM",
+      "M&M",
+      "MARUTI",
+      "NTPC",
+      "NESTLEIND",
+      "ONGC",
+      "POWERGRID",
+      "RELIANCE",
+      "SBILIFE",
+      "SBIN",
+      "SUNPHARMA",
+      "TCS",
+      "TATACONSUM",
+      "TATAMOTORS",
+      "TATASTEEL",
+      "TECHM",
+      "TITAN",
+      "ULTRACEMCO",
+      "WIPRO"
+    ]
+  },
+  "sensex_30": {
+    "id": "sensex_30",
+    "name": "BSE Sensex 30",
+    "category": "Broad Market",
+    "description": "The S&P BSE SENSEX — India's 30 oldest and most-tracked large-caps.",
+    "icon": "landmark",
+    "constituents": [
+      "ASIANPAINT",
+      "AXISBANK",
+      "BAJFINANCE",
+      "BAJAJFINSV",
+      "BHARTIARTL",
+      "HCLTECH",
+      "HDFCBANK",
+      "HINDUNILVR",
+      "ICICIBANK",
+      "INDUSINDBK",
+      "INFY",
+      "ITC",
+      "JSWSTEEL",
+      "KOTAKBANK",
+      "LT",
+      "M&M",
+      "MARUTI",
+      "NESTLEIND",
+      "NTPC",
+      "POWERGRID",
+      "RELIANCE",
+      "SBIN",
+      "SUNPHARMA",
+      "TCS",
+      "TATAMOTORS",
+      "TATASTEEL",
+      "TECHM",
+      "TITAN",
+      "ULTRACEMCO",
+      "WIPRO"
+    ]
+  },
+  "nifty_bank": {
+    "id": "nifty_bank",
+    "name": "Nifty Bank",
+    "category": "Banking & Finance",
+    "description": "The 12 most liquid and large-cap Indian banking stocks.",
+    "icon": "landmark",
+    "constituents": [
+      "HDFCBANK",
+      "ICICIBANK",
+      "AXISBANK",
+      "SBIN",
+      "KOTAKBANK",
+      "INDUSINDBK",
+      "BANKBARODA",
+      "AUBANK",
+      "PNB",
+      "IDFCFIRSTB",
+      "FEDERALBNK",
+      "BANDHANBNK"
+    ]
+  },
+  "nifty_private_bank": {
+    "id": "nifty_private_bank",
+    "name": "Nifty Private Bank",
+    "category": "Banking & Finance",
+    "description": "Leading private-sector banks in India.",
+    "icon": "landmark",
+    "constituents": [
+      "HDFCBANK",
+      "ICICIBANK",
+      "AXISBANK",
+      "KOTAKBANK",
+      "INDUSINDBK",
+      "FEDERALBNK",
+      "IDFCFIRSTB",
+      "BANDHANBNK",
+      "RBLBANK",
+      "CUB",
+      "KARURVYSYA"
+    ]
+  },
+  "nifty_psu_bank": {
+    "id": "nifty_psu_bank",
+    "name": "Nifty PSU Bank",
+    "category": "Banking & Finance",
+    "description": "Public-sector (government-owned) banks.",
+    "icon": "landmark",
+    "constituents": [
+      "SBIN",
+      "BANKBARODA",
+      "PNB",
+      "CANBK",
+      "UNIONBANK",
+      "INDIANB",
+      "BANKINDIA",
+      "CENTRALBK",
+      "UCOBANK",
+      "MAHABANK",
+      "IOB",
+      "PSB"
+    ]
+  },
+  "nifty_financial_services": {
+    "id": "nifty_financial_services",
+    "name": "Nifty Financial Services",
+    "category": "Banking & Finance",
+    "description": "Banks, NBFCs and insurers — the broad financial-services basket.",
+    "icon": "wallet",
+    "constituents": [
+      "HDFCBANK",
+      "ICICIBANK",
+      "AXISBANK",
+      "SBIN",
+      "KOTAKBANK",
+      "BAJFINANCE",
+      "BAJAJFINSV",
+      "JIOFIN",
+      "CHOLAFIN",
+      "SHRIRAMFIN",
+      "MUTHOOTFIN",
+      "SBICARD"
+    ]
+  },
+  "nifty_fin_ex_bank": {
+    "id": "nifty_fin_ex_bank",
+    "name": "Nifty Financial Services Ex-Bank",
+    "category": "Banking & Finance",
+    "description": "Financial services excluding banks — NBFCs and insurers.",
+    "icon": "wallet",
+    "constituents": [
+      "BAJFINANCE",
+      "BAJAJFINSV",
+      "JIOFIN",
+      "SHRIRAMFIN",
+      "CHOLAFIN",
+      "MUTHOOTFIN",
+      "SBICARD",
+      "HDFCLIFE",
+      "SBILIFE",
+      "ICICIGI",
+      "ICICIPRULI",
+      "LICI"
+    ]
+  },
+  "nifty_nbfc": {
+    "id": "nifty_nbfc",
+    "name": "Nifty NBFC",
+    "category": "Banking & Finance",
+    "description": "Non-banking financial companies (NBFCs).",
+    "icon": "wallet",
+    "constituents": [
+      "BAJFINANCE",
+      "BAJAJFINSV",
+      "JIOFIN",
+      "SHRIRAMFIN",
+      "CHOLAFIN",
+      "MUTHOOTFIN",
+      "LTF",
+      "M&MFIN",
+      "SUNDARMFIN",
+      "POONAWALLA"
+    ]
+  },
+  "nifty_midsmall_fin": {
+    "id": "nifty_midsmall_fin",
+    "name": "Nifty MidSmall Financial Services",
+    "category": "Banking & Finance",
+    "description": "Mid & small-cap financial-services names.",
+    "icon": "wallet",
+    "constituents": [
+      "IDFCFIRSTB",
+      "FEDERALBNK",
+      "LTF",
+      "M&MFIN",
+      "POONAWALLA",
+      "ABCAPITAL",
+      "CHOLAFIN",
+      "NAM-INDIA",
+      "ANGELONE",
+      "BSE",
+      "MCX",
+      "CAMS"
+    ]
+  },
+  "nifty_it": {
+    "id": "nifty_it",
+    "name": "Nifty IT",
+    "category": "Technology",
+    "description": "India's top IT services and software companies.",
+    "icon": "cpu",
+    "constituents": [
+      "TCS",
+      "INFY",
+      "HCLTECH",
+      "WIPRO",
+      "LTIM",
+      "TECHM",
+      "PERSISTENT",
+      "COFORGE",
+      "MPHASIS",
+      "BSOFT"
+    ]
+  },
+  "nifty_midsmall_it_telecom": {
+    "id": "nifty_midsmall_it_telecom",
+    "name": "Nifty MidSmall IT & Telecom",
+    "category": "Technology",
+    "description": "Mid & small-cap IT and telecom companies.",
+    "icon": "cpu",
+    "constituents": [
+      "PERSISTENT",
+      "COFORGE",
+      "MPHASIS",
+      "BSOFT",
+      "CYIENT",
+      "KPITTECH",
+      "TATAELXSI",
+      "ZENSARTECH",
+      "SONATSOFTW",
+      "INDUSTOWER",
+      "TATACOMM",
+      "TEJASNET"
+    ]
+  },
+  "nifty_telecom": {
+    "id": "nifty_telecom",
+    "name": "Nifty Telecommunications",
+    "category": "Technology",
+    "description": "Telecom operators, towers and equipment makers.",
+    "icon": "phone",
+    "constituents": [
+      "BHARTIARTL",
+      "INDUSTOWER",
+      "TATACOMM",
+      "IDEA",
+      "BHARTIHEXA",
+      "TEJASNET",
+      "ROUTE",
+      "RAILTEL",
+      "OPTIEMUS",
+      "ITI"
+    ]
+  },
+  "nifty_auto": {
+    "id": "nifty_auto",
+    "name": "Nifty Auto",
+    "category": "Manufacturing",
+    "description": "Automobile makers and ancillaries.",
+    "icon": "car",
+    "constituents": [
+      "MARUTI",
+      "M&M",
+      "TATAMOTORS",
+      "BAJAJ-AUTO",
+      "HEROMOTOCO",
+      "EICHERMOT",
+      "TVSMOTOR",
+      "ASHOKLEY",
+      "BOSCHLTD",
+      "MRF",
+      "MOTHERSON",
+      "BALKRISIND",
+      "BHARATFORG",
+      "TIINDIA"
+    ]
+  },
+  "nifty_capital_goods": {
+    "id": "nifty_capital_goods",
+    "name": "Nifty Capital Goods",
+    "category": "Manufacturing",
+    "description": "Capital goods and heavy engineering companies.",
+    "icon": "factory",
+    "constituents": [
+      "LT",
+      "SIEMENS",
+      "HAL",
+      "BEL",
+      "CGPOWER",
+      "ABB",
+      "POLYCAB",
+      "SUZLON",
+      "THERMAX",
+      "BEML",
+      "BHARATFORG",
+      "CARBORUNIV"
+    ]
+  },
+  "nifty_cement": {
+    "id": "nifty_cement",
+    "name": "Nifty Cement",
+    "category": "Manufacturing",
+    "description": "Leading listed cement manufacturers.",
+    "icon": "building",
+    "constituents": [
+      "ULTRACEMCO",
+      "GRASIM",
+      "AMBUJACEM",
+      "SHREECEM",
+      "ACC",
+      "DALBHARAT",
+      "RAMCOCEM",
+      "JKCEMENT",
+      "INDIACEM",
+      "NUVOCO",
+      "JKLAKSHMI"
+    ]
+  },
+  "nifty_chemicals": {
+    "id": "nifty_chemicals",
+    "name": "Nifty Chemicals",
+    "category": "Manufacturing",
+    "description": "Speciality and bulk chemical producers.",
+    "icon": "flask",
+    "constituents": [
+      "PIDILITIND",
+      "SRF",
+      "FLUOROCHEM",
+      "AARTIIND",
+      "TATACHEM",
+      "DEEPAKNTR",
+      "ATUL",
+      "NAVINFLUOR",
+      "UPL",
+      "PIIND",
+      "BASF",
+      "CLEAN"
+    ]
+  },
+  "nifty_metal": {
+    "id": "nifty_metal",
+    "name": "Nifty Metal",
+    "category": "Manufacturing",
+    "description": "Ferrous, non-ferrous and mining companies.",
+    "icon": "layers",
+    "constituents": [
+      "TATASTEEL",
+      "HINDALCO",
+      "JSWSTEEL",
+      "COALINDIA",
+      "VEDL",
+      "JINDALSTEL",
+      "NMDC",
+      "SAIL",
+      "NATIONALUM",
+      "APLAPOLLO",
+      "HINDZINC",
+      "HINDCOPPER"
+    ]
+  },
+  "nifty_power": {
+    "id": "nifty_power",
+    "name": "Nifty Power",
+    "category": "Infrastructure",
+    "description": "Power generation, transmission and equipment.",
+    "icon": "zap",
+    "constituents": [
+      "NTPC",
+      "POWERGRID",
+      "TATAPOWER",
+      "ADANIPOWER",
+      "ADANIGREEN",
+      "JSWENERGY",
+      "NHPC",
+      "TORNTPOWER",
+      "SJVN",
+      "CESC",
+      "BHEL",
+      "CGPOWER"
+    ]
+  },
+  "nifty_oil_gas": {
+    "id": "nifty_oil_gas",
+    "name": "Nifty Oil & Gas",
+    "category": "Energy",
+    "description": "Oil, gas and downstream energy companies.",
+    "icon": "fuel",
+    "constituents": [
+      "RELIANCE",
+      "ONGC",
+      "IOC",
+      "BPCL",
+      "HINDPETRO",
+      "GAIL",
+      "PETRONET",
+      "GUJGASLTD",
+      "IGL",
+      "MGL",
+      "CASTROLIND",
+      "OIL"
+    ]
+  },
+  "nifty_fmcg": {
+    "id": "nifty_fmcg",
+    "name": "Nifty FMCG",
+    "category": "Consumer",
+    "description": "Fast-moving consumer goods companies.",
+    "icon": "shopping-cart",
+    "constituents": [
+      "ITC",
+      "HINDUNILVR",
+      "NESTLEIND",
+      "BRITANNIA",
+      "TATACONSUM",
+      "GODREJCP",
+      "DABUR",
+      "MARICO",
+      "VBL",
+      "UNITDSPR",
+      "COLPAL",
+      "EMAMILTD"
+    ]
+  },
+  "nifty_consumer_durables": {
+    "id": "nifty_consumer_durables",
+    "name": "Nifty Consumer Durables",
+    "category": "Consumer",
+    "description": "Consumer durables, appliances and electronics.",
+    "icon": "tv",
+    "constituents": [
+      "ASIANPAINT",
+      "TITAN",
+      "HAVELLS",
+      "VOLTAS",
+      "DIXON",
+      "BLUESTARCO",
+      "CROMPTON",
+      "WHIRLPOOL",
+      "KAJARIACER",
+      "VGUARD",
+      "SYMPHONY",
+      "BATAINDIA"
+    ]
+  },
+  "nifty_consumer_services": {
+    "id": "nifty_consumer_services",
+    "name": "Nifty Consumer Services",
+    "category": "Consumer",
+    "description": "Retail, hospitality, food-tech and internet services.",
+    "icon": "concierge",
+    "constituents": [
+      "TRENT",
+      "JUBLFOOD",
+      "ZOMATO",
+      "NAUKRI",
+      "DEVYANI",
+      "INDHOTEL",
+      "WESTLIFE",
+      "PAGEIND",
+      "ABFRL",
+      "NYKAA"
+    ]
+  },
+  "nifty_retail": {
+    "id": "nifty_retail",
+    "name": "Nifty Retail",
+    "category": "Consumer",
+    "description": "Organised retail chains and brands.",
+    "icon": "store",
+    "constituents": [
+      "TRENT",
+      "DMART",
+      "ABFRL",
+      "SHOPERSTOP",
+      "VMART",
+      "ARVINDFASN",
+      "EMIL",
+      "METROBRAND"
+    ]
+  },
+  "nifty_healthcare": {
+    "id": "nifty_healthcare",
+    "name": "Nifty Healthcare",
+    "category": "Healthcare",
+    "description": "Pharma companies and hospital chains.",
+    "icon": "heart-pulse",
+    "constituents": [
+      "SUNPHARMA",
+      "DRREDDY",
+      "CIPLA",
+      "APOLLOHOSP",
+      "DIVISLAB",
+      "MAXHEALTH",
+      "LUPIN",
+      "AUROPHARMA",
+      "ALKEM",
+      "TORNTPHARM",
+      "BIOCON",
+      "SYNGENE"
+    ]
+  },
+  "nifty_pharma": {
+    "id": "nifty_pharma",
+    "name": "Nifty Pharma",
+    "category": "Healthcare",
+    "description": "Pharmaceutical manufacturers.",
+    "icon": "pill",
+    "constituents": [
+      "SUNPHARMA",
+      "DRREDDY",
+      "CIPLA",
+      "DIVISLAB",
+      "LUPIN",
+      "AUROPHARMA",
+      "TORNTPHARM",
+      "ALKEM",
+      "BIOCON",
+      "ZYDUSLIFE",
+      "GLENMARK"
+    ]
+  },
+  "nifty500_healthcare": {
+    "id": "nifty500_healthcare",
+    "name": "Nifty500 Healthcare",
+    "category": "Healthcare",
+    "description": "Broader healthcare basket from the Nifty 500.",
+    "icon": "heart-pulse",
+    "constituents": [
+      "SUNPHARMA",
+      "DRREDDY",
+      "CIPLA",
+      "DIVISLAB",
+      "APOLLOHOSP",
+      "MAXHEALTH",
+      "LUPIN",
+      "AUROPHARMA",
+      "BIOCON",
+      "FORTIS",
+      "MEDANTA",
+      "NH"
+    ]
+  },
+  "nifty_midsmall_healthcare": {
+    "id": "nifty_midsmall_healthcare",
+    "name": "Nifty MidSmall Healthcare",
+    "category": "Healthcare",
+    "description": "Mid & small-cap healthcare names.",
+    "icon": "heart-pulse",
+    "constituents": [
+      "MAXHEALTH",
+      "FORTIS",
+      "MEDANTA",
+      "NH",
+      "ASTERDM",
+      "SUVENPHAR",
+      "LAURUSLABS",
+      "GRANULES",
+      "CONCORDBIO",
+      "JUBLPHARMA",
+      "GLENMARK"
+    ]
+  },
+  "nifty_construction": {
+    "id": "nifty_construction",
+    "name": "Nifty Construction",
+    "category": "Infrastructure",
+    "description": "EPC, construction and real-estate developers.",
+    "icon": "hard-hat",
+    "constituents": [
+      "LT",
+      "LODHA",
+      "GODREJPROP",
+      "DLF",
+      "OBEROIRLTY",
+      "PRESTIGE",
+      "KNRCON",
+      "PNCINFRA",
+      "NCC",
+      "DBL",
+      "NBCC"
+    ]
+  },
+  "nifty_realty": {
+    "id": "nifty_realty",
+    "name": "Nifty Realty",
+    "category": "Infrastructure",
+    "description": "Listed real-estate developers.",
+    "icon": "building-2",
+    "constituents": [
+      "DLF",
+      "LODHA",
+      "GODREJPROP",
+      "PRESTIGE",
+      "OBEROIRLTY",
+      "PHOENIXLTD",
+      "BRIGADE",
+      "SOBHA",
+      "MAHLIFE",
+      "SUNTECK",
+      "PURVA"
+    ]
+  },
+  "nifty_transport": {
+    "id": "nifty_transport",
+    "name": "Nifty Commercial & Transport Services",
+    "category": "Infrastructure",
+    "description": "Logistics, ports, aviation and transport services.",
+    "icon": "truck",
+    "constituents": [
+      "ADANIPORTS",
+      "INDIGO",
+      "CONCOR",
+      "BLUEDART",
+      "VRLLOG",
+      "TCIEXP",
+      "AEGISLOG",
+      "MAHLOG",
+      "DELHIVERY"
+    ]
+  },
   "nifty_top_10": {
     "id": "nifty_top_10",
     "name": "Nifty Top 10",
     "category": "Thematic",
     "description": "India's 10 largest blue-chip companies by weight.",
     "icon": "crown",
-    "constituents": ["RELIANCE", "HDFCBANK", "ICICIBANK", "BHARTIARTL", "INFY", "TCS", "SBIN", "LT", "HINDUNILVR", "ITC"]
+    "constituents": [
+      "RELIANCE",
+      "HDFCBANK",
+      "ICICIBANK",
+      "BHARTIARTL",
+      "INFY",
+      "TCS",
+      "SBIN",
+      "LT",
+      "HINDUNILVR",
+      "ITC"
+    ]
   },
   "cement": {
     "id": "cement",
@@ -13,7 +691,18 @@
     "category": "Manufacturing",
     "description": "Leading listed cement manufacturers.",
     "icon": "building",
-    "constituents": ["ULTRACEMCO", "AMBUJACEM", "ACC", "SHREECEM", "DALBHARAT", "JKCEMENT", "RAMCOCEM", "JKLAKSHMI", "BIRLACORPN", "ORIENTCEM"]
+    "constituents": [
+      "ULTRACEMCO",
+      "AMBUJACEM",
+      "ACC",
+      "SHREECEM",
+      "DALBHARAT",
+      "JKCEMENT",
+      "RAMCOCEM",
+      "JKLAKSHMI",
+      "BIRLACORPN",
+      "ORIENTCEM"
+    ]
   },
   "hospitals": {
     "id": "hospitals",
@@ -21,7 +710,18 @@
     "category": "Healthcare",
     "description": "Listed hospital and healthcare chains.",
     "icon": "heart-pulse",
-    "constituents": ["APOLLOHOSP", "NH", "MAXHEALTH", "FORTIS", "ASTERDM", "KIMS", "RAINBOW", "MEDANTA", "YATHARTH", "GLOBAL"]
+    "constituents": [
+      "APOLLOHOSP",
+      "NH",
+      "MAXHEALTH",
+      "FORTIS",
+      "ASTERDM",
+      "KIMS",
+      "RAINBOW",
+      "MEDANTA",
+      "YATHARTH",
+      "GLOBAL"
+    ]
   },
   "sugar": {
     "id": "sugar",
@@ -29,7 +729,17 @@
     "category": "Manufacturing",
     "description": "Sugar and ethanol producers.",
     "icon": "candy",
-    "constituents": ["BAJAJHIND", "RENUKA", "TRIVENI", "BALRAMCHIN", "EIDPARRY", "PICCADIL", "DHAMPURSUG", "AVADHSUGAR", "DALMIASUG", "DWARKESH"]
+    "constituents": [
+      "BAJAJHIND",
+      "RENUKA",
+      "TRIVENI",
+      "BALRAMCHIN",
+      "EIDPARRY",
+      "DHAMPURSUG",
+      "AVADHSUGAR",
+      "DALMIASUG",
+      "DWARKESH"
+    ]
   },
   "pipes": {
     "id": "pipes",
@@ -37,7 +747,16 @@
     "category": "Manufacturing",
     "description": "Plastic and metal pipe manufacturers.",
     "icon": "git-commit-vertical",
-    "constituents": ["ASTRAL", "FINPIPE", "PRINCEPIPE", "SUPREMEIND", "APOLLOPIPE", "JINDALSAW", "RATNAMANI", "SHYAMMETL"]
+    "constituents": [
+      "ASTRAL",
+      "FINPIPE",
+      "PRINCEPIPE",
+      "SUPREMEIND",
+      "APOLLOPIPE",
+      "JINDALSAW",
+      "RATNAMANI",
+      "SHYAMMETL"
+    ]
   },
   "hosiery": {
     "id": "hosiery",
@@ -45,7 +764,13 @@
     "category": "Manufacturing",
     "description": "Innerwear and hosiery brands.",
     "icon": "shirt",
-    "constituents": ["PAGEIND", "LUXIND", "RUPA", "DOLLAR", "VIPCLOTHNG", "CANTABIL"]
+    "constituents": [
+      "PAGEIND",
+      "LUXIND",
+      "RUPA",
+      "DOLLAR",
+      "CANTABIL"
+    ]
   },
   "defence": {
     "id": "defence",
@@ -53,7 +778,18 @@
     "category": "Defence",
     "description": "Defence manufacturing and shipbuilding.",
     "icon": "shield",
-    "constituents": ["HAL", "BEL", "BDL", "MAZDOCK", "COCHINSHIP", "GRSE", "DATAPATTERNS", "PARAS", "ZENTEC", "ASTRAMICRO"]
+    "constituents": [
+      "HAL",
+      "BEL",
+      "BDL",
+      "MAZDOCK",
+      "COCHINSHIP",
+      "GRSE",
+      "DATAPATTNS",
+      "PARAS",
+      "ZENTEC",
+      "ASTRAMICRO"
+    ]
   },
   "railways": {
     "id": "railways",
@@ -61,7 +797,16 @@
     "category": "Infrastructure",
     "description": "Railway PSUs and rolling-stock makers.",
     "icon": "train-front",
-    "constituents": ["IRFC", "RVNL", "IRCON", "RAILTEL", "BEML", "TITAGARH", "TEXRAIL", "RITES"]
+    "constituents": [
+      "IRFC",
+      "RVNL",
+      "IRCON",
+      "RAILTEL",
+      "BEML",
+      "TITAGARH",
+      "TEXRAIL",
+      "RITES"
+    ]
   },
   "ems": {
     "id": "ems",
@@ -69,7 +814,15 @@
     "category": "Manufacturing",
     "description": "Electronics manufacturing services companies.",
     "icon": "cpu",
-    "constituents": ["DIXON", "KAYNES", "SYRMA", "PGEL", "AVALON", "IKIO", "CYIENTDLM"]
+    "constituents": [
+      "DIXON",
+      "KAYNES",
+      "SYRMA",
+      "PGEL",
+      "AVALON",
+      "IKIO",
+      "CYIENTDLM"
+    ]
   },
   "power_equipment": {
     "id": "power_equipment",
@@ -77,7 +830,15 @@
     "category": "Manufacturing",
     "description": "Power generation and electrical equipment makers.",
     "icon": "zap",
-    "constituents": ["SIEMENS", "ABB", "CGPOWER", "BHEL", "HAVELLS", "WAAREEENER", "SUZLON", "HITACHIENER"]
+    "constituents": [
+      "SIEMENS",
+      "ABB",
+      "CGPOWER",
+      "BHEL",
+      "HAVELLS",
+      "SUZLON",
+      "POWERINDIA"
+    ]
   },
   "capital_goods": {
     "id": "capital_goods",
@@ -85,7 +846,18 @@
     "category": "Manufacturing",
     "description": "Industrial and engineering capital-goods leaders.",
     "icon": "factory",
-    "constituents": ["LT", "SIEMENS", "ABB", "CUMMINSIND", "POLYCAB", "KEI", "CGPOWER", "SKFINDIA", "AIAENG", "THERMAX"]
+    "constituents": [
+      "LT",
+      "SIEMENS",
+      "ABB",
+      "CUMMINSIND",
+      "POLYCAB",
+      "KEI",
+      "CGPOWER",
+      "SKFINDIA",
+      "AIAENG",
+      "THERMAX"
+    ]
   },
   "housing_finance": {
     "id": "housing_finance",
@@ -93,7 +865,17 @@
     "category": "Financials",
     "description": "Leading listed housing-finance companies.",
     "icon": "home",
-    "constituents": ["BAJAJHFL", "LICHSGFIN", "APTUS", "AAVAS", "HOMEFIRST", "PNBHOUSING", "CANFINHOME", "AADHARHFC", "SAMMAANCAP"]
+    "constituents": [
+      "BAJAJHFL",
+      "LICHSGFIN",
+      "APTUS",
+      "AAVAS",
+      "HOMEFIRST",
+      "PNBHOUSING",
+      "CANFINHOME",
+      "AADHARHFC",
+      "SAMMAANCAP"
+    ]
   },
   "insurance": {
     "id": "insurance",
@@ -101,7 +883,16 @@
     "category": "Financials",
     "description": "Life, general and health insurers.",
     "icon": "umbrella",
-    "constituents": ["LICI", "SBILIFE", "HDFCLIFE", "ICICIPRULI", "ICICIGI", "GICRE", "STARHEALTH", "NIACL"]
+    "constituents": [
+      "LICI",
+      "SBILIFE",
+      "HDFCLIFE",
+      "ICICIPRULI",
+      "ICICIGI",
+      "GICRE",
+      "STARHEALTH",
+      "NIACL"
+    ]
   },
   "gold_finance": {
     "id": "gold_finance",
@@ -109,7 +900,13 @@
     "category": "Financials",
     "description": "Gold-loan and allied lenders.",
     "icon": "coins",
-    "constituents": ["MUTHOOTFIN", "MANAPPURAM", "IIFL", "FEDERALBNK", "SOUTHBANK"]
+    "constituents": [
+      "MUTHOOTFIN",
+      "MANAPPURAM",
+      "IIFL",
+      "FEDERALBNK",
+      "SOUTHBANK"
+    ]
   },
   "broking": {
     "id": "broking",
@@ -117,7 +914,14 @@
     "category": "Capital Markets",
     "description": "Listed retail and institutional brokerages.",
     "icon": "line-chart",
-    "constituents": ["ANGELONE", "IIFLCAPS", "MOTILALOFS", "NUVAMA", "5PAISA", "JMFINANCIL"]
+    "constituents": [
+      "ANGELONE",
+      "IIFLSEC",
+      "MOTILALOFS",
+      "NUVAMA",
+      "5PAISA",
+      "JMFINANCIL"
+    ]
   },
   "market_infrastructure": {
     "id": "market_infrastructure",
@@ -125,7 +929,13 @@
     "category": "Capital Markets",
     "description": "Exchanges, depositories and registrars.",
     "icon": "landmark",
-    "constituents": ["CDSL", "BSE", "MCX", "CAMS", "KFINTECH"]
+    "constituents": [
+      "CDSL",
+      "BSE",
+      "MCX",
+      "CAMS",
+      "KFINTECH"
+    ]
   },
   "wealth_management": {
     "id": "wealth_management",
@@ -133,7 +943,13 @@
     "category": "Capital Markets",
     "description": "Wealth and asset-management firms.",
     "icon": "gem",
-    "constituents": ["360ONE", "NUVAMA", "MOTILALOFS", "IIFLCAPS", "ANANDRATHI"]
+    "constituents": [
+      "360ONE",
+      "NUVAMA",
+      "MOTILALOFS",
+      "IIFLSEC",
+      "ANANDRATHI"
+    ]
   },
   "financialization_of_india": {
     "id": "financialization_of_india",
@@ -141,7 +957,16 @@
     "category": "Capital Markets",
     "description": "Beneficiaries of India's shift to financial assets.",
     "icon": "trending-up",
-    "constituents": ["CDSL", "CAMS", "KFINTECH", "BSE", "MCX", "ANGELONE", "360ONE", "MOTILALOFS"]
+    "constituents": [
+      "CDSL",
+      "CAMS",
+      "KFINTECH",
+      "BSE",
+      "MCX",
+      "ANGELONE",
+      "360ONE",
+      "MOTILALOFS"
+    ]
   },
   "logistics": {
     "id": "logistics",
@@ -149,7 +974,18 @@
     "category": "Logistics",
     "description": "Logistics, express and supply-chain players.",
     "icon": "truck",
-    "constituents": ["CONCOR", "TCI", "TCIEXP", "MAHLOG", "ALLCARGO", "DELHIVERY", "BLUEDART", "VRLLOG", "GATI", "TVSSCS"]
+    "constituents": [
+      "CONCOR",
+      "TCI",
+      "TCIEXP",
+      "MAHLOG",
+      "ALLCARGO",
+      "DELHIVERY",
+      "BLUEDART",
+      "VRLLOG",
+      "ACLGATI",
+      "TVSSCS"
+    ]
   },
   "premium_consumption": {
     "id": "premium_consumption",
@@ -157,7 +993,16 @@
     "category": "Consumption",
     "description": "Brands riding India's premiumisation trend.",
     "icon": "shopping-bag",
-    "constituents": ["TRENT", "DMART", "TITAN", "PAGEIND", "VBL", "HINDUNILVR", "NESTLEIND", "RADICO"]
+    "constituents": [
+      "TRENT",
+      "DMART",
+      "TITAN",
+      "PAGEIND",
+      "VBL",
+      "HINDUNILVR",
+      "NESTLEIND",
+      "RADICO"
+    ]
   },
   "monopoly_duopoly": {
     "id": "monopoly_duopoly",
@@ -165,7 +1010,18 @@
     "category": "Thematic",
     "description": "Companies that dominate their markets.",
     "icon": "trophy",
-    "constituents": ["IRCTC", "CDSL", "MCX", "IEX", "POLYCAB", "PIDILITIND", "ASIANPAINT", "TITAN", "HDFCLIFE", "NESTLEIND"]
+    "constituents": [
+      "IRCTC",
+      "CDSL",
+      "MCX",
+      "IEX",
+      "POLYCAB",
+      "PIDILITIND",
+      "ASIANPAINT",
+      "TITAN",
+      "HDFCLIFE",
+      "NESTLEIND"
+    ]
   },
   "wealth_creators": {
     "id": "wealth_creators",
@@ -173,6 +1029,17 @@
     "category": "Thematic",
     "description": "Long-term compounders across sectors.",
     "icon": "sparkles",
-    "constituents": ["BAJFINANCE", "POLYCAB", "DIXON", "TRENT", "PERSISTENT", "APLAPOLLO", "PIIND", "CUMMINSIND", "KEI", "SUPREMEIND"]
+    "constituents": [
+      "BAJFINANCE",
+      "POLYCAB",
+      "DIXON",
+      "TRENT",
+      "PERSISTENT",
+      "APLAPOLLO",
+      "PIIND",
+      "CUMMINSIND",
+      "KEI",
+      "SUPREMEIND"
+    ]
   }
 }
