@@ -10,7 +10,10 @@ const RAW = 'https://raw.githubusercontent.com/BennyThadikaran/eod2_data/main/da
 const lib = JSON.parse(readFileSync(
   new URL('../public/index-builder-app/data/sectorIndices.json', import.meta.url)));
 // Symbols whose dataset filename differs from the lowercased ticker (renames etc.)
-const ALIAS = { ZOMATO: 'eternal', SUVENPHAR: 'suven', IIFLSEC: 'iifl' };
+// ZOMATO renamed to Eternal — same company, correct mapping. (IIFLSEC and
+// SUVENPHAR were dropped: the similarly-named dataset files are different
+// companies, so those two fall back to Yahoo instead of serving wrong data.)
+const ALIAS = { ZOMATO: 'eternal' };
 // Optional CLI args restrict the run to specific tickers (idempotent retry).
 const only = process.argv.slice(2).map((s) => s.toUpperCase());
 const allTickers = [...new Set(Object.values(lib).flatMap((v) => v.constituents))].sort();
