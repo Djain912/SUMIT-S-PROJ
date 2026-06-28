@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     const user = await requireAuthenticatedUser();
     const { searchParams } = new URL(request.url);
     let subtopicId = searchParams.get('subtopicId') ?? searchParams.get('subtopic');
-    const chapterId = searchParams.get('chapterId') ?? searchParams.get('chapter');
+    let chapterId = searchParams.get('chapterId') ?? searchParams.get('chapter');
     const noteId = searchParams.get('note');
 
     // When a specific note ID is given, resolve its subtopicId first
@@ -27,13 +27,39 @@ export async function GET(request: Request) {
       subtopicId = note.subtopicId;
     }
 
-    if (!subtopicId && !chapterId) {
-      return NextResponse.json({ success: false, error: { message: 'subtopicId or chapterId required' } }, { status: 400 });
-    }
-
-    // Chapter-level access gate: resolve which chapter these notes belong to,
-    // then deny if a scoped (coupon) user doesn't hold that chapter.
+    // Resolve access once — used both for the default-chapter fallback below
+    // and the chapter-level gate further down.
     const access = await getChapterAccess(user.email);
+
+    // No selection (e.g. a fresh visit to /user/notes from the dashboard or a
+    // welcome email) → default to the first chapter the user can access so the
+    // page loads notes instead of erroring with "chapterId required".
+    if (!subtopicId && !chapterId) {
+      const firstNote = await prisma.note.findFirst({
+        where: {
+          isPublished: true,
+          isDeleted: false,
+          subtopic: {
+            chapter: {
+              level: 'LEVEL_1',
+              isPublished: true,
+              isDeleted: false,
+              ...(access.full ? {} : { id: { in: [...access.chapterIds] } }),
+            },
+          },
+        },
+        orderBy: [
+          { subtopic: { chapter: { orderIndex: 'asc' } } },
+          { subtopic: { orderIndex: 'asc' } },
+          { orderIndex: 'asc' },
+        ],
+        select: { subtopic: { select: { chapterId: true } } },
+      });
+      if (!firstNote) {
+        return NextResponse.json({ success: true, data: [] }, { headers: { 'Cache-Control': 'private, no-store' } });
+      }
+      chapterId = firstNote.subtopic.chapterId;
+    }
     if (!access.full) {
       let effectiveChapterId = chapterId;
       if (!effectiveChapterId && subtopicId) {
