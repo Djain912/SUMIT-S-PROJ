@@ -933,9 +933,22 @@ async function fetchAndBuild(){
 }
 function assembleAndBuild(stocks,priceMap,baseVal,gStart,gEnd,equal){
   try{
-    const set=new Set();
-    stocks.forEach(s=>Object.keys(priceMap[s.key].close).forEach(d=>{if(d>=gStart&&d<=gEnd)set.add(d);}));
-    const dates=[...set].sort();
+    // Build the index timeline from REAL trading days only. A genuine NSE/BSE
+    // session is one where most constituents actually traded. Counting how many
+    // stocks have a real quote per date — instead of taking the union of every
+    // stock's dates — drops phantom bars (e.g. an illiquid stock's stray Jan-1
+    // entry on a market holiday) that would otherwise create a gap + lone candle.
+    const counts={};
+    stocks.forEach(s=>{const cm=priceMap[s.key].close;for(const d in cm){if(d>=gStart&&d<=gEnd&&cm[d]>0)counts[d]=(counts[d]||0)+1;}});
+    const minReal=Math.max(2,Math.ceil(stocks.length*0.5));
+    let dates=Object.keys(counts).filter(d=>counts[d]>=minReal).sort();
+    // Fallback: if the majority rule leaves too little (e.g. a 2-stock index with
+    // mismatched calendars), fall back to the union so the build still works.
+    if(dates.length<2){
+      const set=new Set();
+      stocks.forEach(s=>Object.keys(priceMap[s.key].close).forEach(d=>{if(d>=gStart&&d<=gEnd)set.add(d);}));
+      dates=[...set].sort();
+    }
     if(dates.length<2){showMsg('Not enough trading days.','err');return;}
     function ff(field){const out={};stocks.forEach(s=>{const m=priceMap[s.key][field]||{};let last=NaN;const a=[];for(const d of dates){if(m[d]>0)last=m[d];a.push(last);}out[s.key]=a;});return out;}
     const C=ff('close'),O=ff('open'),H=ff('high'),L=ff('low');
