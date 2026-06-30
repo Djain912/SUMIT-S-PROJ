@@ -896,6 +896,12 @@ function hideLoader(){
 }
 async function fetchAndBuild(){
   clearMsg();
+  // A new build (Build button, weight switch, or loading a different index) means
+  // the price series changes entirely, so any drawings from the previous chart no
+  // longer line up — clear them. Timeframe (D/W/M) switches keep drawings since
+  // they don't pass through here.
+  D.shapes=[];D.temp=null;D.selected=-1;D.wavePoints=[];
+  if(typeof hideMenu==='function')hideMenu();
   S.rs.data={};S.raw=null;S.tf='D';  // new build — reset benchmark cache + timeframe
   const status=document.getElementById('fetchStatus');
   const start=document.getElementById('gStart').value,end=document.getElementById('gEnd').value;
