@@ -20,16 +20,26 @@ const ALLOWED_ATTR = [
   'colspan', 'rowspan', 'scope',
 ];
 
+// Insert Cloudinary auto-format/quality/resize transforms into raw image URLs so
+// large admin-uploaded PNGs are served as small WebP/AVIF — reliable on mobile.
+// Skips URLs that already carry a transformation segment (e.g. f_auto/q_auto/w_…).
+function optimizeCloudinary(html: string): string {
+  return html.replace(
+    /(https?:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)(?![a-z]{1,3}_)/g,
+    '$1f_auto,q_auto,w_1200/',
+  );
+}
+
 export function BlogContent({ html, className }: { html: string; className?: string }) {
   // SSR: render admin-authored HTML directly (no jsdom dependency on server).
   // Client: re-render after DOMPurify sanitizes in the real browser DOM.
-  const [safeHtml, setSafeHtml] = useState(html);
+  const [safeHtml, setSafeHtml] = useState(() => optimizeCloudinary(html));
 
   useEffect(() => {
     // Runs only in the browser — real DOM exists, no jsdom needed
     import('isomorphic-dompurify').then(({ default: DOMPurify }) => {
       setSafeHtml(
-        DOMPurify.sanitize(html, {
+        optimizeCloudinary(DOMPurify.sanitize(html, {
           ALLOWED_TAGS,
           ALLOWED_ATTR,
           ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|tel):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
@@ -37,7 +47,7 @@ export function BlogContent({ html, className }: { html: string; className?: str
           FORBID_ATTR: ['srcset', 'formaction'],
           ADD_ATTR: ['target'],
           USE_PROFILES: { html: true },
-        }),
+        })),
       );
     });
   }, [html]);
