@@ -115,14 +115,14 @@ export default async function BlogPostPage({ params }: Props) {
         </div>
       </nav>
 
-      {/* Cover image */}
+      {/* Cover image — show the full graphic without cropping on any screen */}
       {post.coverImageUrl && (
-        <div className="h-64 sm:h-80 w-full overflow-hidden bg-zinc-100">
+        <div className="w-full bg-zinc-100">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={post.coverImageUrl}
             alt={post.title}
-            className="h-full w-full object-cover"
+            className="mx-auto block h-auto w-full max-w-4xl object-contain"
           />
         </div>
       )}
@@ -133,17 +133,6 @@ export default async function BlogPostPage({ params }: Props) {
         <Link href="/blog" className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-zinc-900 transition mb-8">
           <ArrowLeft className="h-3.5 w-3.5" /> All posts
         </Link>
-
-        {/* Tags */}
-        {post.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-4">
-            {post.tags.map((tag) => (
-              <span key={tag} className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-600">
-                <Tag className="h-3 w-3" /> {tag}
-              </span>
-            ))}
-          </div>
-        )}
 
         {/* Title */}
         <h1 className="text-3xl font-bold tracking-tight text-zinc-950 sm:text-4xl leading-tight">
@@ -182,6 +171,17 @@ export default async function BlogPostPage({ params }: Props) {
             prose-img:rounded-xl prose-img:shadow-sm
             prose-hr:border-zinc-200"
         />
+
+        {/* Tags — shown at the end of the post */}
+        {post.tags.length > 0 && (
+          <div className="mt-10 flex flex-wrap items-center gap-2 border-t border-zinc-100 pt-6">
+            {post.tags.map((tag) => (
+              <span key={tag} className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-600">
+                <Tag className="h-3 w-3" /> {tag}
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* Post-article CTA — shown on every blog post */}
         <div className="mt-12 rounded-2xl bg-emerald-50 border border-emerald-100 px-6 py-8 text-center not-prose">
