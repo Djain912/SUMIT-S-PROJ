@@ -647,3 +647,21 @@ model PublicBotSource {
 
   @@index([createdAt])
 }
+
+// ── Candidate feedback on prep materials (CMT Prep Provider guideline #5) ──
+// Structured feedback the CMT Association can request results from.
+model CandidateFeedback {
+  id           String   @id @default(cuid())
+  userId       String?
+  email        String
+  level        String   // LEVEL_1 | LEVEL_2 | LEVEL_3 | GENERAL
+  rating       Int      // 1–5 overall quality of materials
+  consistent   String   // YES | NO | NO_COMMENT | NOT_APPLICABLE — materials consistent with current curriculum
+  informed     String   // YES | NO | NO_COMMENT | NOT_APPLICABLE — kept informed of program updates/errata
+  adequateTime String   // YES | NO | NO_COMMENT | NOT_APPLICABLE — materials available in adequate time
+  comments     String   @default("") @db.Text
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([level])
+}

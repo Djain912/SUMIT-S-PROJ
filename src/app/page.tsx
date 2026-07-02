@@ -195,7 +195,7 @@ export default async function HomePage() {
                     </h1>
 
                     <p className="mt-4 text-base leading-7 text-zinc-500 max-w-md">
-                      In-depth notes, 3,500+ exam-grade MCQs per level (10,000+ in all), unlimited mock tests, and the Chartix Scholar AI tutor — everything you need to crack Level I, II &amp; III.
+                      In-depth notes, 3,500+ exam-grade MCQs per level (10,000+ in all), unlimited mock tests, and the Chartix Scholar AI tutor — built to complement the official CMT curriculum across Level I, II &amp; III.
                     </p>
 
                     <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
@@ -422,8 +422,8 @@ export default async function HomePage() {
             <section className="bg-white py-20 sm:py-24">
               <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
                 <div className="mb-12 text-center">
-                  <h2 className="text-3xl font-extrabold tracking-tight text-emerald-900 sm:text-4xl">Everything you need to pass</h2>
-                  <p className="mt-3 text-base text-zinc-500">One platform. All three levels. Built for the CMT exam.</p>
+                  <h2 className="text-3xl font-extrabold tracking-tight text-emerald-900 sm:text-4xl">Built around the CMT curriculum</h2>
+                  <p className="mt-3 text-base text-zinc-500">One platform. All three levels. Designed to complement the official curriculum — not replace it.</p>
                 </div>
                 <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
                   {pillars.map((p) => {

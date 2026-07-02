@@ -145,7 +145,7 @@ export async function sendTrialWelcomeEmail(email: string, fullName: string | nu
     html: buildHtml({
       firstName,
       headline: 'Your free trial is live. 🎉',
-      subline: 'Your 7-day access starts now — everything you need to prepare for the CMT exam is ready.',
+      subline: 'Your 7-day access starts now — notes, quizzes, mock tests and the AI tutor are ready to support your CMT preparation.',
       introLine: 'Thank you for starting your free trial. We\'re excited to have you on board and look forward to helping you prepare with confidence.',
       showOffer: true,
     }),
@@ -196,7 +196,7 @@ export async function sendPremiumWelcomeEmail(email: string, fullName: string | 
     html: buildHtml({
       firstName,
       headline: 'Welcome to Chartix Premium. 🎉',
-      subline: 'Your full access is now unlocked — everything you need to prepare for the CMT exam is ready.',
+      subline: 'Your full access is now unlocked — notes, quizzes, mock tests and the AI tutor are ready to support your CMT preparation.',
       introLine: 'Thank you for choosing us to be part of your CMT journey. We\'re excited to have you on board and look forward to helping you prepare with confidence.',
       showOffer: false,
     }),
