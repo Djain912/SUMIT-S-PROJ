@@ -11,7 +11,7 @@
 <script src="stocks.js"></script>
 <style>
 :root{
-  --bg:#eef2f1; --panel:#ffffff; --panel-2:#f3faf6; --line:#e6ecea;
+  --bg:#fafbfb; --panel:#ffffff; --panel-2:#f6f8f8; --line:#eceff0;
   --line-soft:#eef2f1; --txt:#0f172a; --txt-dim:#374151; --txt-mut:#6b7280;
   --accent:#0f7b5a; --accent-dim:#0b6047;
   --topbar:#0c3b29; --topbar-soft:rgba(255,255,255,.12);
@@ -92,7 +92,7 @@ textarea{font-family:"JetBrains Mono",monospace;font-size:11.5px;line-height:1.5
 .loader-txt{font-size:12px;color:var(--txt-mut);font-family:"Sora";font-weight:600;letter-spacing:.3px}
 @keyframes logoPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.95)}}
 @keyframes barSlide{0%{transform:translateX(-100%)}100%{transform:translateX(350%)}}
-.stats{display:flex;gap:0;border-top:1px solid var(--line);background:var(--panel-2);overflow-x:auto;flex:none}
+.stats{display:flex;gap:0;border-top:1px solid var(--line);background:#fff;overflow-x:auto;flex:none}
 .stat{padding:8px 16px;border-right:1px solid var(--line-soft);white-space:nowrap;min-width:auto}
 .stat .k{font-size:9.5px;color:var(--txt-mut);text-transform:uppercase;letter-spacing:.5px}
 .stat .v{font-family:"JetBrains Mono";font-weight:600;font-size:14px;color:var(--txt);margin-top:1px}
@@ -185,15 +185,15 @@ header.cmd{display:flex;align-items:center;gap:14px;padding:0 16px;height:56px;b
 .controls::-webkit-scrollbar{display:none}
 .ctrl-name{width:200px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:13px;font-weight:600;font-family:inherit;outline:none}
 .ctrl-name:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(15,123,90,.12)}
-.controls .subtabs{display:flex;gap:4px;margin:0;background:var(--panel-2);padding:3px;border-radius:10px;border:1px solid var(--line)}
+.controls .subtabs{display:flex;gap:2px;margin:0;background:none;padding:0;border-radius:0;border:none}
 .controls .subtabs button{background:none;border:none;color:var(--txt-mut);font-family:"Sora";font-weight:600;font-size:12.5px;padding:6px 12px;border-radius:7px;cursor:pointer}
-.controls .subtabs button.active{background:#fff;color:var(--accent);box-shadow:var(--shadow)}
-.range{display:flex;gap:3px;background:var(--panel-2);padding:3px;border-radius:10px;border:1px solid var(--line)}
+.controls .subtabs button.active{background:#e8f6f0;color:var(--accent);box-shadow:none}
+.range{display:flex;gap:2px;background:none;padding:0;border-radius:0;border:none}
 .range button{background:none;border:none;color:var(--txt-mut);font-family:"Sora";font-weight:600;font-size:12.5px;padding:6px 11px;border-radius:7px;cursor:pointer}
-.range button.on{background:#fff;color:var(--accent);box-shadow:var(--shadow)}
-.gear{background:#fff;border:1px solid var(--line);border-radius:10px;width:38px;height:38px;font-size:16px;cursor:pointer;color:var(--txt-dim)}
-.gear:hover{border-color:var(--accent);color:var(--accent)}
-.btn-build{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:9px 22px;font-family:"Sora";font-weight:700;font-size:13px;cursor:pointer;box-shadow:0 2px 8px rgba(15,123,90,.25)}
+.range button.on{background:#e8f6f0;color:var(--accent);box-shadow:none}
+.gear{background:none;border:none;border-radius:8px;width:36px;height:36px;font-size:16px;cursor:pointer;color:var(--txt-mut)}
+.gear:hover{background:#f3f4f6;color:var(--txt)}
+.btn-build{background:var(--accent);color:#fff;border:none;border-radius:20px;padding:8px 22px;font-family:"Sora";font-weight:700;font-size:13px;cursor:pointer}
 .btn-build:hover{background:var(--accent-dim)}
 .controls .hint{margin:0;font-size:11.5px}
 .pop{position:absolute;top:calc(100% + 6px);left:16px;z-index:60;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow-lg);padding:14px 16px;width:280px;display:none}
@@ -207,10 +207,10 @@ header.cmd{display:flex;align-items:center;gap:14px;padding:0 16px;height:56px;b
 .chip .cx:hover{background:var(--down);color:#fff}
 main{flex:1;display:flex;min-height:0}
 /* chart-type segmented control in the controls strip */
-.ctype{display:flex;gap:3px;background:var(--panel-2);padding:3px;border-radius:10px;border:1px solid var(--line)}
+.ctype{display:flex;gap:2px;background:none;padding:0;border-radius:0;border:none}
 .ctype .tbtn{border:none;background:none;border-radius:7px;padding:6px 12px;margin:0;color:var(--txt-mut);font-family:"Sora";font-weight:600;font-size:12.5px}
 .ctype .tbtn:hover{color:var(--accent)}
-.ctype .tbtn.on{background:#fff;color:var(--accent);box-shadow:var(--shadow)}
+.ctype .tbtn.on{background:#e8f6f0;color:var(--accent);box-shadow:none}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 .grid3 .miniinp{width:100%}
 /* left vertical toolbar */
@@ -231,12 +231,12 @@ main{flex:1;display:flex;min-height:0}
 .ctrl-brand .glyph::before{content:"◧ ";color:var(--accent)}
 .ctrl-brand .brand-sub{font-size:11px;color:var(--txt-mut);font-weight:600}
 .ctrl-search{position:relative;flex:none;width:200px}
-.ctrl-search input{width:100%;background:#fff;border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:8px 13px;font-size:13px;font-family:inherit;outline:none}
+.ctrl-search input{width:100%;background:#f3f4f6;border:1px solid transparent;color:var(--txt);border-radius:20px;padding:8px 15px;font-size:13px;font-family:inherit;outline:none;transition:background .15s,border-color .15s}
 .ctrl-search input::placeholder{color:var(--txt-mut)}
-.ctrl-search input:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(15,123,90,.10)}
-.ctrl-btn{background:#fff;border:1px solid var(--line);color:var(--txt-dim);border-radius:9px;padding:7px 12px;font-size:12.5px;font-weight:600;font-family:"Sora";cursor:pointer;white-space:nowrap}
-.ctrl-btn:hover{border-color:var(--accent);color:var(--accent)}
-.ctrl-btn.solid{background:var(--accent);border-color:var(--accent);color:#fff}
+.ctrl-search input:focus{background:#fff;border-color:var(--accent);box-shadow:0 0 0 3px rgba(15,123,90,.08)}
+.ctrl-btn{background:none;border:none;color:var(--txt-dim);border-radius:8px;padding:8px 12px;font-size:12.5px;font-weight:600;font-family:"Sora";cursor:pointer;white-space:nowrap}
+.ctrl-btn:hover{background:#f3f4f6;color:var(--txt)}
+.ctrl-btn.solid{background:var(--accent);color:#fff}.ctrl-btn.solid:hover{background:var(--accent-dim);color:#fff}
 .ctrl-btn.solid:hover{background:var(--accent-dim)}
 #saveStatus{font-size:11px;color:var(--txt-mut);min-width:0;white-space:nowrap}
 .ctrl-acct{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--txt)}
@@ -326,14 +326,14 @@ main{flex:1;display:flex;min-height:0}
 .stat .v{font-size:13px}
 
 /* ── Top brand bar (Row 1: dark) ── */
-.bar-top{display:flex;align-items:center;padding:0 16px;height:46px;background:var(--topbar);box-shadow:0 2px 8px rgba(12,59,41,.15);flex:none;z-index:40;position:relative;gap:10px}
+.bar-top{display:flex;align-items:center;padding:0 16px;height:48px;background:#fff;border-bottom:1px solid var(--line);flex:none;z-index:40;position:relative;gap:10px}
 .bar-top-spacer{flex:1}
-.bar-top #cloudAcct{display:flex;align-items:center;gap:7px;font-size:13px;color:#fff}
+.bar-top #cloudAcct{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--txt-dim)}
 .bar-top #cloudAcct img{width:28px;height:28px;border-radius:50%;object-fit:cover}
-.bar-top #cloudAcct .nm{font-weight:600;color:#fff;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.bar-top #cloudAcct .lnk{font-size:12px;color:rgba(255,255,255,.7);cursor:pointer;text-decoration:underline;white-space:nowrap}
-.bar-top #cloudAcct .gbtn{display:inline-flex;align-items:center;gap:6px;background:#fff;color:#1f2937;border:none;border-radius:9px;padding:7px 13px;font-size:13px;font-weight:600;text-decoration:none;cursor:pointer;white-space:nowrap;font-family:"Sora"}
-.bar-top #cloudAcct .gbtn:hover{background:#f0fdf4}
+.bar-top #cloudAcct .nm{font-weight:600;color:var(--txt);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-top #cloudAcct .lnk{font-size:12px;color:var(--txt-mut);cursor:pointer;text-decoration:underline;white-space:nowrap}
+.bar-top #cloudAcct .gbtn{display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#fff;border:none;border-radius:20px;padding:7px 15px;font-size:12.5px;font-weight:600;text-decoration:none;cursor:pointer;white-space:nowrap;font-family:"Sora"}
+.bar-top #cloudAcct .gbtn:hover{background:var(--accent-dim)}
 /* Controls (Row 2: light, wraps freely — overflow must be visible so the
    autocomplete dropdown can extend below the bar without being clipped) */
 .controls{display:flex;align-items:center;gap:7px;flex-wrap:wrap;overflow:visible;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--line);position:relative;z-index:30;flex:none}
@@ -361,7 +361,7 @@ main{flex:1;display:flex;min-height:0}
   <!-- ── ROW 1: Brand bar (dark) — logo + account only ── -->
   <div class="bar-top">
     <a href="/" style="display:flex;align-items:center;text-decoration:none;flex:none">
-      <img src="/chartix-wordmark.png" alt="Chartix" style="height:26px;width:auto;display:block;filter:brightness(0) invert(1)">
+      <img src="/chartix-wordmark.png" alt="Chartix" style="height:26px;width:auto;display:block">
     </a>
     <div class="bar-top-spacer"></div>
     <div id="cloudAcct"></div>
