@@ -429,6 +429,16 @@ main .workspace{order:1}
 .cmp-pill .px{background:none;border:none;cursor:pointer;color:#9ca3af;font-size:14px;padding:0 0 0 2px;line-height:1}
 .cmp-pill .px:hover{color:#dc2626}
 
+
+/* my-indices dashboard perf row */
+.ix-card .perf{display:flex;align-items:center;gap:10px;margin-top:7px;flex-wrap:wrap}
+.ix-card .spark{flex:none;display:block}
+.ix-card .chg{font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:600}
+.ix-card .chg i{font-style:normal;font-family:"Inter";font-weight:500;font-size:10px;color:#9ca3af;margin-left:4px;text-transform:uppercase;letter-spacing:.05em}
+.ix-card .chg.up{color:#16a34a}
+.ix-card .chg.dn{color:#dc2626}
+.ix-card .cov{font-size:10.5px;color:#9ca3af}
+
 </style>
 </head>
 <body>
@@ -2605,13 +2615,36 @@ new ResizeObserver(()=>{resizeOverlay();redrawOverlay();}).observe(document.getE
     var m=document.getElementById('myModal'); m.classList.add('open');
     var list=document.getElementById('myList'); list.innerHTML='<div class="cloud-empty">Loading…</div>';
     try{
-      var res=await api('/api/index-builder/indices'); var p=await res.json();
+      var pair=await Promise.all([
+        api('/api/index-builder/indices'),
+        api('/api/index-builder/indices/summary').catch(function(){return null;})
+      ]);
+      var res=pair[0]; var p=await res.json();
       if(!res.ok||!p.success){ list.innerHTML='<div class="cloud-empty">Could not load.</div>'; return; }
       if(!p.data.length){ list.innerHTML='<div class="cloud-empty">No saved indices yet. Build one and hit Save.</div>'; return; }
+      var perf={};
+      try{ if(pair[1]&&pair[1].ok){ var ps=await pair[1].json(); if(ps.success)(ps.data||[]).forEach(function(x){perf[x.id]=x;}); } }catch(e){}
+      function sparkSvg(sp,up){
+        if(!sp||sp.length<2)return'';
+        var w=72,h=22,n=sp.length;
+        var pts=sp.map(function(v,i){return (i*(w/(n-1))).toFixed(1)+','+((1-v)*(h-2)+1).toFixed(1);}).join(' ');
+        return '<svg class="spark" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'"><polyline fill="none" stroke="'+(up?'#16a34a':'#dc2626')+'" stroke-width="1.5" points="'+pts+'"/></svg>';
+      }
       list.innerHTML=p.data.map(function(ix){
+        var pf=perf[ix.id];
+        var perfHtml='';
+        if(pf&&pf.changePct!=null){
+          var up=pf.changePct>=0, up30=(pf.change30Pct||0)>=0;
+          perfHtml='<div class="perf">'+sparkSvg(pf.spark,up30)+
+            '<span class="chg '+(up?'up':'dn')+'">'+(up?'+':'')+pf.changePct.toFixed(2)+'%<i>today</i></span>'+
+            (pf.change30Pct!=null?'<span class="chg '+(up30?'up':'dn')+'">'+(up30?'+':'')+pf.change30Pct.toFixed(2)+'%<i>30d</i></span>':'')+
+            (pf.covered<pf.total?'<span class="cov">'+pf.covered+'/'+pf.total+' tracked</span>':'')+
+          '</div>';
+        }
         return '<div class="ix-card" data-id="'+esc(ix.id)+'"><div class="meta">'+
           '<div class="nm">'+esc(ix.name)+'</div>'+
-          '<div class="ct">'+(ix.weightingType==='EQUAL'?'Equal weight':'Market cap')+' · '+ix.constituents.length+' stocks'+(ix.visibility==='PUBLIC'?' · Public':'')+'</div></div>'+
+          '<div class="ct">'+(ix.weightingType==='EQUAL'?'Equal weight':'Market cap')+' · '+ix.constituents.length+' stocks'+(ix.visibility==='PUBLIC'?' · Public':'')+'</div>'+
+          perfHtml+'</div>'+
           '<div class="acts">'+
             '<button class="mini primary" data-act="load">Load</button>'+
             '<button class="mini" data-act="rename">Rename</button>'+
