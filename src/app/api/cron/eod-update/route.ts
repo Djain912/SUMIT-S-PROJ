@@ -17,9 +17,9 @@ const UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36';
 
 // Map a current NSE bhavcopy symbol back to the symbol we store it under, for
-// companies that were renamed (e.g. Zomato → Eternal). Keeps daily updates
-// flowing to the original ticker the index library references.
-const REVERSE_ALIAS: Record<string, string> = { ETERNAL: 'ZOMATO' };
+// companies renamed on the exchange. The library now uses current NSE symbols
+// (e.g. ETERNAL directly), so no remapping is needed at present.
+const REVERSE_ALIAS: Record<string, string> = {};
 
 function ddmmyyyy(d: Date) {
   const p = (n: number) => String(n).padStart(2, '0');

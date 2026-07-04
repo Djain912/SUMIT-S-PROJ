@@ -2217,7 +2217,7 @@ new ResizeObserver(()=>{resizeOverlay();redrawOverlay();}).observe(document.getE
   async function openReadyMade(){
     var m=document.getElementById('rmModal'); m.classList.add('open');
     if(!readyMade){
-      try{ var r=await fetch('/index-builder-app/data/sectorIndices.json?v=3'); readyMade=await r.json(); }
+      try{ var r=await fetch('/index-builder-app/data/sectorIndices.json?v=4'); readyMade=await r.json(); }
       catch(e){ document.getElementById('rmList').innerHTML='<div class="cloud-empty">Could not load ready-made indices.</div>'; return; }
       var cats=[]; Object.keys(readyMade).forEach(function(k){ var c=readyMade[k].category; if(cats.indexOf(c)<0)cats.push(c); });
       cats.sort(); var sel=document.getElementById('rmCat');
