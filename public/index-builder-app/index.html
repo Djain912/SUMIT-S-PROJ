@@ -354,6 +354,24 @@ main{flex:1;display:flex;min-height:0}
   .stats{font-size:11px}
   .stats .stat{padding:6px 11px}
 }
+
+/* ── charting-platform layout: right rail, bottom bar, collapsible chips ── */
+.rightbar{flex:none;width:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:1px;padding:5px;margin:8px 8px 8px 0;overflow:visible;z-index:12;align-self:flex-start}
+.rightbar .lb-tool{position:relative;display:flex;align-items:center;justify-content:center;width:34px;height:32px;background:none;border:none;border-radius:8px;padding:0;cursor:pointer;color:var(--txt-dim)}
+.rightbar .lb-tool svg{width:16px;height:16px}
+.rightbar .lb-tool:hover{background:var(--panel-2);color:var(--accent)}
+.rightbar .lb-tool.on{background:rgba(15,123,90,.1);color:var(--accent)}
+.rightbar [data-tip]:hover::after{content:attr(data-tip);position:absolute;right:calc(100% + 10px);top:50%;transform:translateY(-50%);background:#0c3b29;color:#fff;font-family:"Sora",sans-serif;font-weight:600;font-size:11.5px;padding:5px 9px;border-radius:7px;white-space:nowrap;pointer-events:none;z-index:50;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+.bottombar{display:flex;align-items:center;border-top:1px solid var(--line);background:#fff;flex:none;overflow-x:auto;scrollbar-width:none;min-height:34px}
+.bottombar::-webkit-scrollbar{display:none}
+.bottombar .range{padding:2px 8px;flex:none;border-right:1px solid var(--line-soft)}
+.bottombar .stats{border-top:none;flex:1}
+.chips-inline{display:none}
+.chips-inline.show{display:flex}
+#chipToggle.on{background:#e8f6f0;color:var(--accent)}
+.bar-top .ctrl-search{width:220px}
+.bar-top #saveStatus{font-size:11.5px;color:var(--txt-mut);white-space:nowrap}
+
 </style>
 </head>
 <body>
@@ -361,47 +379,47 @@ main{flex:1;display:flex;min-height:0}
   <!-- ── ROW 1: Brand bar (dark) — logo + account only ── -->
   <div class="bar-top">
     <a href="/" style="display:flex;align-items:center;text-decoration:none;flex:none">
-      <img src="/chartix-wordmark.png" alt="Chartix" style="height:26px;width:auto;display:block">
+      <img src="/chartix-wordmark.png" alt="Chartix" style="height:24px;width:auto;display:block">
     </a>
-    <div class="bar-top-spacer"></div>
-    <div id="cloudAcct"></div>
-  </div>
-
-  <!-- ── ROW 2: Controls (light) — search + cloud actions + index config + build ── -->
-  <div class="controls">
-    <!-- stock search -->
     <div class="ctrl-search">
-      <input type="text" id="topSearch" placeholder="Add a stock…" autocomplete="off">
+      <input type="text" id="topSearch" placeholder="Search stocks to add…" autocomplete="off">
       <div class="ac-drop" id="topAcDrop"></div>
-    </div>
-    <button class="ctrl-btn" id="btnReady">Index Library ▾</button>
-    <button class="ctrl-btn" id="btnMine">My indices ▾</button>
-    <button class="ctrl-btn solid" id="btnSave">Save</button>
-    <span id="saveStatus"></span>
-    <!-- divider -->
-    <div style="width:1px;height:26px;background:var(--line);flex:none;margin:0 2px"></div>
-    <!-- index config -->
-    <div class="subtabs" id="weightTabs">
-      <button id="wMcap" class="active" onclick="setWeight('mcap')">Market-cap</button>
-      <button id="wEqual" onclick="setWeight('equal')">Equal</button>
-    </div>
-    <div class="range" id="rangePresets">
-      <button data-yrs="1">1Y</button><button data-yrs="2" class="on">2Y</button><button data-yrs="5">5Y</button><button data-yrs="10">Max</button>
-    </div>
-    <div class="ctype">
-      <button class="tbtn on" id="btnArea" onclick="setChartType('area')">Area</button>
-      <button class="tbtn" id="btnLine" onclick="setChartType('line')">Line</button>
-      <button class="tbtn" id="btnCandle" onclick="setChartType('candle')">Candles</button>
     </div>
     <div class="ctype">
       <button class="tbtn on" id="tfD" onclick="setTimeframe('D')">D</button>
       <button class="tbtn" id="tfW" onclick="setTimeframe('W')">W</button>
       <button class="tbtn" id="tfM" onclick="setTimeframe('M')">M</button>
     </div>
+    <div class="ctype">
+      <button class="tbtn on" id="btnArea" onclick="setChartType('area')">Area</button>
+      <button class="tbtn" id="btnLine" onclick="setChartType('line')">Line</button>
+      <button class="tbtn" id="btnCandle" onclick="setChartType('candle')">Candles</button>
+    </div>
     <button class="ctrl-btn ind" id="btnIndicators" title="Add indicators">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-6 4 4 6-8"/><path d="M3 21h18"/></svg>
       Indicators
     </button>
+    <div class="bar-top-spacer"></div>
+    <span id="saveStatus"></span>
+    <button class="ctrl-btn solid" id="btnSave">Save</button>
+    <div id="cloudAcct"></div>
+  </div>
+
+  <!-- ── ROW 2: Controls (light) — search + cloud actions + index config + build ── -->
+  <div class="controls">
+    <button class="gear" id="btnSettings" title="More settings">⚙</button>
+    <button class="ctrl-btn" id="btnReady">Index Library ▾</button>
+    <button class="ctrl-btn" id="btnMine">My indices ▾</button>
+    <div style="width:1px;height:22px;background:var(--line);flex:none;margin:0 2px"></div>
+    <div class="subtabs" id="weightTabs">
+      <button id="wMcap" class="active" onclick="setWeight('mcap')">Market-cap</button>
+      <button id="wEqual" onclick="setWeight('equal')">Equal</button>
+    </div>
+    <button class="btn-build" onclick="fetchAndBuild()">Build →</button>
+    <span id="fetchStatus" class="hint"></span>
+    <button class="ctrl-btn" id="chipToggle" style="display:none"
+      onclick="var st=document.getElementById('chipStrip');st.classList.toggle('show');this.classList.toggle('on')">Constituents ▾</button>
+    <div id="chipStrip" class="chips-inline"></div>
     <!-- settings popover (includes index name + advanced) -->
     <div class="pop" id="settingsPop">
       <label class="fld">Index name</label>
@@ -417,13 +435,6 @@ main{flex:1;display:flex;min-height:0}
     </div>
   </div>
 
-  <!-- ── ROW 3: Build + chips ── -->
-  <div class="build-row">
-    <button class="gear" id="btnSettings" title="More settings">⚙</button>
-    <button class="btn-build" onclick="fetchAndBuild()">Build →</button>
-    <span id="fetchStatus" class="hint"></span>
-    <div id="chipStrip" class="chips-inline"></div>
-  </div>
 
   <!-- ── ACTIVE INDICATOR PILLS ── -->
   <div class="ind-pills" id="indPills"></div>
@@ -462,13 +473,14 @@ main{flex:1;display:flex;min-height:0}
       <div class="lb-sep"></div>
       <button class="lb-tool" onclick="undoDraw()" data-tip="Undo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10H9"/></svg><span class="tl-txt">Undo</span></button>
       <button class="lb-tool" onclick="clearDraw()" data-tip="Delete all drawings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg><span class="tl-txt">Delete all</span></button>
-      <button class="lb-tool on" id="dPriceLbl" onclick="togglePriceLabels()" data-tip="Show/hide price labels on drawings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="10" height="6" rx="1"/><path d="M13 10h8M17 7l4 3-4 3"/></svg><span class="tl-txt">Price labels</span></button>
-      <button class="lb-tool" onclick="fitChart()" data-tip="Fit to screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="tl-txt">Fit</span></button>
-      <button class="lb-tool" onclick="exportPNG()" data-tip="Download PNG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg><span class="tl-txt">Export</span></button>
-      <div class="lb-sep"></div>
       <button class="lb-collapse" id="lbCollapse" data-tip="Expand labels"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg><span class="tl-txt">Collapse</span></button>
     </div>
 
+    <div class="rightbar">
+      <button class="lb-tool on" id="dPriceLbl" onclick="togglePriceLabels()" data-tip="Price labels"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="10" height="6" rx="1"/><path d="M13 10h8M17 7l4 3-4 3"/></svg></button>
+      <button class="lb-tool" onclick="fitChart()" data-tip="Fit to screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+      <button class="lb-tool" onclick="exportPNG()" data-tip="Download PNG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></button>
+    </div>
     <div class="workspace">
       <div class="chart-wrap" id="chartWrap">
         <div id="chart"></div>
@@ -491,7 +503,12 @@ main{flex:1;display:flex;min-height:0}
           <div class="loader-txt" id="loaderTxt">Building your index…</div>
         </div>
       </div>
-      <div class="stats" id="stats" style="display:none"></div>
+      <div class="bottombar">
+        <div class="range" id="rangePresets">
+          <button data-yrs="1">1Y</button><button data-yrs="2" class="on">2Y</button><button data-yrs="5">5Y</button><button data-yrs="10">Max</button>
+        </div>
+        <div class="stats" id="stats" style="display:none"></div>
+      </div>
     </div>
   </main>
 </div>
@@ -2375,6 +2392,14 @@ new ResizeObserver(()=>{resizeOverlay();redrawOverlay();}).observe(document.getE
       chip.querySelector('.cx').onclick=function(){ r.remove(); if(typeof updateStkCount==='function')updateStkCount(); renderChips(); scheduleAutosave(); };
       strip.appendChild(chip);
     });
+    // Constituents stay collapsed behind a toggle so loaded indices don't clutter the bar
+    var tog=document.getElementById('chipToggle');
+    if(tog){
+      var n=strip.children.length;
+      tog.style.display=n?'':'none';
+      tog.textContent='Constituents ('+n+') ▾';
+      if(!n){ strip.classList.remove('show'); tog.classList.remove('on'); }
+    }
   }
   // add a stock (from the top search) → hidden row + chip; auto-fetch shares for market-cap
   function addStock(sym){
