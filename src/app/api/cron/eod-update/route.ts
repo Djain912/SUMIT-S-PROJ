@@ -29,6 +29,8 @@ function iso(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
+const MMM = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
 async function fetchBhavcopy(d: Date): Promise<string | null> {
   const url = `https://nsearchives.nseindia.com/products/content/sec_bhavdata_full_${ddmmyyyy(d)}.csv`;
   try {
@@ -38,7 +40,14 @@ async function fetchBhavcopy(d: Date): Promise<string | null> {
     });
     if (!r.ok) return null;
     const text = await r.text();
-    return text.includes('SYMBOL') ? text : null;
+    if (!text.includes('SYMBOL')) return null;
+    // NSE's archive can serve a STALE file (the previous session's data) for
+    // holiday/weekend URLs with HTTP 200. Trust the file only if its internal
+    // DATE1 column matches the date we asked for — otherwise phantom bars get
+    // written under non-trading dates (seen: Ashura 26-Jun-2026 mirrored 25-Jun).
+    const expect = `${String(d.getUTCDate()).padStart(2, '0')}-${MMM[d.getUTCMonth()]}-${d.getUTCFullYear()}`;
+    if (!text.includes(expect)) return null;
+    return text;
   } catch {
     return null;
   }
