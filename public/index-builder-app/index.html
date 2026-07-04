@@ -406,6 +406,29 @@ main .workspace{order:1}
 .qcard{background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 16px;font-family:"Inter";font-weight:600;font-size:12.5px;color:#374151;cursor:pointer;transition:border-color .15s,color .15s,box-shadow .15s}
 .qcard:hover{border-color:var(--accent);color:var(--accent);box-shadow:0 2px 10px rgba(15,123,90,.12)}
 
+
+/* ── compare feature ── */
+.cmp-card{background:#fff;border-radius:16px;box-shadow:var(--shadow-lg);width:min(440px,94vw);max-height:78vh;display:flex;flex-direction:column;padding:18px 18px 14px}
+.cmp-head{display:flex;align-items:center;justify-content:space-between;font-family:"Inter";font-weight:700;font-size:16px;color:#111827}
+.cmp-x{background:none;border:none;font-size:20px;color:#9ca3af;cursor:pointer;line-height:1}
+.cmp-x:hover{color:#111827}
+.cmp-modes{display:flex;gap:6px;margin-top:12px}
+.cmp-mode{background:#f3f4f6;border:1px solid transparent;border-radius:8px;padding:7px 14px;font-family:"Inter";font-weight:600;font-size:12.5px;color:#4b5563;cursor:pointer}
+.cmp-mode.on{background:#e8f6f0;color:var(--accent);border-color:rgba(15,123,90,.25)}
+.cmp-hint{font-size:11px;color:#9ca3af;margin-top:8px;line-height:1.5}
+#cmpSearch{width:100%;background:#f3f4f6;border:1px solid transparent;border-radius:8px;padding:9px 12px;font-size:13px;font-family:"Inter";outline:none;margin-top:12px}
+#cmpSearch:focus{background:#fff;border-color:var(--accent)}
+.cmp-list{overflow:auto;margin-top:8px;display:flex;flex-direction:column;gap:1px;min-height:120px}
+.cmp-item{text-align:left;background:none;border:none;border-radius:8px;padding:8px 10px;font-size:13px;font-family:"Inter";cursor:pointer;color:#111827;display:flex;gap:8px;align-items:baseline}
+.cmp-item:hover{background:#f3f4f6}
+.cmp-item .cmp-nm{color:#9ca3af;font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmp-sec{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#9ca3af;margin:10px 4px 3px;font-family:"Inter";font-weight:600}
+.cmp-pill{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:4px 10px;font-size:11.5px;font-weight:600;font-family:"Inter";color:#374151}
+.cmp-pill .dot{width:8px;height:8px;border-radius:50%;flex:none}
+.cmp-pill .pmode{color:#9ca3af;font-weight:500}
+.cmp-pill .px{background:none;border:none;cursor:pointer;color:#9ca3af;font-size:14px;padding:0 0 0 2px;line-height:1}
+.cmp-pill .px:hover{color:#dc2626}
+
 </style>
 </head>
 <body>
@@ -432,6 +455,10 @@ main .workspace{order:1}
     <button class="ctrl-btn ind" id="btnIndicators" title="Add indicators">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-6 4 4 6-8"/><path d="M3 21h18"/></svg>
       Indicators
+    </button>
+    <button class="ctrl-btn ind" id="btnCompare" onclick="openCompare()" title="Compare with an index or stock">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3l5 5-5 5M21 8H9M8 21l-5-5 5-5M3 16h12"/></svg>
+      Compare
     </button>
     <div class="bar-top-spacer"></div>
     <span id="saveStatus"></span>
@@ -473,6 +500,7 @@ main .workspace{order:1}
 
   <!-- ── ACTIVE INDICATOR PILLS ── -->
   <div class="ind-pills" id="indPills"></div>
+  <div class="ind-pills" id="cmpPills"></div>
 
   <!-- ── hidden data store (the JS reads constituents from #stockList) ── -->
   <div style="display:none">
@@ -622,6 +650,19 @@ main .workspace{order:1}
 </div>
 
 <!-- Indicator picker modal -->
+<div class="cloud-modal" id="cmpModal">
+  <div class="cmp-card">
+    <div class="cmp-head"><span>Compare</span><button class="cmp-x" onclick="closeCompare()">×</button></div>
+    <div class="cmp-modes" id="cmpModePills">
+      <button class="cmp-mode on" data-m="pct">Overlay (%)</button>
+      <button class="cmp-mode" data-m="pane">New pane</button>
+    </div>
+    <div class="cmp-hint" id="cmpHint">Overlay rebases both series to 0% so performance is directly comparable on one scale.</div>
+    <input type="text" id="cmpSearch" placeholder="Search official indices or stocks…" autocomplete="off">
+    <div id="cmpList" class="cmp-list"></div>
+  </div>
+</div>
+
 <div class="cloud-modal" id="indModal">
   <div class="ind-card">
     <div class="ind-head"><h3>Indicators</h3><button class="x" id="indClose">×</button></div>
@@ -963,6 +1004,7 @@ async function fetchAndBuild(){
   D.shapes=[];D.temp=null;D.selected=-1;D.wavePoints=[];
   if(typeof hideMenu==='function')hideMenu();
   S.rs.data={};S.raw=null;S.tf='D';  // new build — reset benchmark cache + timeframe
+  if(typeof clearCompares==='function')clearCompares();S.compares=[];
   const status=document.getElementById('fetchStatus');
   const start=document.getElementById('gStart').value,end=document.getElementById('gEnd').value;
   const field=document.getElementById('priceField').value;
@@ -1105,7 +1147,7 @@ function buildChart(){
     timeScale:{borderColor:'#e7eaec',timeVisible:false,secondsVisible:false,rightOffset:6,barSpacing:12,minBarSpacing:1,fixLeftEdge:true,fixRightEdge:false,lockVisibleTimeRangeOnResize:true,rightBarStaysOnScroll:true},
     autoSize:true,
   });
-  S.chart=chart;addMainSeries();refreshIndicators();
+  S.chart=chart;addMainSeries();refreshIndicators();if(typeof renderCompares==='function')renderCompares();
   chart.timeScale().fitContent();
   chart.subscribeCrosshairMove(onCrosshair);
   chart.timeScale().subscribeVisibleLogicalRangeChange(redrawOverlay);
@@ -1171,6 +1213,94 @@ function setTimeframe(tf){
   document.getElementById('srcChip').textContent=S.title+' · '+S.times.length+' bars';
   if(S.chart)buildChart();computeStats();
 }
+
+/* ── COMPARE: overlay (%) or stacked pane, natively time/crosshair-synced ── */
+S.compares=[];
+var CMP_COLORS=['#2563eb','#d97706','#7c3aed','#dc2626','#0891b2','#db2777'];
+var CMP_OFFICIALS=[['NIFTY 50','Nifty 50'],['SENSEX','Sensex'],['NIFTY BANK','Nifty Bank'],['NIFTY IT','Nifty IT'],['NIFTY PHARMA','Nifty Pharma'],['NIFTY AUTO','Nifty Auto'],['NIFTY FMCG','Nifty FMCG'],['NIFTY METAL','Nifty Metal'],['NIFTY REALTY','Nifty Realty'],['NIFTY PSU BANK','Nifty PSU Bank'],['NIFTY PRIVATE BANK','Nifty Private Bank'],['NIFTY FINANCIAL SERVICES','Nifty Financial Services'],['NIFTY INDIA DEFENCE','Nifty India Defence'],['NIFTY OIL & GAS','Nifty Oil & Gas'],['NIFTY CONSUMER DURABLES','Nifty Consumer Durables'],['NIFTY HEALTHCARE INDEX','Nifty Healthcare'],['NIFTY CHEMICALS','Nifty Chemicals'],['NIFTY MIDSMALL IT & TELECOM','MidSmall IT & Telecom'],['NIFTY TOP 10 EQUAL WEIGHT','Nifty Top 10 EW'],['NIFTY500 HEALTHCARE','Nifty500 Healthcare'],['NIFTY MIDSMALL HEALTHCARE','MidSmall Healthcare']];
+var cmpMode='pct';
+function escC(x){return String(x==null?'':x).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function openCompare(){
+  if(!S.times.length){showMsg('Build or load an index first, then add a comparison.','err');return;}
+  document.getElementById('cmpModal').classList.add('open');
+  var i=document.getElementById('cmpSearch'); if(i){i.value='';renderCmpResults('');setTimeout(function(){i.focus();},50);}
+}
+function closeCompare(){document.getElementById('cmpModal').classList.remove('open');}
+function renderCmpResults(q){
+  var list=document.getElementById('cmpList'); q=(q||'').trim().toUpperCase();
+  var html='';
+  var offs=CMP_OFFICIALS.filter(function(o){return !q||o[1].toUpperCase().indexOf(q)>=0||o[0].indexOf(q)>=0;});
+  if(offs.length){ html+='<div class="cmp-sec">Official indices</div>'+offs.map(function(o){return '<button class="cmp-item" data-sym="'+escC(o[0])+'" data-lbl="'+escC(o[1])+'" data-off="1">'+escC(o[1])+'</button>';}).join(''); }
+  if(q){
+    var res=(typeof acSearch==='function')?acSearch(q).slice(0,8):[];
+    if(res.length){ html+='<div class="cmp-sec">Stocks</div>'+res.map(function(r){return '<button class="cmp-item" data-sym="'+escC(r[0])+'" data-lbl="'+escC(r[0])+'">'+escC(r[0])+' <span class="cmp-nm">'+escC(r[1])+'</span></button>';}).join(''); }
+  }
+  list.innerHTML=html||'<div class="cmp-sec">No matches.</div>';
+  list.querySelectorAll('.cmp-item').forEach(function(el){ el.onclick=function(){ addCompare(el.dataset.sym, el.dataset.lbl, !el.dataset.off); }; });
+}
+async function addCompare(sym,label,isStock){
+  closeCompare();
+  if(S.compares.length>=6){showMsg('Up to 6 comparisons at a time.','err');return;}
+  if(S.compares.some(function(c){return c.label===label;}))return;
+  var start=document.getElementById('gStart').value, end=document.getElementById('gEnd').value;
+  var key=isStock?(typeof ySym==='function'?ySym(sym):sym):sym;
+  var st=document.getElementById('fetchStatus'); if(st)st.textContent='Adding '+label+'…';
+  try{
+    var m=await fetchSeries(key,start,end,'close');
+    var dates=Object.keys(m.close).sort();
+    if(dates.length<2)throw new Error('no data');
+    S.compares.push({id:'c'+Date.now(),label:label,mode:cmpMode,color:CMP_COLORS[S.compares.length%CMP_COLORS.length],times:dates,closes:dates.map(function(d){return m.close[d];}),_series:null});
+    if(st)st.textContent='';
+    if(S.chart)buildChart(); renderCmpPills();
+    showMsg(label+' added ('+(cmpMode==='pane'?'new pane':'% overlay')+').','ok');
+  }catch(e){ if(st)st.textContent=''; showMsg('Could not load '+label+' ('+e.message+').','err'); }
+}
+function cmpSeriesData(c){
+  if(S.tf==='D')return c.times.map(function(t,i){return {time:t,value:c.closes[i]};});
+  function weekKey(ds){var d=new Date(ds+'T00:00:00Z'),day=d.getUTCDay(),diff=day===0?-6:1-day;d.setUTCDate(d.getUTCDate()+diff);return d.toISOString().slice(0,10);}
+  function monthKey(ds){return ds.slice(0,7)+'-01';}
+  var getKey=S.tf==='W'?weekKey:monthKey, groups=new Map();
+  for(var i=0;i<c.times.length;i++){ var k=getKey(c.times[i]); if(!groups.has(k))groups.set(k,{time:c.times[i],value:c.closes[i]}); else groups.get(k).value=c.closes[i]; }
+  return Array.from(groups.values());
+}
+function renderCompares(){
+  if(!S.chart)return;
+  var anyPct=false;
+  S.compares.forEach(function(c){
+    var data=cmpSeriesData(c);
+    var paneIdx=0;
+    if(c.mode==='pane'){ paneIdx=(S.chart.panes?S.chart.panes().length:1); }
+    else anyPct=true;
+    c._series=S.chart.addSeries(LWC.LineSeries,{color:c.color,lineWidth:2,title:c.label,priceLineVisible:false,lastValueVisible:true},paneIdx);
+    c._series.setData(data);
+  });
+  try{ S.chart.priceScale('right').applyOptions({mode:anyPct?LWC.PriceScaleMode.Percentage:LWC.PriceScaleMode.Normal}); }catch(e){}
+}
+function removeCompare(id){
+  var i=-1; S.compares.forEach(function(c,ix){if(c.id===id)i=ix;}); if(i<0)return;
+  S.compares.splice(i,1);
+  if(S.chart)buildChart(); renderCmpPills();
+}
+function clearCompares(){ if(!S.compares.length)return; S.compares=[]; renderCmpPills(); }
+function renderCmpPills(){
+  var bar=document.getElementById('cmpPills'); if(!bar)return;
+  bar.innerHTML=S.compares.map(function(c){
+    return '<span class="cmp-pill"><span class="dot" style="background:'+c.color+'"></span>'+escC(c.label)+' <span class="pmode">'+(c.mode==='pane'?'pane':'%')+'</span><button class="px" title="Remove" onclick="removeCompare(\''+c.id+'\')">×</button></span>';
+  }).join('');
+  bar.classList.toggle('has',S.compares.length>0);
+}
+(function(){
+  var inp=document.getElementById('cmpSearch');
+  if(inp)inp.addEventListener('input',function(){renderCmpResults(inp.value);});
+  document.querySelectorAll('#cmpModePills .cmp-mode').forEach(function(b){
+    b.onclick=function(){ cmpMode=b.dataset.m; document.querySelectorAll('#cmpModePills .cmp-mode').forEach(function(x){x.classList.toggle('on',x===b);});
+      var h=document.getElementById('cmpHint');
+      if(h)h.textContent=cmpMode==='pane'?'New pane stacks the series below your index — time axis and crosshair stay perfectly synced.':'Overlay rebases both series to 0% so performance is directly comparable on one scale.';
+    };
+  });
+  var mod=document.getElementById('cmpModal');
+  if(mod)mod.addEventListener('mousedown',function(e){ if(e.target===mod)closeCompare(); });
+})();
 
 /* ── INDICATORS ── */
 function SMA(v,p){const o=Array(v.length).fill(null);let s=0;for(let i=0;i<v.length;i++){s+=v[i];if(i>=p)s-=v[i-p];if(i>=p-1)o[i]=s/p;}return o;}
@@ -2338,6 +2468,7 @@ new ResizeObserver(()=>{resizeOverlay();redrawOverlay();}).observe(document.getE
     document.getElementById('idxName').value='My Custom Index';
     D.shapes=[];D.temp=null;D.selected=-1;D.wavePoints=[];
     S.times=[];S.closes=[];S.raw=null;S.ohlc=null;if(S.rs)S.rs.data={};
+    if(typeof clearCompares==='function')clearCompares();
     if(typeof disposeChart==='function')disposeChart();
     try{if(typeof redrawOverlay==='function')redrawOverlay();}catch(e){}
     ['legend','stats'].forEach(function(id){var el=document.getElementById(id);if(el)el.style.display='none';});
@@ -2408,6 +2539,7 @@ new ResizeObserver(()=>{resizeOverlay();redrawOverlay();}).observe(document.getE
     currentId=null; currentShareId=null;
     D.shapes=[];D.temp=null;D.selected=-1;D.wavePoints=[];
     S.rs.data={};S.raw=null;S.tf='D';
+    if(typeof clearCompares==='function')clearCompares();
     document.getElementById('idxName').value=x.name||'';
     setWeight('equal');
     var list=document.getElementById('stockList'); list.innerHTML='';
