@@ -400,6 +400,12 @@ main .workspace{order:1}
 .empty .ico{opacity:.25}
 .empty .t{font-weight:600;color:#6b7280}
 
+
+/* empty-state quick cards */
+.empty .qcards{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:16px;max-width:540px}
+.qcard{background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 16px;font-family:"Inter";font-weight:600;font-size:12.5px;color:#374151;cursor:pointer;transition:border-color .15s,color .15s,box-shadow .15s}
+.qcard:hover{border-color:var(--accent);color:var(--accent);box-shadow:0 2px 10px rgba(15,123,90,.12)}
+
 </style>
 </head>
 <body>
@@ -436,6 +442,7 @@ main .workspace{order:1}
   <!-- ── ROW 2: Controls (light) — search + cloud actions + index config + build ── -->
   <div class="controls">
     <button class="gear" id="btnSettings" title="More settings">⚙</button>
+    <button class="ctrl-btn" id="btnNew" onclick="newIndex()" title="Start a new index (N)">+ New</button>
     <button class="ctrl-btn" id="btnReady">Index Library ▾</button>
     <button class="ctrl-btn" id="btnMine">My indices ▾</button>
     <div style="width:1px;height:22px;background:var(--line);flex:none;margin:0 2px"></div>
@@ -484,29 +491,29 @@ main .workspace{order:1}
   <main>
     <!-- ── FLOATING DRAWING TOOLBAR (collapsible) ── -->
     <div class="leftbar" id="leftbar">
-      <button class="lb-tool on" id="dCursor" onclick="setTool('cursor')" data-tip="Cursor"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 4l7 16 2-7 7-2z"/></svg><span class="tl-txt">Cursor</span></button>
+      <button class="lb-tool on" id="dCursor" onclick="setTool('cursor')" data-tip="Cursor (C)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 4l7 16 2-7 7-2z"/></svg><span class="tl-txt">Cursor</span></button>
       <button class="lb-tool" id="dCrosshair" onclick="setTool('crosshair')" data-tip="Crosshair (magnet)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="2.5"/></svg><span class="tl-txt">Crosshair</span></button>
       <div class="lb-sep"></div>
-      <button class="lb-tool" id="dTrend" onclick="setTool('trend')" data-tip="Trend line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 21L21 3"/><circle cx="4" cy="20" r="1.6" fill="currentColor"/><circle cx="20" cy="4" r="1.6" fill="currentColor"/></svg><span class="tl-txt">Trend line</span></button>
-      <button class="lb-tool" id="dHline" onclick="setTool('hline')" data-tip="Horizontal line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h18"/></svg><span class="tl-txt">Horizontal</span></button>
-      <button class="lb-tool" id="dVline" onclick="setTool('vline')" data-tip="Vertical line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v18"/></svg><span class="tl-txt">Vertical</span></button>
-      <button class="lb-tool" id="dRect" onclick="setTool('rect')" data-tip="Rectangle / zone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="12" rx="1"/></svg><span class="tl-txt">Rectangle</span></button>
-      <button class="lb-tool" id="dFib" onclick="setTool('fib')" data-tip="Fibonacci retracement"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 5h18M3 10h18M3 14h18M3 19h18"/></svg><span class="tl-txt">Fibonacci</span></button>
+      <button class="lb-tool" id="dTrend" onclick="setTool('trend')" data-tip="Trend line (T)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 21L21 3"/><circle cx="4" cy="20" r="1.6" fill="currentColor"/><circle cx="20" cy="4" r="1.6" fill="currentColor"/></svg><span class="tl-txt">Trend line</span></button>
+      <button class="lb-tool" id="dHline" onclick="setTool('hline')" data-tip="Horizontal line (H)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h18"/></svg><span class="tl-txt">Horizontal</span></button>
+      <button class="lb-tool" id="dVline" onclick="setTool('vline')" data-tip="Vertical line (V)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v18"/></svg><span class="tl-txt">Vertical</span></button>
+      <button class="lb-tool" id="dRect" onclick="setTool('rect')" data-tip="Rectangle (R)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="12" rx="1"/></svg><span class="tl-txt">Rectangle</span></button>
+      <button class="lb-tool" id="dFib" onclick="setTool('fib')" data-tip="Fibonacci (F)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 5h18M3 10h18M3 14h18M3 19h18"/></svg><span class="tl-txt">Fibonacci</span></button>
       <button class="lb-tool" id="dText" onclick="setTool('text')" data-tip="Text label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 5h14M12 5v14"/></svg><span class="tl-txt">Text</span></button>
-      <button class="lb-tool" id="dMeasure" onclick="setTool('measure')" data-tip="Measure"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 8h18v8H3z"/><path d="M7 8v3M11 8v4M15 8v3M19 8v4"/></svg><span class="tl-txt">Measure</span></button>
+      <button class="lb-tool" id="dMeasure" onclick="setTool('measure')" data-tip="Measure (M)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 8h18v8H3z"/><path d="M7 8v3M11 8v4M15 8v3M19 8v4"/></svg><span class="tl-txt">Measure</span></button>
       <div class="lb-sep"></div>
       <button class="lb-tool" id="dWave5" onclick="setTool('wave5')" data-tip="Elliott Wave 1-2-3-4-5 (motive)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18l4-8 4 4 4-10 4 6"/><circle cx="2" cy="18" r="1.2" fill="currentColor"/><circle cx="6" cy="10" r="1.2" fill="currentColor"/><circle cx="10" cy="14" r="1.2" fill="currentColor"/><circle cx="14" cy="4" r="1.2" fill="currentColor"/><circle cx="18" cy="10" r="1.2" fill="currentColor"/></svg><span class="tl-txt">Wave 1–5</span></button>
       <button class="lb-tool" id="dWaveABC" onclick="setTool('waveABC')" data-tip="Elliott Wave A-B-C (corrective)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16l5-10 5 10"/><circle cx="3" cy="16" r="1.2" fill="currentColor"/><circle cx="8" cy="6" r="1.2" fill="currentColor"/><circle cx="13" cy="16" r="1.2" fill="currentColor"/><text x="3" y="22" font-size="5" fill="currentColor" stroke="none" font-family="Inter" font-weight="700">A</text><text x="7" y="5" font-size="5" fill="currentColor" stroke="none" font-family="Inter" font-weight="700">B</text><text x="12" y="22" font-size="5" fill="currentColor" stroke="none" font-family="Inter" font-weight="700">C</text></svg><span class="tl-txt">Wave A-B-C</span></button>
       <button class="lb-tool" id="dWaveABCDE" onclick="setTool('waveABCDE')" data-tip="Elliott Wave A-B-C-D-E (triangle)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 17l4-8 4 5 4-7 4 5"/><circle cx="2" cy="17" r="1.1" fill="currentColor"/><circle cx="6" cy="9" r="1.1" fill="currentColor"/><circle cx="10" cy="14" r="1.1" fill="currentColor"/><circle cx="14" cy="7" r="1.1" fill="currentColor"/><circle cx="18" cy="12" r="1.1" fill="currentColor"/></svg><span class="tl-txt">Wave ABCDE</span></button>
       <div class="lb-sep"></div>
-      <button class="lb-tool" onclick="undoDraw()" data-tip="Undo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10H9"/></svg><span class="tl-txt">Undo</span></button>
+      <button class="lb-tool" onclick="undoDraw()" data-tip="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10H9"/></svg><span class="tl-txt">Undo</span></button>
       <button class="lb-tool" onclick="clearDraw()" data-tip="Delete all drawings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg><span class="tl-txt">Delete all</span></button>
       <button class="lb-collapse" id="lbCollapse" data-tip="Expand labels"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg><span class="tl-txt">Collapse</span></button>
     </div>
 
     <div class="rightbar">
       <button class="lb-tool on" id="dPriceLbl" onclick="togglePriceLabels()" data-tip="Price labels"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="10" height="6" rx="1"/><path d="M13 10h8M17 7l4 3-4 3"/></svg></button>
-      <button class="lb-tool" onclick="fitChart()" data-tip="Fit to screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+      <button class="lb-tool" onclick="fitChart()" data-tip="Fit to screen (Shift+F)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
       <button class="lb-tool" onclick="exportPNG()" data-tip="Download PNG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></button>
     </div>
     <div class="workspace">
@@ -522,8 +529,16 @@ main .workspace{order:1}
         <div class="legend" id="legend" style="display:none"></div>
         <div class="empty" id="empty">
           <div class="ico">◧</div>
-          <div class="t">No index loaded yet</div>
-          <div class="s">Add stocks above or load a ready-made index, then hit <b>Build →</b></div>
+          <div class="t">Start with a ready-made index</div>
+          <div class="s">One click to chart the official series — or search stocks above to build your own.</div>
+          <div class="qcards">
+            <button class="qcard" onclick="quickLoad('nifty_50')">Nifty 50</button>
+            <button class="qcard" onclick="quickLoad('nifty_bank')">Nifty Bank</button>
+            <button class="qcard" onclick="quickLoad('sensex_30')">Sensex 30</button>
+            <button class="qcard" onclick="quickLoad('nifty_it')">Nifty IT</button>
+            <button class="qcard" onclick="quickLoad('nifty_pharma')">Nifty Pharma</button>
+            <button class="qcard" onclick="quickLoad('defence')">India Defence</button>
+          </div>
         </div>
         <div id="buildLoader">
           <div class="loader-logo"><img src="/chartix-wordmark.png" alt="Chartix"></div>
@@ -1584,6 +1599,34 @@ document.addEventListener('keydown',e=>{
     else hideMenu();
   }
 });
+/* ── keyboard shortcuts (charting-platform standard) ── */
+document.addEventListener('keydown',function(e){
+  var t=e.target;
+  if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT'||t.isContentEditable))return;
+  var k=e.key;
+  if((e.metaKey||e.ctrlKey)&&!e.altKey){
+    if(k==='z'||k==='Z'){e.preventDefault();if(typeof undoDraw==='function')undoDraw();}
+    else if(k==='s'||k==='S'){e.preventDefault();var b=document.getElementById('btnSave');if(b)b.click();}
+    return;
+  }
+  if(e.altKey)return;
+  switch(k){
+    case '/': e.preventDefault(); var si=document.getElementById('topSearch'); if(si)si.focus(); break;
+    case 'Delete': case 'Backspace':
+      if(D.selected>=0){e.preventDefault();D.shapes.splice(D.selected,1);D.selected=-1;if(typeof hideMenu==='function')hideMenu();redrawOverlay();}
+      break;
+    case 'Escape': if(D.tool&&D.tool!=='cursor')setTool('cursor'); break;
+    case 't': case 'T': setTool('trend'); break;
+    case 'h': case 'H': setTool('hline'); break;
+    case 'v': case 'V': setTool('vline'); break;
+    case 'r': case 'R': setTool('rect'); break;
+    case 'f': setTool('fib'); break;
+    case 'F': if(typeof fitChart==='function')fitChart(); break;
+    case 'm': case 'M': setTool('measure'); break;
+    case 'c': case 'C': setTool('cursor'); break;
+    case 'n': case 'N': if(window.newIndex)window.newIndex(); break;
+  }
+});
 document.addEventListener('mousedown',e=>{if(!document.getElementById('shapeMenu').contains(e.target)&&e.target.id!=='overlay')hideMenu();});
 
 /* ── CHART WRAP CLICK (cursor mode hit test) ── */
@@ -2261,7 +2304,56 @@ new ResizeObserver(()=>{resizeOverlay();redrawOverlay();}).observe(document.getE
   // periodic + debounced autosave
   setInterval(function(){ if(dirty&&session&&session.user&&currentId)doSave(false); },30000);
   var debTimer=null;
-  function scheduleAutosave(){ markDirty(); if(!(session&&session.user))return; clearTimeout(debTimer); debTimer=setTimeout(function(){ if(currentId)doSave(false); },2500); }
+  function scheduleAutosave(){
+    markDirty();
+    // local snapshot so anonymous users never lose work on tab close
+    try{
+      var rows=[].slice.call(document.querySelectorAll('#stockList [data-row]')).map(function(r){
+        return {t:(r.querySelector('.sc-tk').value||'').trim(), s:(r.querySelector('.sc-sh').value||'').trim()};
+      }).filter(function(x){return x.t;});
+      localStorage.setItem('cx_local_session',JSON.stringify({n:document.getElementById('idxName').value,w:S.weightMode,rows:rows,ts:Date.now()}));
+    }catch(e){}
+    if(!(session&&session.user))return; clearTimeout(debTimer); debTimer=setTimeout(function(){ if(currentId)doSave(false); },2500);
+  }
+  function restoreLocalSession(){
+    if(currentId)return; // a cloud index was already restored
+    if(document.querySelectorAll('#stockList [data-row]').length)return;
+    try{
+      var raw=localStorage.getItem('cx_local_session'); if(!raw)return;
+      var st=JSON.parse(raw); if(!st||!st.rows||!st.rows.length)return;
+      if(Date.now()-(st.ts||0)>1209600000)return; // stale after 2 weeks
+      document.getElementById('idxName').value=st.n||'My Custom Index';
+      setWeight(st.w==='equal'?'equal':'mcap');
+      st.rows.slice(0,60).forEach(function(x){ addStockRow(x.t, x.s?parseFloat(x.s):undefined); });
+      renderChips(); if(typeof updateStkCount==='function')updateStkCount();
+      setStatus('Restored your last session — hit Build →');
+    }catch(e){}
+  }
+  // Fresh start: clear constituents, chart and drawings in one click (N)
+  window.newIndex=function(){
+    var rows=document.querySelectorAll('#stockList [data-row]').length;
+    if((rows>0||(S.times&&S.times.length>0))&&!confirm('Start a new index? Current constituents, chart and drawings will be cleared.'))return;
+    currentId=null; currentShareId=null; dirty=false;
+    document.getElementById('stockList').innerHTML='';
+    document.getElementById('idxName').value='My Custom Index';
+    D.shapes=[];D.temp=null;D.selected=-1;D.wavePoints=[];
+    S.times=[];S.closes=[];S.raw=null;S.ohlc=null;if(S.rs)S.rs.data={};
+    if(typeof disposeChart==='function')disposeChart();
+    try{if(typeof redrawOverlay==='function')redrawOverlay();}catch(e){}
+    ['legend','stats'].forEach(function(id){var el=document.getElementById(id);if(el)el.style.display='none';});
+    var em=document.getElementById('empty'); if(em)em.style.display='';
+    var sc=document.getElementById('srcChip'); if(sc)sc.textContent='';
+    var fs=document.getElementById('fetchStatus'); if(fs)fs.textContent='';
+    try{localStorage.removeItem('cx_local_session');}catch(e){}
+    renderChips(); if(typeof updateStkCount==='function')updateStkCount();
+    setStatus('New index — add stocks or paste a list');
+    var si=document.getElementById('topSearch'); if(si)si.focus();
+  };
+  // One-click load from the empty-state cards
+  window.quickLoad=async function(key){
+    if(!readyMade){ try{ var r=await fetch('/index-builder-app/data/sectorIndices.json?v=5'); readyMade=await r.json(); }catch(e){ return; } }
+    if(readyMade&&readyMade[key]) loadReadyMade(readyMade[key]);
+  };
 
   // ── ready-made modal ──
   var readyMade=null;
@@ -2451,6 +2543,24 @@ new ResizeObserver(()=>{resizeOverlay();redrawOverlay();}).observe(document.getE
       drop.classList.add('open');
     }
     function pick(sym){ addStock(sym); inp.value=''; drop.classList.remove('open'); inp.focus(); }
+    // Paste a comma/space/newline-separated list (e.g. from Excel) → add all
+    inp.addEventListener('paste',function(e){
+      var txt=((e.clipboardData||window.clipboardData).getData('text')||'');
+      var toks=txt.split(/[\s,;\t\n]+/).map(function(x){return x.trim().toUpperCase();}).filter(Boolean);
+      if(toks.length<2)return; // single token: normal paste
+      e.preventDefault();
+      var added=0,skipped=0;
+      toks.forEach(function(tk){
+        if(!/^[A-Z0-9&.\-]{1,20}$/.test(tk)){skipped++;return;}
+        var res=(typeof acSearch==='function')?acSearch(tk):[];
+        var exact=res.some(function(r){return String(r[0]).toUpperCase()===tk;});
+        if(exact||!res.length){addStock(tk);added++;}
+        else skipped++;
+      });
+      drop.classList.remove('open'); inp.value='';
+      var st=document.getElementById('fetchStatus');
+      if(st)st.textContent='Added '+added+' stocks from paste'+(skipped?' ('+skipped+' unrecognized skipped)':'')+' — hit Build →';
+    });
     inp.addEventListener('input',function(){render(inp.value);});
     inp.addEventListener('keydown',function(e){
       var items=drop.querySelectorAll('.ac-item');
@@ -2565,6 +2675,7 @@ new ResizeObserver(()=>{resizeOverlay();redrawOverlay();}).observe(document.getE
     injectUI();
     renderAccount();
     await restore();
+    restoreLocalSession();
   })();
 })();
 </script>
