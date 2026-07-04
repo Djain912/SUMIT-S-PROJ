@@ -1102,7 +1102,7 @@ function buildChart(){
       vertLine:{color:'#b6bdc4',width:1,style:LWC.LineStyle.LargeDashed,labelBackgroundColor:'#1f2937'},
       horzLine:{color:'#b6bdc4',width:1,style:LWC.LineStyle.LargeDashed,labelBackgroundColor:'#1f2937'}},
     rightPriceScale:{borderColor:'#e7eaec',scaleMargins:{top:0.08,bottom:0.08}},
-    timeScale:{borderColor:'#e7eaec',timeVisible:false,secondsVisible:false,rightOffset:2,barSpacing:12,minBarSpacing:1,fixLeftEdge:true,fixRightEdge:true,lockVisibleTimeRangeOnResize:true,rightBarStaysOnScroll:true},
+    timeScale:{borderColor:'#e7eaec',timeVisible:false,secondsVisible:false,rightOffset:6,barSpacing:12,minBarSpacing:1,fixLeftEdge:true,fixRightEdge:false,lockVisibleTimeRangeOnResize:true,rightBarStaysOnScroll:true},
     autoSize:true,
   });
   S.chart=chart;addMainSeries();refreshIndicators();
