@@ -356,7 +356,9 @@ main{flex:1;display:flex;min-height:0}
 }
 
 /* ── charting-platform layout: right rail, bottom bar, collapsible chips ── */
-.rightbar{flex:none;width:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:1px;padding:5px;margin:8px 8px 8px 0;overflow:visible;z-index:12;align-self:flex-start}
+main .leftbar{order:0}
+main .workspace{order:1}
+.rightbar{order:2;flex:none;width:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:1px;padding:5px;margin:8px 8px 8px 0;overflow:visible;z-index:12;align-self:flex-start}
 .rightbar .lb-tool{position:relative;display:flex;align-items:center;justify-content:center;width:34px;height:32px;background:none;border:none;border-radius:8px;padding:0;cursor:pointer;color:var(--txt-dim)}
 .rightbar .lb-tool svg{width:16px;height:16px}
 .rightbar .lb-tool:hover{background:var(--panel-2);color:var(--accent)}
