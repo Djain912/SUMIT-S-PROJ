@@ -2047,8 +2047,14 @@ new ResizeObserver(()=>{resizeOverlay();redrawOverlay();}).observe(document.getE
     <div class="lopt-sub" id="loptSub">12 stocks</div>
     <div class="lopt-lbl">Weighting</div>
     <div class="lopt-pills" id="loptWeight">
+      <button class="lopt-pill" data-w="official" id="loptOfficial" style="display:none">Official Index</button>
       <button class="lopt-pill on" data-w="mcap">Market-cap</button>
       <button class="lopt-pill" data-w="equal">Equal weight</button>
+    </div>
+    <div id="loptNote" style="display:none;font-size:11px;color:#6b7280;margin:-4px 0 12px;line-height:1.5">
+      <b>Official Index</b> charts the real exchange-published series (actual levels).
+      Market-cap / Equal weight rebuild it from today&rsquo;s constituents &mdash; an educational
+      reconstruction whose values will differ from the official index.
     </div>
     <div class="lopt-lbl">Time period</div>
     <div class="lopt-pills" id="loptPeriod">
@@ -2217,7 +2223,7 @@ new ResizeObserver(()=>{resizeOverlay();redrawOverlay();}).observe(document.getE
   async function openReadyMade(){
     var m=document.getElementById('rmModal'); m.classList.add('open');
     if(!readyMade){
-      try{ var r=await fetch('/index-builder-app/data/sectorIndices.json?v=4'); readyMade=await r.json(); }
+      try{ var r=await fetch('/index-builder-app/data/sectorIndices.json?v=5'); readyMade=await r.json(); }
       catch(e){ document.getElementById('rmList').innerHTML='<div class="cloud-empty">Could not load ready-made indices.</div>'; return; }
       var cats=[]; Object.keys(readyMade).forEach(function(k){ var c=readyMade[k].category; if(cats.indexOf(c)<0)cats.push(c); });
       cats.sort(); var sel=document.getElementById('rmCat');
@@ -2247,11 +2253,51 @@ new ResizeObserver(()=>{resizeOverlay();redrawOverlay();}).observe(document.getE
     _pendingRM=x;
     document.getElementById('loptName').textContent=x.name||'Index';
     document.getElementById('loptSub').textContent=(x.constituents?x.constituents.length:0)+' stocks · '+esc(x.category||'');
-    // reset pills to defaults
-    document.querySelectorAll('#loptWeight .lopt-pill').forEach(function(b){b.classList.toggle('on',b.dataset.w==='mcap');});
+    // Official pill only for indices with a real exchange-published series.
+    var hasOff=!!x.official;
+    document.getElementById('loptOfficial').style.display=hasOff?'':'none';
+    document.getElementById('loptNote').style.display=hasOff?'':'none';
+    // reset pills to defaults — official (the real chart) when available
+    var defW=hasOff?'official':'mcap';
+    document.querySelectorAll('#loptWeight .lopt-pill').forEach(function(b){b.classList.toggle('on',b.dataset.w===defW);});
     document.querySelectorAll('#loptPeriod .lopt-pill').forEach(function(b){b.classList.toggle('on',b.dataset.p==='2');});
     document.getElementById('rmModal').classList.remove('open');
     document.getElementById('loadOptModal').classList.add('open');
+  }
+  // Chart the real exchange-published index series (true replica of the
+  // official chart — actual levels), served from our stock_eod store.
+  async function loadOfficialSeries(x, years){
+    S.times=[];S.closes=[]; // prevent auto-rebuild while we set up
+    currentId=null; currentShareId=null;
+    D.shapes=[];D.temp=null;D.selected=-1;D.wavePoints=[];
+    S.rs.data={};S.raw=null;S.tf='D';
+    document.getElementById('idxName').value=x.name||'';
+    setWeight('equal');
+    var list=document.getElementById('stockList'); list.innerHTML='';
+    (x.constituents||[]).forEach(function(sym){ addStockRow(sym); });
+    if(typeof updateStkCount==='function')updateStkCount();
+    var rangeBtn=document.querySelector('#rangePresets [data-yrs="'+years+'"]');
+    if(rangeBtn){ document.querySelectorAll('#rangePresets button').forEach(function(b){b.classList.remove('on');}); rangeBtn.classList.add('on'); rangeBtn.click(); }
+    renderChips();
+    setStatus('Official index loaded — switch weighting to rebuild from constituents');
+    var start=document.getElementById('gStart').value,end=document.getElementById('gEnd').value;
+    showLoader('Loading official '+(x.name||'index')+'…');
+    try{
+      var m=await fetchSeries(x.official,start,end,'close');
+      var dates=Object.keys(m.close).sort();
+      var recs=dates.map(function(d){
+        var o=m.open[d],h=m.high[d],l=m.low[d],c=m.close[d];
+        var ok=o>0&&h>0&&l>0;
+        return {key:d,value:c,o:ok?o:NaN,h:ok?h:NaN,l:ok?l:NaN,c:c};
+      });
+      if(recs.length<2){hideLoader();showMsg('No official data available for this index yet.','err');return;}
+      S.title=(x.name||'Index')+' (Official)';
+      document.getElementById('fetchStatus').textContent='Official exchange series ✓';
+      finalizeData(recs,recs.some(function(r){return !isNaN(r.o);}),false);
+    }catch(e){
+      hideLoader();
+      showMsg('Could not load the official series ('+e.message+'). Try Market-cap or Equal weight instead.','err');
+    }
   }
   async function applyReadyMade(x, weight, years){
     S.times=[];S.closes=[]; // prevent auto-rebuild during load
@@ -2419,7 +2465,8 @@ new ResizeObserver(()=>{resizeOverlay();redrawOverlay();}).observe(document.getE
       var weight=w?w.dataset.w:'mcap';
       var years=p?parseInt(p.dataset.p,10):2;
       document.getElementById('loadOptModal').classList.remove('open');
-      applyReadyMade(_pendingRM, weight, years);
+      if(weight==='official'&&_pendingRM.official){ loadOfficialSeries(_pendingRM, years); }
+      else{ applyReadyMade(_pendingRM, weight, years); }
       _pendingRM=null;
     };
     document.getElementById('loptCancel').onclick=function(){

@@ -56,7 +56,8 @@
    "TRENT",
    "ULTRACEMCO",
    "WIPRO"
-  ]
+  ],
+  "official": "NIFTY 50"
  },
  "sensex_30": {
   "id": "sensex_30",
@@ -95,7 +96,8 @@
    "TITAN",
    "TRENT",
    "ULTRACEMCO"
-  ]
+  ],
+  "official": "SENSEX"
  },
  "nifty_bank": {
   "id": "nifty_bank",
@@ -118,7 +120,8 @@
    "SBIN",
    "UNIONBANK",
    "YESBANK"
-  ]
+  ],
+  "official": "NIFTY BANK"
  },
  "nifty_private_bank": {
   "id": "nifty_private_bank",
@@ -137,7 +140,8 @@
    "KOTAKBANK",
    "RBLBANK",
    "YESBANK"
-  ]
+  ],
+  "official": "NIFTY PRIVATE BANK"
  },
  "nifty_psu_bank": {
   "id": "nifty_psu_bank",
@@ -158,7 +162,8 @@
    "SBIN",
    "UCOBANK",
    "UNIONBANK"
-  ]
+  ],
+  "official": "NIFTY PSU BANK"
  },
  "nifty_financial_services": {
   "id": "nifty_financial_services",
@@ -187,7 +192,8 @@
    "SBILIFE",
    "SHRIRAMFIN",
    "SBIN"
-  ]
+  ],
+  "official": "NIFTY FINANCIAL SERVICES"
  },
  "nifty_fin_ex_bank": {
   "id": "nifty_fin_ex_bank",
@@ -285,7 +291,8 @@
    "TCS",
    "TECHM",
    "WIPRO"
-  ]
+  ],
+  "official": "NIFTY IT"
  },
  "nifty_midsmall_it_telecom": {
   "id": "nifty_midsmall_it_telecom",
@@ -314,7 +321,8 @@
    "TATATECH",
    "IDEA",
    "ZENSARTECH"
-  ]
+  ],
+  "official": "NIFTY MIDSMALL IT & TELECOM"
  },
  "nifty_telecom": {
   "id": "nifty_telecom",
@@ -357,7 +365,8 @@
    "TMPV",
    "TIINDIA",
    "UNOMINDA"
-  ]
+  ],
+  "official": "NIFTY AUTO"
  },
  "nifty_capital_goods": {
   "id": "nifty_capital_goods",
@@ -427,7 +436,8 @@
    "SUMICHEM",
    "TATACHEM",
    "UPL"
-  ]
+  ],
+  "official": "NIFTY CHEMICALS"
  },
  "nifty_metal": {
   "id": "nifty_metal",
@@ -451,7 +461,8 @@
    "TATASTEEL",
    "VEDL",
    "WELCORP"
-  ]
+  ],
+  "official": "NIFTY METAL"
  },
  "nifty_power": {
   "id": "nifty_power",
@@ -496,7 +507,8 @@
    "OIL",
    "PETRONET",
    "RELIANCE"
-  ]
+  ],
+  "official": "NIFTY OIL & GAS"
  },
  "nifty_fmcg": {
   "id": "nifty_fmcg",
@@ -520,7 +532,8 @@
    "UBL",
    "UNITDSPR",
    "VBL"
-  ]
+  ],
+  "official": "NIFTY FMCG"
  },
  "nifty_consumer_durables": {
   "id": "nifty_consumer_durables",
@@ -542,7 +555,8 @@
    "TITAN",
    "VOLTAS",
    "WHIRLPOOL"
-  ]
+  ],
+  "official": "NIFTY CONSUMER DURABLES"
  },
  "nifty_consumer_services": {
   "id": "nifty_consumer_services",
@@ -643,7 +657,8 @@
    "SYNGENE",
    "TORNTPHARM",
    "ZYDUSLIFE"
-  ]
+  ],
+  "official": "NIFTY HEALTHCARE INDEX"
  },
  "nifty_pharma": {
   "id": "nifty_pharma",
@@ -672,7 +687,8 @@
    "TORNTPHARM",
    "WOCKPHARMA",
    "ZYDUSLIFE"
-  ]
+  ],
+  "official": "NIFTY PHARMA"
  },
  "nifty500_healthcare": {
   "id": "nifty500_healthcare",
@@ -729,7 +745,8 @@
    "TORNTPHARM",
    "VIJAYA",
    "ZYDUSLIFE"
-  ]
+  ],
+  "official": "NIFTY500 HEALTHCARE"
  },
  "nifty_midsmall_healthcare": {
   "id": "nifty_midsmall_healthcare",
@@ -768,7 +785,8 @@
    "SAILIFE",
    "SYNGENE",
    "WOCKPHARMA"
-  ]
+  ],
+  "official": "NIFTY MIDSMALL HEALTHCARE"
  },
  "nifty_construction": {
   "id": "nifty_construction",
@@ -807,7 +825,8 @@
    "PHOENIXLTD",
    "PRESTIGE",
    "SOBHA"
-  ]
+  ],
+  "official": "NIFTY REALTY"
  },
  "nifty_transport": {
   "id": "nifty_transport",
@@ -844,7 +863,8 @@
    "LT",
    "RELIANCE",
    "TCS"
-  ]
+  ],
+  "official": "NIFTY TOP 10 EQUAL WEIGHT"
  },
  "cement": {
   "id": "cement",
@@ -959,7 +979,8 @@
    "PARAS",
    "SOLARINDS",
    "ZENTEC"
-  ]
+  ],
+  "official": "NIFTY INDIA DEFENCE"
  },
  "railways": {
   "id": "railways",

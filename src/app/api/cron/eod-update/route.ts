@@ -44,6 +44,51 @@ async function fetchBhavcopy(d: Date): Promise<string | null> {
   }
 }
 
+// NSE's daily "all indices" close file — official index OHLC for the day.
+// Rows whose UPPERCASED "Index Name" matches a symbol already in stock_eod
+// (e.g. 'NIFTY 50', backfilled by scripts/index-eod-backfill.mjs) get upserted,
+// so official index series stay current with zero extra config.
+async function fetchIndexClose(d: Date): Promise<string | null> {
+  const url = `https://archives.nseindia.com/content/indices/ind_close_all_${ddmmyyyy(d)}.csv`;
+  try {
+    const r = await fetch(url, {
+      headers: { 'User-Agent': UA, Accept: '*/*', Referer: 'https://www.nseindia.com/' },
+      cache: 'no-store',
+    });
+    if (!r.ok) return null;
+    const text = await r.text();
+    return text.includes('Index Name') ? text : null;
+  } catch {
+    return null;
+  }
+}
+
+// Sensex is BSE — not in NSE files. Pull the last few days from Yahoo ^BSESN;
+// failures are non-fatal (the next run catches up via the 5-day window).
+async function fetchSensexRecent(): Promise<Array<[string, number, number, number, number, number]>> {
+  try {
+    const r = await fetch(
+      'https://query1.finance.yahoo.com/v8/finance/chart/%5EBSESN?interval=1d&range=5d',
+      { headers: { 'User-Agent': UA }, cache: 'no-store' },
+    );
+    if (!r.ok) return [];
+    const j = await r.json();
+    const res = j?.chart?.result?.[0];
+    if (!res?.timestamp?.length) return [];
+    const q = res.indicators.quote[0];
+    const out: Array<[string, number, number, number, number, number]> = [];
+    for (let i = 0; i < res.timestamp.length; i++) {
+      const c = q.close?.[i];
+      if (!(c > 0)) continue;
+      const day = new Date(res.timestamp[i] * 1000).toISOString().slice(0, 10);
+      out.push([day, q.open?.[i] ?? c, q.high?.[i] ?? c, q.low?.[i] ?? c, c, Math.round(q.volume?.[i] || 0)]);
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization');
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -106,5 +151,54 @@ export async function GET(request: Request) {
     written += slice.length;
   }
 
-  return NextResponse.json({ ok: true, barDate, tracked: trackedSet.size, updated: written });
+  // ── Official NSE index series (Nifty 50, sector indices…) ──
+  let indexUpdated = 0;
+  const idxCsv = await fetchIndexClose(new Date(barDate + 'T00:00:00Z'));
+  if (idxCsv) {
+    // Index Name,Index Date,Open,High,Low,Close,... — Date is DD-MM-YYYY.
+    const idxLines = idxCsv.split('\n');
+    const idxUpdates: Array<[string, string, number, number, number, number, number]> = [];
+    const seen = new Set<string>();
+    for (let i = 1; i < idxLines.length; i++) {
+      // Split respecting simple CSV (index names contain no commas in this file).
+      const p = idxLines[i].split(',').map((x) => x.trim());
+      if (p.length < 9) continue;
+      const sym = p[0].toUpperCase();
+      if (!trackedSet.has(sym) || seen.has(sym)) continue;
+      const dm = p[1].match(/^(\d{2})-(\d{2})-(\d{4})$/);
+      if (!dm) continue;
+      const day = `${dm[3]}-${dm[2]}-${dm[1]}`;
+      const o = +p[2], h = +p[3], l = +p[4], c = +p[5];
+      const v = parseInt(p[8] || '0', 10);
+      if (!(c > 0)) continue;
+      seen.add(sym);
+      idxUpdates.push([sym, day, isNaN(o) ? c : o, isNaN(h) ? c : h, isNaN(l) ? c : l, c, isNaN(v) ? 0 : v]);
+    }
+    for (const [sym, day, o, h, l, c, v] of idxUpdates) {
+      await prisma.$executeRawUnsafe(
+        `INSERT INTO stock_eod (symbol,d,o,h,l,c,v) VALUES ($1,$2::date,$3,$4,$5,$6,$7::bigint)
+         ON CONFLICT (symbol,d) DO UPDATE SET o=EXCLUDED.o,h=EXCLUDED.h,l=EXCLUDED.l,c=EXCLUDED.c,v=EXCLUDED.v`,
+        sym, day, o, h, l, c, v,
+      );
+      indexUpdated++;
+    }
+  }
+
+  // Sensex (BSE) via Yahoo — last 5 sessions, non-fatal on failure.
+  let sensexUpdated = 0;
+  if (trackedSet.has('SENSEX')) {
+    for (const [day, o, h, l, c, v] of await fetchSensexRecent()) {
+      await prisma.$executeRawUnsafe(
+        `INSERT INTO stock_eod (symbol,d,o,h,l,c,v) VALUES ('SENSEX',$1::date,$2,$3,$4,$5,$6::bigint)
+         ON CONFLICT (symbol,d) DO UPDATE SET o=EXCLUDED.o,h=EXCLUDED.h,l=EXCLUDED.l,c=EXCLUDED.c,v=EXCLUDED.v`,
+        day, o, h, l, c, v,
+      );
+      sensexUpdated++;
+    }
+  }
+
+  return NextResponse.json({
+    ok: true, barDate, tracked: trackedSet.size, updated: written,
+    indexUpdated, sensexUpdated,
+  });
 }
