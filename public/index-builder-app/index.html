@@ -617,8 +617,8 @@ function setWeight(mode){
   document.getElementById('wEqual').classList.toggle('active',mode==='equal');
   document.getElementById('stockList').classList.toggle('equal',mode==='equal');
   document.getElementById('constHint').textContent = mode==='equal'
-    ? 'Up to 15 stocks. Each stock gets an equal weight — no share counts needed.'
-    : 'Up to 15 stocks · shares in Crores. Pick from the list and shares auto-fill from Yahoo — edit any value if needed.';
+    ? 'Up to 60 stocks. Each stock gets an equal weight — no share counts needed.'
+    : 'Up to 60 stocks · shares in Crores. Pick from the list and shares auto-fill from Yahoo — edit any value if needed.';
   // auto-rebuild when toggling if a chart is already showing
   if(S.times&&S.times.length>0){
     if(mode==='mcap'&&prev==='equal'){
@@ -833,7 +833,7 @@ async function fetchShares(card,yh){
 }
 
 /* ── STOCK ROWS ── */
-const MAX_STOCKS=15;
+const MAX_STOCKS=60;
 function updateStkCount(){
   const n=document.querySelectorAll('#stockList [data-row]').length;
   document.getElementById('stkCount').textContent='('+n+'/'+MAX_STOCKS+')';
