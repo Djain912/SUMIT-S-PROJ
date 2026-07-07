@@ -34,7 +34,7 @@ export default function DisclaimerPage() {
             <div>
               <p className="font-bold text-amber-800 text-base">Independent Preparation Platform</p>
               <p className="mt-1 text-sm text-amber-700 leading-6">
-                Chartix is an <strong>independent, privately owned</strong> exam preparation platform. We are <strong>not affiliated with, endorsed by, sponsored by, or in any way connected to</strong> the CMT Association or any of its subsidiaries, affiliates, or representatives.
+                Chartix is an <strong>independent, privately owned</strong> exam preparation platform and a <strong>Participating Prep Provider of the CMT Association</strong> under its Prep Provider Program. Our participation <strong>does not</strong> constitute an endorsement or sponsorship of our products by the CMT Association, nor an authorized or exclusive partnership. CMT® and Chartered Market Technician® are registered trademarks owned by the CMT Association.
               </p>
             </div>
           </div>
@@ -94,9 +94,9 @@ export default function DisclaimerPage() {
 
         <div className="mt-12 rounded-2xl border border-zinc-200 bg-zinc-50 p-5 text-sm text-zinc-500">
           <p>
-            <strong className="text-zinc-700">Summary:</strong> Chartix is a student-built, independent CMT prep platform.
-            CMT® is a registered trademark of the CMT Association — we are not them, we are not endorsed by them,
-            and we are not affiliated with them in any way. We just help you prepare.
+            <strong className="text-zinc-700">Summary:</strong> Chartix is an independent CMT prep platform and a
+            Participating Prep Provider of the CMT Association. CMT® is a registered trademark of the CMT Association —
+            our participation in their Prep Provider Program does not mean they endorse or sponsor our products. We just help you prepare.
           </p>
         </div>
 

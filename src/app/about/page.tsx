@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowRight, BookOpen, Target, TrendingUp, Shield, Zap, Linkedin, Mail, Brain, Instagram, Twitter } from 'lucide-react';
 import { siteConfig } from '@/lib/site';
 
@@ -326,9 +327,12 @@ export default function AboutPage() {
               <Link href="/sign-in" className="text-xs text-zinc-400 hover:text-zinc-950 transition">Sign in</Link>
             </div>
           </div>
-          <p className="mt-5 border-t border-zinc-50 pt-5 text-center text-[11px] leading-5 text-zinc-400 sm:text-left">
-            CMT® and Chartered Market Technician® are registered trademarks owned by the CMT Association. Chartix is not affiliated with, endorsed by, or sponsored by the CMT Association.
-          </p>
+          <div className="mt-5 flex flex-col items-center gap-3 border-t border-zinc-50 pt-5 sm:flex-row sm:items-center sm:text-left">
+            <Image src="/cmt-prep-provider-badge.png" alt="CMT Association Participating Prep Provider" width={64} height={64} className="shrink-0" />
+            <p className="text-center text-[11px] leading-5 text-zinc-400 sm:text-left">
+              Chartix is a <strong className="font-semibold text-zinc-500">Participating Prep Provider</strong> of the CMT Association. CMT® and Chartered Market Technician® are registered trademarks owned by the CMT Association. Participation in the Prep Provider Program does not constitute an endorsement, sponsorship, or an authorized or exclusive partnership.
+            </p>
+          </div>
         </div>
       </footer>
     </>

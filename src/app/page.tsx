@@ -561,10 +561,16 @@ export default async function HomePage() {
                   <Image src="/chartix-wordmark.png" alt="Chartix" width={109} height={28} />
                 </div>
                 <p className="mt-3 text-xs leading-6 text-zinc-400">
-                  Purpose-built CMT exam prep for Level I, II, and III candidates. Not affiliated with, endorsed by, or sponsored by the CMT Association.
+                  Purpose-built CMT exam prep for Level I, II, and III candidates.
                 </p>
-                <p className="mt-2 text-[11px] leading-5 text-zinc-400">
-                  CMT® and Chartered Market Technician® are registered trademarks owned by the CMT Association.
+                <div className="mt-4 flex items-center gap-3">
+                  <Image src="/cmt-prep-provider-badge.png" alt="CMT Association Participating Prep Provider" width={60} height={60} />
+                  <p className="text-[11px] leading-5 text-zinc-500">
+                    Chartix is a <strong className="font-semibold text-zinc-600">Participating Prep Provider</strong> of the CMT Association.
+                  </p>
+                </div>
+                <p className="mt-3 text-[11px] leading-5 text-zinc-400">
+                  CMT® and Chartered Market Technician® are registered trademarks owned by the CMT Association. Participation in the Prep Provider Program does not constitute an endorsement, sponsorship, or an authorized or exclusive partnership.
                 </p>
 
                 {/* Founder */}
