@@ -210,6 +210,18 @@ export default async function HomePage() {
                       </Link>
                     </div>
                     <p className="mt-3 text-xs text-zinc-400">No credit card required · Cancel anytime</p>
+
+                    {/* Official CMT Prep Provider trust lockup */}
+                    <div className="mt-7 inline-flex items-center gap-3 rounded-2xl border border-emerald-100 bg-white/70 px-4 py-3 shadow-[0_1px_2px_rgba(16,40,30,.04),0_8px_24px_rgba(16,40,30,.05)] backdrop-blur">
+                      <Image src="/cmt-prep-provider-badge.png" alt="CMT Association Participating Prep Provider" width={46} height={46} className="shrink-0" />
+                      <div className="text-left">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-600">Official Recognition</p>
+                        <p className="mt-0.5 text-sm font-semibold leading-tight text-emerald-900">
+                          Participating Prep Provider
+                        </p>
+                        <p className="text-xs leading-tight text-zinc-400">of the CMT Association</p>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Right – browser mockup */}
