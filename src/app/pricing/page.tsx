@@ -195,34 +195,6 @@ export default async function PricingPage() {
         </div>
       </section>
 
-      {/* Cost comparison callout */}
-      <section className="bg-[#f0f7f4] py-10 px-4">
-        <div className="mx-auto max-w-3xl rounded-2xl border border-emerald-200 bg-white p-6 sm:p-8 shadow-sm">
-          <h3 className="text-lg font-bold text-emerald-900 mb-3">The math is simple</h3>
-          <p className="text-sm leading-7 text-zinc-600">
-            CMT exam registration costs roughly <strong className="text-zinc-800">$875–$1,475</strong> per level (plus a $250 enrollment fee and $325/year membership). If you fail and retake, that&apos;s another $875–$1,475 out of pocket. Chartix costs{' '}
-            <strong className="text-emerald-700">₹6,999 / $99</strong> — a fraction of one retake fee. Pass first time and you&apos;ve already saved thousands.
-          </p>
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 text-center text-xs">
-            {[
-              { label: 'CMT Enrollment', value: '$250', note: 'one-time' },
-              { label: 'CMT Membership', value: '$325', note: 'per year' },
-              { label: 'Exam fee (early)', value: '$875', note: 'per level' },
-              { label: 'Chartix', value: isUSD ? '$99' : '₹6,999', note: 'per level', highlight: true },
-            ].map((item) => (
-              <div
-                key={item.label}
-                className={`rounded-xl border px-3 py-3 ${item.highlight ? 'border-emerald-300 bg-emerald-50 text-emerald-800' : 'border-zinc-100 bg-zinc-50 text-zinc-600'}`}
-              >
-                <div className={`text-lg font-extrabold ${item.highlight ? 'text-emerald-700' : 'text-zinc-800'}`}>{item.value}</div>
-                <div className="font-semibold mt-0.5">{item.label}</div>
-                <div className={`mt-0.5 ${item.highlight ? 'text-emerald-600' : 'text-zinc-400'}`}>{item.note}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Pricing cards */}
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid gap-6 sm:grid-cols-3">
