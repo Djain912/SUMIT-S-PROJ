@@ -113,6 +113,14 @@ function buildHtml({
     </table>
   </td></tr>
 
+  <!-- CMT Participating Prep Provider -->
+  <tr><td style="padding:0 32px 20px;text-align:center">
+    <img src="https://chartix.in/cmt-prep-provider-badge.png" width="52" height="52" alt="CMT Association Participating Prep Provider" style="display:block;margin:0 auto 8px">
+    <p style="margin:0;font-size:11.5px;color:#9ca3af;line-height:1.5">
+      Chartix is a <b style="color:#6b7280">Participating Prep Provider</b> of the CMT Association
+    </p>
+  </td></tr>
+
   <!-- Footer -->
   <tr><td style="background:#f9fafb;border-top:0.5px solid ${BORDER};padding:16px 32px;text-align:center">
     <p style="margin:0;font-size:11px;color:#9ca3af">
