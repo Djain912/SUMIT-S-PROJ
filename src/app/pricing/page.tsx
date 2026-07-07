@@ -354,7 +354,7 @@ export default async function PricingPage() {
         <div className="mt-4 flex items-center justify-center gap-3">
           <Image src="/cmt-prep-provider-badge.png" alt="CMT Association Participating Prep Provider" width={56} height={56} />
           <p className="max-w-md text-left text-[11px] leading-5 text-zinc-400">
-            Chartix is a <strong className="font-semibold text-zinc-500">Participating Prep Provider</strong> of the CMT Association. CMT® is a registered trademark of the CMT Association. Participation does not constitute an endorsement, sponsorship, or an authorized or exclusive partnership.
+            Chartix is a <strong className="font-semibold text-zinc-500">Participating Prep Provider</strong> of the CMT Association. CMT® is a registered trademark of the CMT Association.
           </p>
         </div>
         <p className="mt-3">© {new Date().getFullYear()} Chartix. All rights reserved.</p>

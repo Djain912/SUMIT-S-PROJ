@@ -570,7 +570,7 @@ export default async function HomePage() {
                   </p>
                 </div>
                 <p className="mt-3 text-[11px] leading-5 text-zinc-400">
-                  CMT® and Chartered Market Technician® are registered trademarks owned by the CMT Association. Participation in the Prep Provider Program does not constitute an endorsement, sponsorship, or an authorized or exclusive partnership.
+                  CMT® and Chartered Market Technician® are registered trademarks owned by the CMT Association.
                 </p>
 
                 {/* Founder */}
