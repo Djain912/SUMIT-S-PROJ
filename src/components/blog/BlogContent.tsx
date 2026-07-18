@@ -11,6 +11,7 @@ const ALLOWED_TAGS = [
   'a', 'img',
   'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'col', 'colgroup', 'caption',
   'figure', 'figcaption',
+  'details', 'summary',
 ];
 
 const ALLOWED_ATTR = [
