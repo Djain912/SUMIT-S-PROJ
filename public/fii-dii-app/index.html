@@ -2497,19 +2497,25 @@ html[data-theme="light"] footer > div { border-top:1px solid rgba(17,24,39,.07) 
       var WINDOWS=[['1 Week',7],['1 Month',30],['3 Months',91],['6 Months',182],['1 Year',365],['3 Years',1095]];
       var lastD=new Date(rows[rows.length-1].date), firstD=new Date(rows[0].date);
       var html='<tr><th>Window</th><th>FII Net</th><th>DII Net</th><th>Combined</th></tr>';
-      var truncated=false;
+      var anyPartial=false;
       WINDOWS.forEach(function(w){
         var from=new Date(lastD); from.setDate(from.getDate()-w[1]);
+        // Only show a window we have full history for. Beyond that we say so
+        // honestly instead of repeating a shorter window's total.
+        if(from < firstD){
+          anyPartial=true;
+          html+='<tr><td style="opacity:.6">'+w[0]+'</td><td colspan="3" style="text-align:center;opacity:.4;font-family:var(--font-body);font-weight:500;letter-spacing:.02em">accumulating history\u2026</td></tr>';
+          return;
+        }
         var fii=0,dii=0;
         rows.forEach(function(r){ if(new Date(r.date)>=from){fii+=r.fiiNet;dii+=r.diiNet;} });
-        var short=from<firstD; if(short)truncated=true;
-        html+='<tr><td>'+w[0]+(short?' *':'')+'</td>'+
+        html+='<tr><td>'+w[0]+'</td>'+
           '<td class="'+cls(fii)+'">'+inr(fii)+'</td>'+
           '<td class="'+cls(dii)+'">'+inr(dii)+'</td>'+
           '<td class="'+cls(fii+dii)+'">'+inr(fii+dii)+'</td></tr>';
       });
       document.getElementById('hfTable').innerHTML=html;
-      if(truncated) document.getElementById('hfNote').textContent='* Our daily log starts '+fmtDate(rows[0].date)+' \u2014 longer windows show the flow recorded since then and will fill out automatically.';
+      document.getElementById('hfNote').textContent='Daily cash-market net (\u20B9 Cr). History from '+fmtDate(rows[0].date)+'.'+(anyPartial?' Longer windows unlock automatically as we log each session.':'');
     }
     function drawChart(){
       if(!H)return;
