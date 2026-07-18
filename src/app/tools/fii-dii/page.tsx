@@ -75,7 +75,7 @@ export default function FiiDiiPage() {
 
       {/* The interactive terminal fills the first screen */}
       <iframe
-        src="/fii-dii-app/index.html?v=4"
+        src="/fii-dii-app/index.html?v=5"
         title="Chartix FII / DII Data Terminal"
         className="block h-screen w-full border-0"
       />

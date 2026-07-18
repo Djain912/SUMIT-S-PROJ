@@ -2432,6 +2432,141 @@ html[data-theme="light"] footer > div { border-top:1px solid rgba(17,24,39,.07) 
     </div>
   </header>
 
+  <!-- ── FLOW HERO: verdict · cumulative windows · one chart (Phase 1) ── -->
+  <section id="heroFlow" style="margin:14px 0 18px">
+    <style>
+      #heroFlow .hf-card{background:var(--l1);border:1px solid var(--sep);border-radius:14px;padding:18px 20px;margin-bottom:12px}
+      #heroFlow .hf-date{font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.55;margin-bottom:10px}
+      #heroFlow .hf-nums{display:flex;flex-wrap:wrap;gap:26px;align-items:baseline}
+      #heroFlow .hf-lbl{display:block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.55;margin-bottom:2px}
+      #heroFlow .hf-val{font-family:var(--font-display);font-weight:900;font-size:clamp(22px,2.4vw,32px);letter-spacing:-.02em}
+      #heroFlow .pos{color:#16a34a}#heroFlow .neg{color:#dc2626}
+      #heroFlow .hf-line{margin-top:10px;font-size:13.5px;line-height:1.55;color:var(--t1);opacity:.85}
+      #heroFlow .hf-table{width:100%;border-collapse:collapse;font-size:13px}
+      #heroFlow .hf-table th{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;opacity:.55;text-align:right;padding:7px 10px;border-bottom:1px solid var(--sep)}
+      #heroFlow .hf-table th:first-child{text-align:left}
+      #heroFlow .hf-table td{padding:8px 10px;text-align:right;font-family:var(--font-mono);font-weight:600;border-bottom:1px solid var(--sep)}
+      #heroFlow .hf-table td:first-child{text-align:left;font-family:var(--font-body);font-weight:700}
+      #heroFlow .hf-table tr:last-child td{border-bottom:none}
+      #heroFlow .hf-note{margin-top:8px;font-size:11px;opacity:.5}
+      #heroFlow .hf-chart-head{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;margin-bottom:10px}
+      #heroFlow .hf-chart-head span{font-size:12.5px;font-weight:700;opacity:.7}
+      #heroFlow .hf-rng{display:flex;gap:4px}
+      #heroFlow .hf-rng button{background:none;border:1px solid var(--sep);color:var(--t1);opacity:.65;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:8px;cursor:pointer}
+      #heroFlow .hf-rng button.on{background:var(--primary);border-color:var(--primary);color:#fff;opacity:1}
+      @media(max-width:640px){#heroFlow .hf-nums{gap:16px}}
+    </style>
+    <div class="hf-card" id="hfVerdict" style="display:none">
+      <div class="hf-date" id="hfDate"></div>
+      <div class="hf-nums">
+        <div><span class="hf-lbl">FII Net (Cash)</span><span class="hf-val" id="hfFii"></span></div>
+        <div><span class="hf-lbl">DII Net (Cash)</span><span class="hf-val" id="hfDii"></span></div>
+        <div><span class="hf-lbl">Combined</span><span class="hf-val" id="hfComb"></span></div>
+      </div>
+      <div class="hf-line" id="hfLine"></div>
+    </div>
+    <div class="hf-card" id="hfTableCard" style="display:none">
+      <div class="hf-chart-head"><span>Cumulative institutional flow (₹ Cr)</span></div>
+      <div style="overflow-x:auto"><table class="hf-table" id="hfTable"></table></div>
+      <div class="hf-note" id="hfNote"></div>
+    </div>
+    <div class="hf-card" id="hfChartCard" style="display:none">
+      <div class="hf-chart-head">
+        <span>Daily FII vs DII net · Nifty 50 overlay</span>
+        <div class="hf-rng" id="hfRng"></div>
+      </div>
+      <div style="position:relative;height:300px"><canvas id="hfChart"></canvas></div>
+    </div>
+  </section>
+
+  <script>
+  (function(){
+    var H=null, NF=null, chart=null, range=90;
+    function inr(v){var a=Math.abs(v);var s=a>=1000?(a/1000).toFixed(2).replace(/\.00$/,'')+'k':a.toFixed(0);return (v<0?'\u2212\u20B9':'+\u20B9')+s+' Cr';}
+    function cls(v){return v>=0?'pos':'neg';}
+    function fmtDate(iso){var d=new Date(iso);return d.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});}
+    function streak(rows,key,sign){var n=0;for(var i=rows.length-1;i>=0;i--){var v=rows[i][key];if((sign>0&&v>0)||(sign<0&&v<0))n++;else break;}return n;}
+    function verdictLine(rows){
+      var last=rows[rows.length-1],f=last.fiiNet,d=last.diiNet;
+      if(f<0&&d>0){var ds=streak(rows,'diiNet',1);return 'DIIs absorbed FII selling'+(ds>1?' \u2014 DII buying streak: '+ds+' straight sessions.':'.');}
+      if(f>0&&d>0){return 'Both FIIs and DIIs were net buyers \u2014 broad institutional support.';}
+      if(f>0&&d<0){return 'FIIs bought while DIIs booked profits.';}
+      var fs=streak(rows,'fiiNet',-1);return 'Both FIIs and DIIs sold \u2014 institutional risk-off'+(fs>1?' ('+fs+' straight FII selling days).':'.');
+    }
+    function buildTable(rows){
+      var WINDOWS=[['1 Week',7],['1 Month',30],['3 Months',91],['6 Months',182],['1 Year',365],['3 Years',1095]];
+      var lastD=new Date(rows[rows.length-1].date), firstD=new Date(rows[0].date);
+      var html='<tr><th>Window</th><th>FII Net</th><th>DII Net</th><th>Combined</th></tr>';
+      var truncated=false;
+      WINDOWS.forEach(function(w){
+        var from=new Date(lastD); from.setDate(from.getDate()-w[1]);
+        var fii=0,dii=0;
+        rows.forEach(function(r){ if(new Date(r.date)>=from){fii+=r.fiiNet;dii+=r.diiNet;} });
+        var short=from<firstD; if(short)truncated=true;
+        html+='<tr><td>'+w[0]+(short?' *':'')+'</td>'+
+          '<td class="'+cls(fii)+'">'+inr(fii)+'</td>'+
+          '<td class="'+cls(dii)+'">'+inr(dii)+'</td>'+
+          '<td class="'+cls(fii+dii)+'">'+inr(fii+dii)+'</td></tr>';
+      });
+      document.getElementById('hfTable').innerHTML=html;
+      if(truncated) document.getElementById('hfNote').textContent='* Our daily log starts '+fmtDate(rows[0].date)+' \u2014 longer windows show the flow recorded since then and will fill out automatically.';
+    }
+    function drawChart(){
+      if(!H)return;
+      var rows=H.slice(-range);
+      var labels=rows.map(function(r){return r.date.slice(0,10);});
+      var nmap={}; if(NF){for(var i=0;i<NF.dates.length;i++){nmap[NF.dates[i]]=NF.close[i];}}
+      var nifty=labels.map(function(d){return nmap[d]!=null?nmap[d]:null;});
+      var ctx=document.getElementById('hfChart').getContext('2d');
+      if(chart)chart.destroy();
+      chart=new Chart(ctx,{
+        data:{labels:labels.map(function(d){var x=new Date(d);return x.getDate()+' '+x.toLocaleString('en',{month:'short'});}),
+          datasets:[
+            {type:'bar',label:'FII net',data:rows.map(function(r){return r.fiiNet;}),backgroundColor:rows.map(function(r){return r.fiiNet>=0?'rgba(22,163,74,.75)':'rgba(220,38,38,.75)';}),borderRadius:3,yAxisID:'y'},
+            {type:'bar',label:'DII net',data:rows.map(function(r){return r.diiNet;}),backgroundColor:rows.map(function(r){return r.diiNet>=0?'rgba(22,163,74,.32)':'rgba(220,38,38,.32)';}),borderRadius:3,yAxisID:'y'},
+            {type:'line',label:'Nifty 50',data:nifty,borderColor:'#3b82f6',borderWidth:2,pointRadius:0,tension:.25,spanGaps:true,yAxisID:'y1'}
+          ]},
+        options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+          plugins:{legend:{labels:{boxWidth:10,font:{size:10.5},color:'#8a94a0'}}},
+          scales:{
+            x:{grid:{display:false},ticks:{color:'#8a94a0',font:{size:10},maxTicksLimit:10}},
+            y:{grid:{color:'rgba(128,128,128,.12)'},ticks:{color:'#8a94a0',font:{size:10}},title:{display:true,text:'\u20B9 Cr',color:'#8a94a0',font:{size:10}}},
+            y1:{position:'right',grid:{display:false},ticks:{color:'#3b82f6',font:{size:10}}}
+          }}
+      });
+    }
+    function buildRanges(){
+      var el=document.getElementById('hfRng');
+      [['1W',7],['1M',30],['3M',91],['6M',182],['1Y',365]].forEach(function(r){
+        var b=document.createElement('button');b.textContent=r[0];if(r[1]===range)b.className='on';
+        b.onclick=function(){range=r[1];el.querySelectorAll('button').forEach(function(x){x.className='';});b.className='on';drawChart();};
+        el.appendChild(b);
+      });
+    }
+    Promise.all([
+      fetch('/api/fii-dii/history?days=365').then(function(r){return r.json();}),
+      fetch('/api/index-tools/history?symbol='+encodeURIComponent('NIFTY 50')+'&start=2025-07-01&end=2099-01-01').then(function(r){return r.json();}).catch(function(){return null;})
+    ]).then(function(res){
+      var rows=res[0];
+      if(!Array.isArray(rows)||!rows.length)return;
+      rows.sort(function(a,b){return a.date<b.date?-1:1;});
+      H=rows; NF=res[1]&&res[1].dates?res[1]:null;
+      var last=rows[rows.length-1];
+      document.getElementById('hfDate').textContent='Latest session \u00b7 '+fmtDate(last.date);
+      var f=document.getElementById('hfFii');f.textContent=inr(last.fiiNet);f.className='hf-val '+cls(last.fiiNet);
+      var d=document.getElementById('hfDii');d.textContent=inr(last.diiNet);d.className='hf-val '+cls(last.diiNet);
+      var c=document.getElementById('hfComb');c.textContent=inr(last.fiiNet+last.diiNet);c.className='hf-val '+cls(last.fiiNet+last.diiNet);
+      document.getElementById('hfLine').textContent=verdictLine(rows);
+      buildTable(rows);
+      buildRanges();
+      document.getElementById('hfVerdict').style.display='';
+      document.getElementById('hfTableCard').style.display='';
+      document.getElementById('hfChartCard').style.display='';
+      drawChart();
+    }).catch(function(e){ /* fail silent — rest of dashboard unaffected */ });
+  })();
+  </script>
+
   <!-- LIVE MARKET TICKER BAR -->
   <div class="market-ticker" id="marketTicker">
     <div class="ticker-live-dot" id="tickerDot" title="Live market data"></div>
