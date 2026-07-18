@@ -1,13 +1,37 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { MessageSquareHeart } from 'lucide-react';
 import { requireAuthenticatedUser } from '@/server/policies/auth';
 import { getUserDashboardData } from '@/server/services/dashboard.service';
 import { UserDashboardClient } from '@/components/user/user-dashboard';
 import { TrialBanner } from '@/components/user/TrialBanner';
 import { OnboardingChecklist } from '@/components/user/OnboardingChecklist';
+import { prisma } from '@/lib/db/prisma';
 
 export default async function UserDashboardPage() {
   const user = await requireAuthenticatedUser();
+
+  // First-ever visit activation: brand-new trial users who haven't opened a
+  // single note get dropped straight into Chapter 1 instead of an empty
+  // dashboard — reading real content beats choosing from a menu. Applies only
+  // on the very first login with zero engagement, so returning users are
+  // never bounced.
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: {
+      role: true,
+      isPremium: true,
+      activity: { select: { loginCount: true, chaptersViewed: true, mcqAttempted: true } },
+    },
+  });
+  if (dbUser && dbUser.role !== 'ADMIN' && !dbUser.isPremium) {
+    const a = dbUser.activity;
+    const chapters = (a?.chaptersViewed as string[] | null) ?? [];
+    if ((a?.loginCount ?? 0) <= 1 && chapters.length === 0 && (a?.mcqAttempted ?? 0) === 0) {
+      redirect('/user/notes?welcome=1');
+    }
+  }
+
   const initialData = await getUserDashboardData(user.id, user.email, 'LEVEL_1');
 
   return (
