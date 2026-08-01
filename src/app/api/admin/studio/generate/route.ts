@@ -27,6 +27,10 @@ export async function POST(request: Request) {
     const allowedPlatforms = ['instagram', 'linkedin', 'twitter', 'reddit'] as const;
     const platform: PlatformKey = allowedPlatforms.includes(body?.platform)
       ? body.platform : 'instagram';
+    const brief: string = typeof body?.brief === 'string' ? body.brief.slice(0, 4000) : '';
+    const chartCaptions: string[] = Array.isArray(body?.chartCaptions)
+      ? body.chartCaptions.filter((c: unknown) => typeof c === 'string').slice(0, 8)
+      : [];
 
     if (!Number.isFinite(day) || day < 1 || !topic) {
       return NextResponse.json(
@@ -43,7 +47,7 @@ export async function POST(request: Request) {
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: systemPrompt(audience) },
-        { role: 'user', content: userPrompt(day, topic, audience, platform) },
+        { role: 'user', content: userPrompt(day, topic, audience, platform, brief, chartCaptions) },
       ],
     });
 

@@ -122,6 +122,7 @@ function redditSchema(topic: string, audience: AudienceKey): string {
 
 export function userPrompt(
   day: number, topic: string, audience: AudienceKey, platform: PlatformKey,
+  brief?: string, chartCaptions: string[] = [],
 ): string {
   const isReddit = platform === 'reddit';
   const where = {
@@ -131,8 +132,35 @@ export function userPrompt(
     reddit: 'a Reddit text post',
   }[platform];
 
-  return `Write content for ${where} on the topic: "${topic}" (day ${day} of a structured technical analysis series).
+  // The author's brief is the strongest signal we have - it beats the model's
+  // own default reading of the topic string.
+  const briefBlock = brief && brief.trim()
+    ? [
+        '',
+        'WHAT THIS POST MUST COVER.',
+        'This is the author\'s brief. Follow it closely - it overrides your own angle',
+        'on the topic, including which sub-points to include and what to leave out:',
+        '---',
+        brief.trim(),
+        '---',
+        '',
+      ].join('\n')
+    : '';
 
+  const chartBlock = chartCaptions.length
+    ? [
+        '',
+        `This post will carry ${chartCaptions.length} chart image(s) the author has already prepared:`,
+        ...chartCaptions.map((c, i) => `  ${i + 1}. ${c.trim() || '(no caption supplied)'}`),
+        'Write the surrounding copy so it sets these charts up and refers to what they',
+        'actually show. Never describe a different chart, and never claim a chart shows',
+        'something the caption does not support.',
+        '',
+      ].join('\n')
+    : '';
+
+  return `Write content for ${where} on the topic: "${topic}" (day ${day} of a structured technical analysis series).
+${briefBlock}${chartBlock}
 Audience level: ${audience === 'expert' ? 'practitioner / CMT Level II-III' : 'beginner'}.
 ${platform === 'linkedin' ? 'LinkedIn readers are professionals; lead with the insight, not a hook.' : ''}
 ${platform === 'twitter' ? 'Each slide is landscape and read fast - keep every line tight.' : ''}

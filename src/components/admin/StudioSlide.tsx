@@ -121,6 +121,28 @@ function BlockView({
     case 'rule':
       return <div style={{ width: 78, height: 5, background: theme.accent, borderRadius: 3 }} />;
 
+    case 'image':
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18, minHeight: 0 }}>
+          <div style={{
+            borderRadius: 20, overflow: 'hidden',
+            border: `2px solid ${theme.line}`,
+            background: theme.dark ? '#0B0F14' : '#fff',
+          }}>
+            {/* data: URL from the admin's own upload - rasterises cleanly into the PNG */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={block.src} alt={block.caption ?? 'chart'}
+              style={{ width: '100%', display: 'block', objectFit: 'contain' }} />
+          </div>
+          {block.caption ? (
+            <p style={{
+              margin: 0, fontSize: fs(27), lineHeight: 1.42,
+              color: theme.body, fontStyle: 'italic',
+            }}>{block.caption}</p>
+          ) : null}
+        </div>
+      );
+
     case 'title':
       return <h1 style={{
         margin: 0, fontFamily: display, fontWeight: 400,

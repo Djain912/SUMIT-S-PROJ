@@ -218,8 +218,27 @@ export type Slide = {
   notebook?: boolean;
 };
 
+/** A chart the user uploaded, placed at a named anchor in the deck. */
+export type ChartAnchor = 'after_intro' | 'after_explainer' | 'after_rules' | 'before_takeaway';
+
+export const CHART_ANCHORS: Array<{ key: ChartAnchor; label: string }> = [
+  { key: 'after_intro',      label: 'After the cover' },
+  { key: 'after_explainer',  label: 'After the explanation' },
+  { key: 'after_rules',      label: 'After the rules' },
+  { key: 'before_takeaway',  label: 'Before the takeaway' },
+];
+
+export type StudioChart = {
+  id: string;
+  /** data: URL - kept client-side, never uploaded anywhere. */
+  dataUrl: string;
+  caption: string;
+  anchor: ChartAnchor;
+};
+
 export type Block =
   | { kind: 'rule' }
+  | { kind: 'image'; src: string; caption?: string }
   | { kind: 'title'; text: string }
   | { kind: 'heading'; text: string }
   | { kind: 'big'; text: string }
@@ -228,7 +247,39 @@ export type Block =
   | { kind: 'steps'; items: Array<{ label: string; text: string }> }
   | { kind: 'ticks'; items: string[]; bad?: boolean };
 
-export function buildSlides(day: number, topic: string, c: StudioContent, fmt: FormatKey): Slide[] {
+function chartSlides(charts: StudioChart[], anchor: ChartAnchor): Slide[] {
+  return charts.filter((ch) => ch.anchor === anchor).map((ch) => ({
+    chip: 'Chart',
+    blocks: [
+      { kind: 'image', src: ch.dataUrl, caption: ch.caption } as Block,
+    ],
+  }));
+}
+
+export function buildSlides(
+  day: number, topic: string, c: StudioContent, fmt: FormatKey,
+  charts: StudioChart[] = [],
+): Slide[] {
+  const base = buildBaseSlides(day, topic, c, fmt);
+  if (charts.length === 0) return base;
+
+  // Anchor positions differ per format; clamp to what the deck actually has.
+  const at = (i: number) => Math.min(Math.max(i, 1), base.length - 1);
+  const anchorIndex: Record<ChartAnchor, number> = fmt === 'deep_dive'
+    ? { after_intro: 1, after_explainer: 3, after_rules: 5, before_takeaway: 7 }
+    : { after_intro: 1, after_explainer: 2, after_rules: 3, before_takeaway: base.length - 1 };
+
+  const out: Slide[] = [];
+  base.forEach((s, i) => {
+    out.push(s);
+    for (const a of CHART_ANCHORS) {
+      if (at(anchorIndex[a.key]) === i + 1) out.push(...chartSlides(charts, a.key));
+    }
+  });
+  return out;
+}
+
+function buildBaseSlides(day: number, topic: string, c: StudioContent, fmt: FormatKey): Slide[] {
   const nb = fmt === 'notebook';
 
   switch (fmt) {

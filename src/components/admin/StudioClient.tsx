@@ -1,12 +1,13 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
-import { Check, Copy, Download, Loader2, Sparkles, Wand2 } from 'lucide-react';
+import { Check, Copy, Download, ImagePlus, Loader2, Sparkles, Trash2, Wand2 } from 'lucide-react';
 import { CONTENT_PLAN, TOTAL_DAYS } from '@/lib/studio/content-plan';
 import {
-  AUDIENCES, FORMAT_LABELS, FORMAT_ROTATION, PLATFORMS, PRESENTATION_THEMES, THEMES,
+  AUDIENCES, CHART_ANCHORS, FORMAT_LABELS, FORMAT_ROTATION, PLATFORMS, PRESENTATION_THEMES, THEMES,
   buildSlides, formatAllowed, resolveFormat, themeKeyFor,
-  type AudienceKey, type CategoryKey, type FormatKey, type PlatformKey, type StudioContent,
+  type AudienceKey, type CategoryKey, type ChartAnchor, type FormatKey, type PlatformKey,
+  type StudioChart, type StudioContent,
 } from '@/lib/studio/design';
 import { StudioSlide } from './StudioSlide';
 
@@ -22,6 +23,8 @@ export function StudioClient({ logoUrl }: { logoUrl?: string }) {
   const [audience, setAudience] = useState<AudienceKey>('beginner');
   const [formatOverride, setFormatOverride] = useState<FormatKey | 'auto'>('auto');
   const [themeOverride, setThemeOverride] = useState<CategoryKey | 'auto'>('auto');
+  const [brief, setBrief] = useState('');
+  const [charts, setCharts] = useState<StudioChart[]>([]);
   const [content, setContent] = useState<StudioContent | null>(null);
   const [busy, setBusy] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
@@ -35,8 +38,8 @@ export function StudioClient({ logoUrl }: { logoUrl?: string }) {
   const theme = THEMES[themeKey];
   const fmt = resolveFormat(day, audience, platform, formatOverride);
   const slides = useMemo(
-    () => (content && !isText ? buildSlides(day, topic, content, fmt) : []),
-    [content, day, topic, fmt, isText],
+    () => (content && !isText ? buildSlides(day, topic, content, fmt, charts) : []),
+    [content, day, topic, fmt, isText, charts],
   );
 
   // Preview scale — fit roughly three portrait slides across.
@@ -54,7 +57,10 @@ export function StudioClient({ logoUrl }: { logoUrl?: string }) {
       const res = await fetch('/api/admin/studio/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ day, topic, audience, platform }),
+        body: JSON.stringify({
+          day, topic, audience, platform, brief,
+          chartCaptions: charts.map((c) => c.caption),
+        }),
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json?.error?.message ?? 'Generation failed');
@@ -99,6 +105,37 @@ export function StudioClient({ logoUrl }: { logoUrl?: string }) {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Export failed');
     } finally { setExporting(null); }
+  }
+
+  /** Downscale on read - a raw 4MB screenshot would bloat the export SVG. */
+  function addCharts(files: FileList | null) {
+    if (!files) return;
+    Array.from(files).slice(0, 6).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const MAX = 1600;
+          const ratio = Math.min(1, MAX / img.naturalWidth);
+          const cv = document.createElement('canvas');
+          cv.width = Math.round(img.naturalWidth * ratio);
+          cv.height = Math.round(img.naturalHeight * ratio);
+          cv.getContext('2d')?.drawImage(img, 0, 0, cv.width, cv.height);
+          setCharts((prev) => [...prev, {
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            dataUrl: cv.toDataURL('image/png'),
+            caption: '',
+            anchor: 'after_explainer' as ChartAnchor,
+          }]);
+        };
+        img.src = String(reader.result);
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function updateChart(id: string, patch: Partial<StudioChart>) {
+    setCharts((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
   }
 
   async function copyRedditPost() {
@@ -164,6 +201,70 @@ export function StudioClient({ logoUrl }: { logoUrl?: string }) {
             </select>
           </label>
         </div>
+
+        {/* brief — the strongest steer on what the post actually says */}
+        <label className="mt-4 block">
+          <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            Brief — what should this post actually cover?
+          </span>
+          <textarea
+            value={brief} onChange={(e) => setBrief(e.target.value)} rows={3}
+            placeholder={'e.g. "CMT is a global designation, not an Indian one. Three levels, roughly two years. Aimed at analysts and portfolio managers, not day traders. Emphasise it is the recognised credential for technical analysis, awarded by the CMT Association."'}
+            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm leading-relaxed"
+          />
+          <span className="mt-1 block text-xs text-zinc-500">
+            Leave blank to let the model pick its own angle. Anything here overrides that.
+          </span>
+        </label>
+
+        {/* charts */}
+        {!isText && (
+          <div className="mt-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                Charts ({charts.length})
+              </span>
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50">
+                <ImagePlus className="h-4 w-4" />
+                Add chart image
+                <input type="file" accept="image/*" multiple className="hidden"
+                  onChange={(e) => { addCharts(e.target.files); e.target.value = ''; }} />
+              </label>
+            </div>
+
+            {charts.length === 0 ? (
+              <p className="text-xs text-zinc-500">
+                Upload your own TradingView screenshots. Each becomes its own slide, and the copy is
+                written to set it up. Images stay in your browser — they are never uploaded anywhere.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {charts.map((ch) => (
+                  <div key={ch.id} className="flex items-start gap-3 rounded-lg border border-zinc-200 bg-white p-2.5">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={ch.dataUrl} alt="" className="h-16 w-24 flex-shrink-0 rounded object-cover" />
+                    <div className="grid flex-1 gap-2 sm:grid-cols-2">
+                      <input type="text" value={ch.caption}
+                        onChange={(e) => updateChart(ch.id, { caption: e.target.value })}
+                        placeholder="Caption — what does this chart show?"
+                        className="w-full rounded-lg border border-zinc-300 px-2.5 py-1.5 text-sm" />
+                      <select value={ch.anchor}
+                        onChange={(e) => updateChart(ch.id, { anchor: e.target.value as ChartAnchor })}
+                        className="w-full rounded-lg border border-zinc-300 px-2.5 py-1.5 text-sm">
+                        {CHART_ANCHORS.map((a) => <option key={a.key} value={a.key}>{a.label}</option>)}
+                      </select>
+                    </div>
+                    <button onClick={() => setCharts((p) => p.filter((x) => x.id !== ch.id))}
+                      className="rounded-lg p-1.5 text-zinc-400 hover:bg-red-50 hover:text-red-600"
+                      aria-label="Remove chart">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {!isText && (
           <div className="mt-4 max-w-xs">
