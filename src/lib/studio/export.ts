@@ -12,9 +12,11 @@ import { SLIDE_H, SLIDE_W } from './design';
  */
 export async function slideToPngDataUrl(
   node: HTMLElement,
-  opts: { pixelRatio?: number; fontEmbedCSS?: string } = {},
+  opts: { pixelRatio?: number; fontEmbedCSS?: string; width?: number; height?: number } = {},
 ): Promise<string> {
   const pixelRatio = opts.pixelRatio ?? 2;
+  const W = opts.width ?? SLIDE_W;
+  const H = opts.height ?? SLIDE_H;
   const fontEmbedCSS = opts.fontEmbedCSS ?? (await getFontEmbedCss());
 
   // html-to-image copies *computed* styles onto every cloned child, so if the
@@ -28,18 +30,18 @@ export async function slideToPngDataUrl(
     minHeight: node.style.minHeight,
     flex: node.style.flex,
   };
-  node.style.width = `${SLIDE_W}px`;
-  node.style.minWidth = `${SLIDE_W}px`;
-  node.style.height = `${SLIDE_H}px`;
-  node.style.minHeight = `${SLIDE_H}px`;
+  node.style.width = `${W}px`;
+  node.style.minWidth = `${W}px`;
+  node.style.height = `${H}px`;
+  node.style.minHeight = `${H}px`;
   node.style.flex = '0 0 auto';
   void node.offsetWidth; // force synchronous reflow before capture
 
   let svgUrl: string;
   try {
     svgUrl = await toSvg(node, {
-      width: SLIDE_W,
-      height: SLIDE_H,
+      width: W,
+      height: H,
       fontEmbedCSS,
       style: { transform: 'none', margin: '0' },
     });
@@ -54,8 +56,8 @@ export async function slideToPngDataUrl(
   const img = await loadImage(svgUrl);
 
   const canvas = document.createElement('canvas');
-  canvas.width = Math.round(SLIDE_W * pixelRatio);
-  canvas.height = Math.round(SLIDE_H * pixelRatio);
+  canvas.width = Math.round(W * pixelRatio);
+  canvas.height = Math.round(H * pixelRatio);
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Could not get a 2D canvas context.');
   ctx.imageSmoothingEnabled = true;

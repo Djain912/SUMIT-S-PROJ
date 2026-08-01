@@ -8,14 +8,19 @@ import { SLIDE_H, SLIDE_W } from '@/lib/studio/design';
  * to PNG in the browser (no serverless screenshot service needed).
  */
 export function StudioSlide({
-  slide, theme, index, total, logoUrl,
+  slide, theme, index, total, logoUrl, width = SLIDE_W, height = SLIDE_H,
 }: {
   slide: Slide;
   theme: Theme;
   index: number;
   total: number;
   logoUrl?: string;
+  width?: number;
+  height?: number;
 }) {
+  // 16:9 canvases are much shorter - tighten padding and type so nothing clips.
+  const wide = width > height;
+  const scale = wide ? 0.78 : 1;
   const nb = !!slide.notebook;
   const ink = nb ? '#12212E' : theme.ink;
   const bodyColor = nb ? '#2C3E4C' : theme.body;
@@ -27,13 +32,13 @@ export function StudioSlide({
       data-studio-slide={index}
       style={{
         position: 'relative',
-        width: SLIDE_W,
-        height: SLIDE_H,
+        width,
+        height,
         overflow: 'hidden',
         background: nb ? '#FBF7EE' : theme.paper,
         display: 'flex',
         flexDirection: 'column',
-        padding: '84px 84px 76px',
+        padding: wide ? '54px 72px 48px' : '84px 84px 76px',
         fontFamily: sans,
         color: bodyColor,
         boxSizing: 'border-box',
@@ -68,7 +73,7 @@ export function StudioSlide({
           padding: '11px 24px',
           borderRadius: 100,
         }}>{slide.chip}</span>
-        <span style={{ fontFamily: sans, fontWeight: 500, fontSize: 20, color: '#A8B2BD' }}>
+        <span style={{ fontFamily: sans, fontWeight: 500, fontSize: 20, color: theme.muted }}>
           {index} / {total}
         </span>
       </div>
@@ -79,7 +84,7 @@ export function StudioSlide({
         flexDirection: 'column', justifyContent: 'center', gap: 30,
       }}>
         {slide.blocks.map((b, i) => (
-          <BlockView key={i} block={b} theme={theme} nb={nb} ink={ink} display={display} sans={sans} />
+          <BlockView key={i} block={b} theme={theme} nb={nb} ink={ink} display={display} sans={sans} scale={scale} />
         ))}
       </div>
 
@@ -97,8 +102,8 @@ export function StudioSlide({
             // eslint-disable-next-line @next/next/no-img-element
             <img src={logoUrl} alt="Chartix" style={{ width: 150, height: 'auto', display: 'block' }} />
           )
-          : <span style={{ fontSize: 26, color: '#8A99A8', fontFamily: sans }}>chartix.in</span>}
-        <span style={{ fontFamily: sans, fontWeight: 500, fontSize: 21, color: '#A8B2BD' }}>
+          : <span style={{ fontSize: 26, color: theme.muted, fontFamily: sans }}>chartix.in</span>}
+        <span style={{ fontFamily: sans, fontWeight: 500, fontSize: 21, color: theme.muted }}>
           {slide.hint ?? ''}
         </span>
       </div>
@@ -107,10 +112,11 @@ export function StudioSlide({
 }
 
 function BlockView({
-  block, theme, nb, ink, display, sans,
+  block, theme, nb, ink, display, sans, scale = 1,
 }: {
-  block: Block; theme: Theme; nb: boolean; ink: string; display: string; sans: string;
+  block: Block; theme: Theme; nb: boolean; ink: string; display: string; sans: string; scale?: number;
 }) {
+  const fs = (n: number) => Math.round(n * scale);
   switch (block.kind) {
     case 'rule':
       return <div style={{ width: 78, height: 5, background: theme.accent, borderRadius: 3 }} />;
@@ -118,25 +124,25 @@ function BlockView({
     case 'title':
       return <h1 style={{
         margin: 0, fontFamily: display, fontWeight: 400,
-        fontSize: nb ? 92 : 104, lineHeight: nb ? 1.02 : 0.94,
+        fontSize: fs(nb ? 92 : 104), lineHeight: nb ? 1.02 : 0.94,
         letterSpacing: nb ? 0 : -3, color: ink,
       }}>{block.text}</h1>;
 
     case 'heading':
       return <h2 style={{
         margin: 0, fontFamily: display, fontWeight: 400,
-        fontSize: nb ? 62 : 66, lineHeight: 1.04,
+        fontSize: fs(nb ? 62 : 66), lineHeight: 1.04,
         letterSpacing: nb ? 0 : -1.6, color: ink,
       }}>{block.text}</h2>;
 
     case 'big':
       return <div style={{
-        fontFamily: display, fontWeight: 400, fontSize: 78, lineHeight: 1.06,
+        fontFamily: display, fontWeight: 400, fontSize: fs(78), lineHeight: 1.06,
         letterSpacing: nb ? 0 : -2, color: ink,
       }}>{block.text}</div>;
 
     case 'lead':
-      return <p style={{ margin: 0, fontSize: 36, lineHeight: 1.5, color: nb ? '#2C3E4C' : theme.body }}>
+      return <p style={{ margin: 0, fontSize: fs(36), lineHeight: 1.5, color: nb ? '#2C3E4C' : theme.body }}>
         {block.text}
       </p>;
 
@@ -144,7 +150,7 @@ function BlockView({
       const danger = block.tone === 'danger';
       return (
         <div style={{
-          background: nb ? '#FFF3B0' : (danger ? '#FCEBEC' : theme.soft),
+          background: nb ? '#FFF3B0' : (danger ? (theme.dark ? '#2A1517' : '#FCEBEC') : theme.soft),
           borderRadius: nb ? 6 : 26,
           padding: '34px 38px',
           transform: nb ? 'rotate(-0.5deg)' : undefined,
@@ -153,12 +159,12 @@ function BlockView({
           <div style={{
             fontFamily: sans, fontWeight: nb ? 400 : 700, fontSize: 17,
             letterSpacing: 3, textTransform: 'uppercase',
-            color: nb ? '#8A6D00' : (danger ? '#B3242B' : theme.accent),
+            color: nb ? '#8A6D00' : (danger ? (theme.dark ? '#F08A90' : '#B3242B') : theme.accent),
             marginBottom: 12,
           }}>{block.label}</div>
           <div style={{
             fontFamily: nb ? display : sans, fontWeight: nb ? 400 : 600,
-            fontSize: 31, lineHeight: 1.45, color: nb ? '#4A3B00' : ink,
+            fontSize: fs(31), lineHeight: 1.45, color: nb ? '#4A3B00' : ink,
           }}>{block.text}</div>
         </div>
       );
@@ -173,7 +179,7 @@ function BlockView({
               borderBottom: i === block.items.length - 1 ? 'none' : `2px solid ${theme.line}`,
             }}>
               <div style={{
-                fontFamily: display, fontSize: 44, lineHeight: 1,
+                fontFamily: display, fontSize: fs(44), lineHeight: 1,
                 color: theme.accent, opacity: 0.5, minWidth: 56,
               }}>{String(i + 1).padStart(2, '0')}</div>
               <div>
@@ -181,7 +187,7 @@ function BlockView({
                   fontFamily: sans, fontWeight: 700, fontSize: 16, letterSpacing: 2.6,
                   textTransform: 'uppercase', color: theme.accent, marginBottom: 7,
                 }}>{s.label}</div>
-                <div style={{ fontSize: 29, lineHeight: 1.42, color: ink }}>{s.text}</div>
+                <div style={{ fontSize: fs(29), lineHeight: 1.42, color: ink }}>{s.text}</div>
               </div>
             </div>
           ))}
@@ -195,9 +201,9 @@ function BlockView({
             <div key={i} style={{ display: 'flex', gap: 20, alignItems: 'flex-start', padding: '19px 0' }}>
               <span style={{
                 fontFamily: sans, fontWeight: 700, fontSize: 29, lineHeight: 1.25,
-                color: block.bad ? '#C0392B' : theme.accent, minWidth: 38,
+                color: block.bad ? (theme.dark ? '#F08A90' : '#C0392B') : theme.accent, minWidth: 38,
               }}>{block.bad ? '✕' : '✓'}</span>
-              <span style={{ fontSize: 29, lineHeight: 1.45, color: ink }}>{t}</span>
+              <span style={{ fontSize: fs(29), lineHeight: 1.45, color: ink }}>{t}</span>
             </div>
           ))}
         </div>
