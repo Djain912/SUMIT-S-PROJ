@@ -5,7 +5,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { LayoutDashboard, BookOpen, FileText, ListChecks, Flag, ShieldCheck, Menu, X, LogOut, MessageSquare, Bot, Globe, ThumbsUp, Newspaper, Users, LineChart, Ticket, Sparkles, BarChart2, ExternalLink } from 'lucide-react';
+import { LayoutDashboard, BookOpen, FileText, ListChecks, Flag, ShieldCheck, Menu, X, LogOut, MessageSquare, Bot, Globe, ThumbsUp, Newspaper, Users, LineChart, Ticket, Sparkles, BarChart2, ExternalLink, Instagram } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { signOut } from 'next-auth/react';
 
@@ -29,6 +29,7 @@ const navItems = [
   { label: 'Homepage Bot', href: '/admin/homepage-bot', icon: Globe },
   { label: 'Bot Feedback', href: '/admin/bot-feedback', icon: ThumbsUp },
   { label: 'Blog', href: '/admin/blog', icon: Newspaper },
+  { label: 'Social Studio', href: '/admin/studio', icon: Instagram },
   { label: 'Users / Leads', href: '/admin/users', icon: Users },
   { label: 'Analytics', href: '/admin/analytics', icon: BarChart2 },
   { label: 'Coupons', href: '/admin/coupons', icon: Ticket },
