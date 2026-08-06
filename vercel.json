@@ -14,14 +14,6 @@
     {
       "path": "/api/cron/eod-update",
       "schedule": "0 13 * * 1-5"
-    },
-    {
-      "path": "/api/cron/fii-dii-report?period=weekly",
-      "schedule": "0 6 * * 6"
-    },
-    {
-      "path": "/api/cron/fii-dii-report?period=monthly",
-      "schedule": "0 6 1 * *"
     }
   ]
 }

@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
-import { Instagram } from 'lucide-react';
-import { StudioClient } from '@/components/admin/StudioClient';
+import { StudioTabs } from '@/components/admin/StudioTabs';
 
 export const metadata: Metadata = {
   title: 'Studio | Admin — Chartix',
@@ -29,21 +28,7 @@ export default function StudioPage() {
         }}
       />
 
-      <div className="space-y-6">
-        <header>
-          <div className="flex items-center gap-2 text-zinc-900">
-            <Instagram className="h-5 w-5" />
-            <h1 className="text-xl font-semibold tracking-tight">Social Studio</h1>
-          </div>
-          <p className="mt-1.5 text-sm text-zinc-500">
-            Generate the daily carousel, preview it, and download print-ready
-            1080×1350 PNGs. Themes and layouts rotate automatically so the feed
-            never looks repetitive.
-          </p>
-        </header>
-
-        <StudioClient logoUrl="/studio-logo.png" />
-      </div>
+      <StudioTabs logoUrl="/studio-logo.png" />
     </>
   );
 }
