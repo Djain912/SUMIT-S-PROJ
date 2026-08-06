@@ -60,8 +60,7 @@
     "price": "0",
     "priceCurrency": "INR"
   },
-  "featureList": "Live FII/DII Cash Flows, F&O Derivatives Positioning, 24-Sector FPI Allocation, 45-Day Heatmaps, Daily/Weekly/Monthly Flow Matrices, AI Agent Synthesis",
-  "screenshot": "https://chartix.in/tools/fii-diiscreenshots/01_home_fii_dii_date.png",
+  "featureList": "Live FII/DII Cash Flows, F&O Derivatives Positioning, 24-Sector FPI Allocation, 45-Day Heatmaps, Daily/Weekly/Monthly Flow Matrices",
   "softwareVersion": "2.0.0"
 }
 </script>
@@ -2388,7 +2387,8 @@ html[data-theme="light"] footer > div { border-top:1px solid rgba(17,24,39,.07) 
         <button onclick="installPWA()" class="hdr-btn" id="btnInstall" style="display:none; color:var(--primary);">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Install App
         </button>
-        <button onclick="togglePushNotifications()" class="hdr-btn" id="btnNotify" title="Get push alerts when new FII/DII data arrives">
+        <!-- Get Alerts hidden: needs a service worker + push subscription backend that isn't deployed -->
+        <button onclick="togglePushNotifications()" class="hdr-btn" id="btnNotify" title="Get push alerts when new FII/DII data arrives" style="display:none;">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg> <span id="notifyLabel">Get Alerts</span>
         </button>
         <button onclick="toggleTheme()" class="hdr-btn" id="btnTheme">
@@ -2573,8 +2573,8 @@ html[data-theme="light"] footer > div { border-top:1px solid rgba(17,24,39,.07) 
   })();
   </script>
 
-  <!-- LIVE MARKET TICKER BAR -->
-  <div class="market-ticker" id="marketTicker">
+  <!-- LIVE MARKET TICKER BAR — hidden: /api/market backend isn't deployed -->
+  <div class="market-ticker" id="marketTicker" style="display:none;">
     <div class="ticker-live-dot" id="tickerDot" title="Live market data"></div>
     <div class="ticker-item">
       <span class="ticker-label">Nifty 50</span>
@@ -2594,8 +2594,8 @@ html[data-theme="light"] footer > div { border-top:1px solid rgba(17,24,39,.07) 
     </div>
   </div>
 
-  <!-- AI SNIPER BRIEFING -->
-  <div class="terminal-panel sniper-briefing" id="sniperBriefingCard">
+  <!-- AI SNIPER BRIEFING — hidden: /api/agents/synthesis backend isn't deployed -->
+  <div class="terminal-panel sniper-briefing" id="sniperBriefingCard" style="display:none;">
     <div id="sniperLoading">
       <div class="sniper-skeleton-line skeleton"></div>
       <div class="sniper-skeleton-line skeleton"></div>
@@ -3537,7 +3537,6 @@ html[data-theme="light"] footer > div { border-top:1px solid rgba(17,24,39,.07) 
       <!-- Overview Section -->
       <div class="card" style="margin-bottom:24px; padding:24px;">
         <h3 style="font-size:18px; color:var(--t1); margin-bottom:16px; border-bottom:1px solid var(--sep2); padding-bottom:12px;"> 1. FII / DII Home Dashboard</h3>
-        <img src="screenshots/01_home_fii_dii_date.png" alt="Home Dashboard" style="width:100%; border-radius:12px; border:1px solid var(--sep2); margin-bottom:20px; box-shadow: var(--card-shadow);">
         <p style="font-size:14px; color:var(--t2); line-height:1.7; margin-bottom:16px;">The home dashboard provides an immediate snapshot of the primary liquidity flowing into or out of the Indian stock market. It relies on standard Daily Cash Market volume figures released by the NSE.</p>
         
         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px; margin-bottom:16px;">
@@ -3563,7 +3562,6 @@ html[data-theme="light"] footer > div { border-top:1px solid rgba(17,24,39,.07) 
       <!-- F&O Section -->
       <div class="card" style="margin-bottom:24px; padding:24px;">
         <h3 style="font-size:18px; color:var(--t1); margin-bottom:16px; border-bottom:1px solid var(--sep2); padding-bottom:12px;">🎲 2. F&O Positioning (Derivatives)</h3>
-        <img src="screenshots/02_fno_positions.png" alt="F&O Positioning" style="width:100%; border-radius:12px; border:1px solid var(--sep2); margin-bottom:20px; box-shadow: var(--card-shadow);">
         <p style="font-size:14px; color:var(--t2); line-height:1.7; margin-bottom:16px;">Instead of purely trusting Cash flow data, analyzing Futures & Options positioning gives you insight into the hedged direction professionals are betting on. DII footprint in options is minimal; FII rules this space.</p>
         
         <ul style="font-size:14px; color:var(--t3); line-height:1.8; list-style-type:none; padding-left:0; margin-bottom:16px;">
@@ -3577,7 +3575,6 @@ html[data-theme="light"] footer > div { border-top:1px solid rgba(17,24,39,.07) 
       <!-- Databases & Matrices Section -->
       <div class="card" style="margin-bottom:24px; padding:24px;">
         <h3 style="font-size:18px; color:var(--t1); margin-bottom:16px; border-bottom:1px solid var(--sep2); padding-bottom:12px;">🗄️ 3. Historical Flow Databases & Matrices</h3>
-        <img src="screenshots/03_databases_matrices.png" alt="Databases & Matrices" style="width:100%; border-radius:12px; border:1px solid var(--sep2); margin-bottom:20px; box-shadow: var(--card-shadow);">
         <p style="font-size:14px; color:var(--t2); line-height:1.7; margin-bottom:16px;">A dedicated tabular data layer tracking institutional money across different timeframes. Features ultra-precise <code>tabular-nums</code> rendering for Bloomberg-terminal grade reading accuracy.</p>
         
         <ul style="font-size:14px; color:var(--t3); line-height:1.8; list-style-type:none; padding-left:0;">
@@ -3590,7 +3587,6 @@ html[data-theme="light"] footer > div { border-top:1px solid rgba(17,24,39,.07) 
       <!-- Historical Trends Section -->
       <div class="card" style="margin-bottom:24px; padding:24px;">
         <h3 style="font-size:18px; color:var(--t1); margin-bottom:16px; border-bottom:1px solid var(--sep2); padding-bottom:12px;">📈 4. Historical Flow Trends (Interactive Charts)</h3>
-        <img src="screenshots/04_history.png" alt="Flow Trends" style="width:100%; border-radius:12px; border:1px solid var(--sep2); margin-bottom:20px; box-shadow: var(--card-shadow);">
         <p style="font-size:14px; color:var(--t2); line-height:1.7; margin-bottom:16px;">Visualizing capital injection is easier than reading raw matrices. This tab relies on a highly responsive HTML5 Canvas engine to plot exact FII (Blue) and DII (Green) multi-axis bars.</p>
         
         <ul style="font-size:14px; color:var(--t3); line-height:1.8; list-style-type:none; padding-left:0;">
@@ -3602,7 +3598,6 @@ html[data-theme="light"] footer > div { border-top:1px solid rgba(17,24,39,.07) 
       <!-- Sectors Section -->
       <div class="card" style="margin-bottom:24px; padding:24px;">
         <h3 style="font-size:18px; color:var(--t1); margin-bottom:16px; border-bottom:1px solid var(--sep2); padding-bottom:12px;">🌐 5. Sector Analytics (NSDL Data)</h3>
-        <img src="screenshots/05_sectors.png" alt="Sector Analytics" style="width:100%; border-radius:12px; border:1px solid var(--sep2); margin-bottom:20px; box-shadow: var(--card-shadow);">
         <p style="font-size:14px; color:var(--t2); line-height:1.7; margin-bottom:16px;">Published completely independent of NSE, this data tracks actual equity portfolios held by Foreign Portfolio Investors inside Indian Depositories via NSDL/CDSL. It is reported fortnightly.</p>
         
         <ul style="font-size:14px; color:var(--t3); line-height:1.8; list-style-type:none; padding-left:0;">
@@ -3616,7 +3611,6 @@ html[data-theme="light"] footer > div { border-top:1px solid rgba(17,24,39,.07) 
       <!-- Utilities Section -->
       <div class="card" style="margin-bottom:24px; padding:24px;">
         <h3 style="font-size:18px; color:var(--t1); margin-bottom:16px; border-bottom:1px solid var(--sep2); padding-bottom:12px;">⚙️ 6. Global Dashboard Utilities</h3>
-        <img src="screenshots/06_docs.png" alt="Dashboard Utilities" style="width:100%; border-radius:12px; border:1px solid var(--sep2); margin-bottom:20px; box-shadow: var(--card-shadow);">
         <p style="font-size:14px; color:var(--t2); line-height:1.7; margin-bottom:16px;">The dashboard comes packed with built-in tools for elite analysts.</p>
         
         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
@@ -3846,11 +3840,20 @@ function switchMainTab(id) {
       const el = document.getElementById(pid);
       if (el) { el.style.display = 'none'; el.classList.remove('active', 'exiting'); }
     });
-    
+
+    // #heroFlow (the "Latest session" summary + cumulative-flow table) lives
+    // OUTSIDE the .panel system entirely, ahead of it in the DOM, and only
+    // one script ever unhides it (on initial load). Without this, it stays
+    // visible above every tab forever, so switching to F&O / Analytics /
+    // Sectors appeared to do nothing - the real panel content was rendering
+    // over 1000px further down, past what heroFlow pushed off-screen.
+    const heroFlow = document.getElementById('heroFlow');
+    if (heroFlow) heroFlow.style.display = (id === 't-hero') ? '' : 'none';
+
     if (targetPanel) {
       targetPanel.style.display = 'block';
       // Force reflow to restart animations
-      void targetPanel.offsetWidth; 
+      void targetPanel.offsetWidth;
       targetPanel.classList.add('active');
     }
     
@@ -5456,14 +5459,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (btn) btn.innerHTML = `Loading Data...`;
 
   try {
-    const res = await fetch('/api/history-full');
-    if (res.ok) {
-        const fullData = await res.json();
-        if (fullData && fullData.length > 0) {
-            dailyData = fullData;
-            console.log('[INIT] ✅ Loaded full history from API');
-        }
-    }
+    // /api/history-full isn't deployed — go straight to the GitHub/local fallback below.
   } catch (err) {
       console.error('[INIT] Failed to load history API', err);
   }
@@ -6402,18 +6398,9 @@ function renderFnoHistoryChart(mode = _fnoHistoryMode) {
 
   let swRegistration = null;
 
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', async () => {
-      try {
-        swRegistration = await navigator.serviceWorker.register('/sw.js');
-        console.log('[PWA] ✅ Service Worker registered, scope:', swRegistration.scope);
-        // Check if already subscribed and update button
-        updateNotifyButton();
-      } catch (err) {
-        console.warn('[PWA] Service Worker failed:', err);
-      }
-    });
-  }
+  // Push alerts require a service worker + subscription backend that isn't
+  // deployed yet — registration disabled until that's built (Get Alerts
+  // button is hidden below in the meantime, so this is unreachable anyway).
 
   // ── Install App (PWA) ──────────────────────────────────────────────────────
   let deferredPrompt;
@@ -6845,8 +6832,8 @@ function renderFnoHistoryChart(mode = _fnoHistoryMode) {
     content.style.display = 'block';
   }
 
-  // Load briefing after initial data fetch
-  setTimeout(() => loadSniperBriefing(), 2000);
+  // AI Sniper Briefing disabled — /api/agents/synthesis backend isn't deployed
+  // setTimeout(() => loadSniperBriefing(), 2000);
 
   // ── PHASE 4: SSE Live Connection ─────────────────────────────────────────────
   function initSSE() {
@@ -6890,7 +6877,8 @@ function renderFnoHistoryChart(mode = _fnoHistoryMode) {
       // Auto-reconnect handled by EventSource
     };
   }
-  setTimeout(initSSE, 3000);
+  // SSE live connection disabled — /api/stream backend isn't deployed
+  // setTimeout(initSSE, 3000);
 
   // ── PHASE 6: Smooth Number Count-Up Animation ───────────────────────────────
   function animateValue(element, start, end, duration) {
@@ -6992,8 +6980,8 @@ function renderFnoHistoryChart(mode = _fnoHistoryMode) {
     _marketTimerId = setTimeout(fetchMarketData, interval);
   }
 
-  // Boot market ticker
-  setTimeout(fetchMarketData, 1500);
+  // Live market ticker disabled — /api/market backend isn't deployed
+  // setTimeout(fetchMarketData, 1500);
 
 </script>
 <div id="chartix-wm"><b>chartix.in</b> &middot; Free FII/DII Terminal</div>
