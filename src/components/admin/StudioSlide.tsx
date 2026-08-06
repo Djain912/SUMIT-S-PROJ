@@ -57,24 +57,27 @@ export function StudioSlide({
         </>
       )}
 
-      {/* eyebrow */}
+      {/* eyebrow — a masthead label, not an app badge */}
       <div style={{
         position: 'relative', zIndex: 2, display: 'flex',
         justifyContent: 'space-between', alignItems: 'center', marginBottom: 52,
       }}>
-        <span style={{
-          fontFamily: sans,
-          fontWeight: nb ? 400 : 700,
-          fontSize: nb ? 26 : 19,
-          letterSpacing: nb ? 0 : 2.4,
-          textTransform: nb ? 'none' : 'uppercase',
-          color: nb ? '#fff' : theme.accent,
-          background: nb ? '#12212E' : theme.soft,
-          padding: '11px 24px',
-          borderRadius: 100,
-        }}>{slide.chip}</span>
-        <span style={{ fontFamily: sans, fontWeight: 500, fontSize: 20, color: theme.muted }}>
-          {index} / {total}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          {!nb && <div style={{ width: 26, height: 3, background: theme.accent, borderRadius: 2 }} />}
+          <span style={{
+            fontFamily: sans,
+            fontWeight: nb ? 400 : 700,
+            fontSize: nb ? 26 : 19,
+            letterSpacing: nb ? 0 : 3,
+            textTransform: nb ? 'none' : 'uppercase',
+            color: nb ? '#fff' : theme.ink,
+            background: nb ? '#12212E' : 'transparent',
+            padding: nb ? '11px 24px' : 0,
+            borderRadius: nb ? 100 : 0,
+          }}>{slide.chip}</span>
+        </div>
+        <span style={{ fontFamily: sans, fontWeight: 500, fontSize: 19, letterSpacing: 0.5, color: theme.muted }}>
+          {String(index).padStart(2, '0')} / {String(total).padStart(2, '0')}
         </span>
       </div>
 
@@ -170,23 +173,37 @@ function BlockView({
 
     case 'panel': {
       const danger = block.tone === 'danger';
+      const accentColor = danger ? (theme.dark ? '#F08A90' : '#B3242B') : theme.accent;
+      if (nb) {
+        return (
+          <div style={{
+            background: '#FFF3B0', borderRadius: 6, padding: '34px 38px',
+            transform: 'rotate(-0.5deg)', boxShadow: '6px 7px 0 rgba(0,0,0,.10)',
+          }}>
+            <div style={{
+              fontFamily: sans, fontWeight: 400, fontSize: 17,
+              letterSpacing: 3, textTransform: 'uppercase', color: '#8A6D00', marginBottom: 12,
+            }}>{block.label}</div>
+            <div style={{ fontFamily: display, fontSize: fs(31), lineHeight: 1.45, color: '#4A3B00' }}>
+              {block.text}
+            </div>
+          </div>
+        );
+      }
+      // Editorial pull-quote: hairline left rule + a whisper of tint, not a filled app card.
       return (
         <div style={{
-          background: nb ? '#FFF3B0' : (danger ? (theme.dark ? '#2A1517' : '#FCEBEC') : theme.soft),
-          borderRadius: nb ? 6 : 26,
-          padding: '34px 38px',
-          transform: nb ? 'rotate(-0.5deg)' : undefined,
-          boxShadow: nb ? '6px 7px 0 rgba(0,0,0,.10)' : undefined,
+          borderLeft: `3px solid ${accentColor}`,
+          background: danger ? (theme.dark ? '#1D1416' : '#FBF4F4') : (theme.dark ? '#161B22' : '#FAFAF8'),
+          padding: '8px 0 8px 34px',
         }}>
           <div style={{
-            fontFamily: sans, fontWeight: nb ? 400 : 700, fontSize: 17,
-            letterSpacing: 3, textTransform: 'uppercase',
-            color: nb ? '#8A6D00' : (danger ? (theme.dark ? '#F08A90' : '#B3242B') : theme.accent),
-            marginBottom: 12,
+            fontFamily: sans, fontWeight: 700, fontSize: 16,
+            letterSpacing: 3, textTransform: 'uppercase', color: accentColor, marginBottom: 12,
           }}>{block.label}</div>
           <div style={{
-            fontFamily: nb ? display : sans, fontWeight: nb ? 400 : 600,
-            fontSize: fs(31), lineHeight: 1.45, color: nb ? '#4A3B00' : ink,
+            fontFamily: sans, fontWeight: 500,
+            fontSize: fs(31), lineHeight: 1.48, color: ink,
           }}>{block.text}</div>
         </div>
       );

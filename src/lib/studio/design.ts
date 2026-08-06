@@ -289,8 +289,7 @@ function buildBaseSlides(day: number, topic: string, c: StudioContent, fmt: Form
           { kind: 'rule' }, { kind: 'title', text: topic }, { kind: 'lead', text: c.cover_subtitle }] },
         { chip: 'What it is', blocks: [
           { kind: 'heading', text: c.definition_headline },
-          { kind: 'lead', text: c.definition_body },
-          { kind: 'panel', label: 'Key insight', text: c.key_insight }] },
+          { kind: 'lead', text: c.definition_body }] },
         { chip: 'The idea', blocks: [{ kind: 'big', text: c.key_insight }] },
         { chip: 'How it works', blocks: [
           { kind: 'heading', text: c.how_it_works_title },
@@ -300,8 +299,7 @@ function buildBaseSlides(day: number, topic: string, c: StudioContent, fmt: Form
           { kind: 'ticks', items: c.rules ?? [] }] },
         { chip: 'Worked example', blocks: [
           { kind: 'heading', text: c.example_title },
-          { kind: 'panel', label: 'Scenario', text: c.example_scenario },
-          { kind: 'lead', text: c.example_action }] },
+          { kind: 'panel', label: 'What happened', text: `${c.example_scenario} ${c.example_action}`.trim() }] },
         { chip: 'Where it fails', blocks: [
           { kind: 'heading', text: c.mistakes_title },
           { kind: 'ticks', items: c.mistakes ?? [], bad: true }] },
@@ -309,8 +307,7 @@ function buildBaseSlides(day: number, topic: string, c: StudioContent, fmt: Form
           { kind: 'rule' }, { kind: 'big', text: c.takeaway }] },
         { chip: 'Chartix', hint: 'Follow for daily posts', blocks: [
           { kind: 'heading', text: 'Learn technical analysis the simple way.' },
-          { kind: 'lead', text: 'Structured CMT-aligned lessons, practice questions and interactive tools.' },
-          { kind: 'panel', label: 'Start free', text: 'chartix.in' }] },
+          { kind: 'panel', label: 'Start free', text: 'Structured CMT-aligned lessons, practice questions and interactive tools — chartix.in' }] },
       ];
 
     case 'quick_card':
@@ -336,10 +333,9 @@ function buildBaseSlides(day: number, topic: string, c: StudioContent, fmt: Form
           chip: `Myth ${i + 1}`,
           blocks: [
             { kind: 'panel', label: 'The mistake', text: m, tone: 'danger' } as Block,
-            { kind: 'rule' } as Block,
-            { kind: 'lead', text: c.key_insight } as Block,
           ],
         })),
+        { chip: 'The pattern', blocks: [{ kind: 'big', text: c.key_insight }] },
         { chip: 'Do this instead', hint: 'Save this', blocks: [
           { kind: 'rule' }, { kind: 'big', text: c.takeaway }] },
       ];
@@ -356,8 +352,7 @@ function buildBaseSlides(day: number, topic: string, c: StudioContent, fmt: Form
           { kind: 'lead', text: 'Take a second before you swipe.' }] },
         { chip: 'The answer', blocks: [
           { kind: 'heading', text: c.example_title },
-          { kind: 'lead', text: c.example_action },
-          { kind: 'panel', label: 'Why it works', text: c.key_insight }] },
+          { kind: 'panel', label: 'Why it works', text: `${c.example_action} ${c.key_insight}`.trim() }] },
         { chip: 'Remember', hint: 'Save this', blocks: [
           { kind: 'rule' }, { kind: 'big', text: c.takeaway }] },
       ];
