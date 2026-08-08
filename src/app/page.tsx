@@ -589,7 +589,7 @@ export default async function HomePage() {
                 <div className="mt-5 border-t border-emerald-50 pt-4">
                   <p className="text-xs font-semibold uppercase tracking-widest text-emerald-600">Founder</p>
                   <p className="mt-2 text-xs leading-6 text-zinc-500">
-                    Built by <Link href="/about" className="font-semibold text-zinc-700 hover:text-emerald-700 transition">Sumit Jain</Link> — CMT Level 3 cleared. Have a question? Reach out anytime.
+                    Built by <Link href="/about" className="font-semibold text-zinc-700 hover:text-emerald-700 transition">Sumit Jain, CMT®</Link> — a CMT® charterholder. Have a question? Reach out anytime.
                   </p>
                   <div className="mt-3 flex flex-wrap items-center gap-3">
                     <a

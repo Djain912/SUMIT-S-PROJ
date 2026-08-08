@@ -242,10 +242,19 @@ export default function AboutPage() {
                   SJ
                 </div>
                 <div className="text-center sm:text-left">
-                  <h3 className="text-xl font-bold text-zinc-950">Sumit Jain</h3>
-                  <p className="mt-1 text-sm font-semibold text-emerald-700">Founder, Chartix · CMT Level 3 Cleared</p>
+                  <div className="flex flex-col items-center gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+                    <h3 className="text-xl font-bold text-zinc-950">Sumit Jain, CMT®</h3>
+                    <Image
+                      src="/cmt-charterholder-badge.png"
+                      alt="CMT Charterholder"
+                      width={40}
+                      height={40}
+                      className="shrink-0"
+                    />
+                  </div>
+                  <p className="mt-1 text-sm font-semibold text-emerald-700">Founder, Chartix · CMT® Charterholder</p>
                   <div className="mt-2 flex flex-wrap justify-center gap-2 sm:justify-start">
-                    {['CMT Level 3 Cleared', 'BSE/NSE Certified', 'Mutual Fund Distributor', 'Equity & Derivatives Trader'].map((tag) => (
+                    {['CMT® Charterholder', 'BSE/NSE Certified', 'Mutual Fund Distributor', 'Equity & Derivatives Trader'].map((tag) => (
                       <span key={tag} className="rounded-full border border-zinc-200 bg-white px-2.5 py-0.5 text-[11px] font-medium text-zinc-600">
                         {tag}
                       </span>
@@ -256,7 +265,7 @@ export default function AboutPage() {
 
               <div className="mt-8 space-y-4 text-base leading-7 text-zinc-600">
                 <p>
-                  Hi, I&apos;m <span className="font-semibold text-zinc-900">Sumit Jain</span> — founder of Chartix and <span className="font-semibold text-zinc-900">CMT Level 3 cleared</span>, based in Mumbai.
+                  Hi, I&apos;m <span className="font-semibold text-zinc-900">Sumit Jain</span> — founder of Chartix and a <span className="font-semibold text-zinc-900">CMT® charterholder</span>, based in Mumbai.
                 </p>
                 <p>
                   I work as an Equity Research Analyst at a Mumbai-based family office, where I&apos;ve spent the last 4+ years analysing the markets across both technical and fundamental angles. I&apos;m BSE/NSE certified, a registered Mutual Fund Distributor, and an active equity &amp; derivatives trader — with deep hands-on experience in chart reading, options strategies, and financial instruments.
