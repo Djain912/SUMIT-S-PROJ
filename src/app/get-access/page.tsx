@@ -15,9 +15,9 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-const LEVEL_1_FEATURES = [
-  'All Level 1 study notes (chapter-wise)',
-  '3,500+ practice MCQs at exam difficulty',
+const FULL_ACCESS_FEATURES = [
+  'All Level I & Level II study notes (chapter-wise)',
+  '4,000+ practice MCQs at exam difficulty',
   'Unlimited mock tests & custom quizzes',
   'Performance analytics dashboard',
   'Chartix Scholar (CMT-trained chatbot)',
@@ -72,23 +72,23 @@ export default async function GetAccessPage() {
             Unlock your CMT prep
           </h1>
           <p className="mt-3 text-sm text-zinc-500">
-            Get full access to Chartix Level 1 — notes, quizzes, mock tests, analytics and Chartix Scholar.
+            Get full access to Chartix — Level I &amp; Level II notes, quizzes, mock tests, analytics and Chartix Scholar.
           </p>
         </div>
 
-        {/* Level 1 card */}
+        {/* Full-access card — one purchase unlocks every live level */}
         <div className="mx-auto mt-8 max-w-md rounded-2xl border border-emerald-200 bg-white p-7 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-emerald-600">CMT Level 1</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-emerald-600">CMT Level I &amp; II</p>
               <div className="mt-1 flex items-end gap-1.5">
                 <span className="text-3xl font-extrabold text-emerald-900">
                   {currency === 'USD' ? '$99' : '₹6,999'}
                 </span>
-                <span className="mb-1 text-sm text-zinc-400">per level</span>
+                <span className="mb-1 text-sm text-zinc-400">full access</span>
               </div>
             </div>
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-700 text-sm font-bold text-white">L1</div>
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-700 text-sm font-bold text-white">L1+2</div>
           </div>
 
           <div className="mt-3 flex items-center gap-1.5">
@@ -97,7 +97,7 @@ export default async function GetAccessPage() {
           </div>
 
           <ul className="mt-5 space-y-2.5">
-            {LEVEL_1_FEATURES.map((f) => (
+            {FULL_ACCESS_FEATURES.map((f) => (
               <li key={f} className="flex items-start gap-2.5">
                 <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
                 <span className="text-sm text-zinc-600">{f}</span>
@@ -119,19 +119,15 @@ export default async function GetAccessPage() {
           </div>
         </div>
 
-        {/* Levels 2 & 3 — coming soon */}
-        <div className="mx-auto mt-6 max-w-md">
+        {/* Level 3 — coming soon */}
+        <div className="mx-auto mt-6 max-w-xs">
           <p className="mb-3 text-center text-xs font-semibold uppercase tracking-widest text-zinc-400">
             Also on the way
           </p>
-          <div className="grid grid-cols-2 gap-3">
-            {['CMT Level 2', 'CMT Level 3'].map((lvl) => (
-              <div key={lvl} className="rounded-2xl border border-dashed border-zinc-300 bg-white/60 p-5 text-center">
-                <Lock className="mx-auto h-5 w-5 text-zinc-300" />
-                <p className="mt-2 text-sm font-semibold text-zinc-500">{lvl}</p>
-                <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-amber-500">Coming Soon</p>
-              </div>
-            ))}
+          <div className="rounded-2xl border border-dashed border-zinc-300 bg-white/60 p-5 text-center">
+            <Lock className="mx-auto h-5 w-5 text-zinc-300" />
+            <p className="mt-2 text-sm font-semibold text-zinc-500">CMT Level 3</p>
+            <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-amber-500">Coming Soon</p>
           </div>
         </div>
       </main>

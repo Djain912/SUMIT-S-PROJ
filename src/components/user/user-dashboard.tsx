@@ -5,10 +5,13 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   ChevronRight, Search, ChevronsDownUp, ChevronsUpDown,
-  BookOpen, Brain, FileText, LayoutGrid, TrendingUp, Lock,
+  BookOpen, Brain, FileText, LayoutGrid, TrendingUp, Lock, Sparkles,
 } from 'lucide-react';
+import { startLevelTrial } from '@/app/start-trial/actions';
 
 type Level = 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3';
+type LevelStatus = 'unavailable' | 'open' | 'trial-available' | 'expired';
+export type LevelStateMap = Record<Level, { status: LevelStatus; daysRemaining: number }>;
 
 export type SectionData = {
   id: string;
@@ -68,11 +71,18 @@ interface ApiResponse<T> {
 }
 
 const levelOptions: Level[] = ['LEVEL_1', 'LEVEL_2', 'LEVEL_3'];
-const lockedLevels: Level[] = ['LEVEL_2', 'LEVEL_3'];
 const levelLabels: Record<Level, string> = {
   LEVEL_1: 'Level I',
   LEVEL_2: 'Level II',
   LEVEL_3: 'Level III',
+};
+
+// Fallback used only when a caller doesn't pass real levelStates — keeps the
+// component usable without the new prop rather than crashing.
+const DEFAULT_LEVEL_STATES: LevelStateMap = {
+  LEVEL_1: { status: 'open', daysRemaining: 0 },
+  LEVEL_2: { status: 'unavailable', daysRemaining: 0 },
+  LEVEL_3: { status: 'unavailable', daysRemaining: 0 },
 };
 
 async function fetchDashboard(level: Level): Promise<DashboardData> {
@@ -354,13 +364,20 @@ export function SectionCard({ title, children }: SectionCardProps) {
   );
 }
 
-export function UserDashboardClient({ initialData }: { initialData?: DashboardData }) {
+export function UserDashboardClient({
+  initialData,
+  levelStates = DEFAULT_LEVEL_STATES,
+}: {
+  initialData?: DashboardData;
+  levelStates?: LevelStateMap;
+}) {
   const initialLevel = (initialData?.level as Level) ?? 'LEVEL_1';
   const [selectedLevel, setSelectedLevel] = useState<Level>(
-    lockedLevels.includes(initialLevel) ? 'LEVEL_1' : initialLevel,
+    levelStates[initialLevel]?.status === 'unavailable' ? 'LEVEL_1' : initialLevel,
   );
   const [search, setSearch] = useState('');
   const [forceExpanded, setForceExpanded] = useState<boolean | null>(null);
+  const [trialConfirmLevel, setTrialConfirmLevel] = useState<Level | null>(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['dashboard', selectedLevel],
@@ -389,8 +406,9 @@ export function UserDashboardClient({ initialData }: { initialData?: DashboardDa
         {/* Level tabs */}
         <div className="flex border-b border-zinc-100">
           {levelOptions.map((level) => {
-            const locked = lockedLevels.includes(level);
-            if (locked) {
+            const state = levelStates[level];
+
+            if (state.status === 'unavailable') {
               return (
                 <div
                   key={level}
@@ -404,22 +422,79 @@ export function UserDashboardClient({ initialData }: { initialData?: DashboardDa
                 </div>
               );
             }
+
+            if (state.status === 'trial-available') {
+              return (
+                <button
+                  key={level}
+                  type="button"
+                  onClick={() => setTrialConfirmLevel(level)}
+                  className="flex flex-1 flex-col items-center justify-center gap-0.5 py-2.5 text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-800"
+                >
+                  <span className="text-sm font-semibold">{levelLabels[level]}</span>
+                  <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-600">
+                    <Sparkles className="h-2.5 w-2.5" /> Free trial
+                  </span>
+                </button>
+              );
+            }
+
             return (
               <button
                 key={level}
                 type="button"
                 onClick={() => { setSelectedLevel(level); setSearch(''); setForceExpanded(null); }}
-                className={`flex-1 py-3 text-sm font-semibold transition-colors ${
+                className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2.5 text-sm font-semibold transition-colors ${
                   selectedLevel === level
                     ? 'bg-emerald-700 text-white'
                     : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800'
                 }`}
               >
-                {levelLabels[level]}
+                <span>{levelLabels[level]}</span>
+                {state.status === 'expired' && (
+                  <span className={`text-[10px] font-semibold uppercase tracking-wide ${selectedLevel === level ? 'text-emerald-100' : 'text-amber-500'}`}>
+                    Trial ended
+                  </span>
+                )}
               </button>
             );
           })}
         </div>
+
+        {/* Trial start confirm dialog */}
+        {trialConfirmLevel && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+            <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-emerald-600">
+                <Sparkles className="h-3.5 w-3.5" /> Free 7-day trial
+              </p>
+              <h3 className="mt-2 text-lg font-bold text-zinc-900">
+                Start your free {levelLabels[trialConfirmLevel]} trial?
+              </h3>
+              <p className="mt-1.5 text-sm text-zinc-500">
+                You get one 7-day trial per level, no card required. This won&apos;t affect any other level&apos;s access.
+              </p>
+              <div className="mt-5 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setTrialConfirmLevel(null)}
+                  className="flex-1 rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-semibold text-zinc-600 transition hover:bg-zinc-50"
+                >
+                  Cancel
+                </button>
+                <form action={startLevelTrial} className="flex-1">
+                  <input type="hidden" name="level" value={trialConfirmLevel} />
+                  <button
+                    type="submit"
+                    className="w-full rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800"
+                  >
+                    Start trial
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="p-5">
           {isLoading ? (

@@ -18,7 +18,9 @@ model User {
   isPremium         Boolean          @default(false)
   premiumUntil      DateTime?
   couponRedeemed    String?
-  // Freemium trial — set on first Google sign-in (see upsertOAuthUser).
+  // DEPRECATED — superseded by LevelTrial (one trial per CMT level). Kept
+  // read-only for backfill provenance and rollback safety; nothing writes
+  // these anymore. Safe to drop in a later cleanup once LevelTrial has run.
   trialStartedAt    DateTime?
   trialExpiresAt    DateTime?
   subscriptionStatus SubStatus?      // TRIAL on signup, PAID on purchase/full coupon
@@ -39,6 +41,25 @@ model User {
   indices           Index[]
   summaryBookmarks  SummaryBookmark[]
   passwordResetTokens PasswordResetToken[]
+  levelTrials       LevelTrial[]
+}
+
+// One 7-day free trial per user PER CMT level. A user can start Level 1's
+// trial and Level 2's trial independently, but never the same level twice —
+// enforced by the unique constraint below, which is the actual source of
+// truth (not just an app-level check).
+model LevelTrial {
+  id          String   @id @default(cuid())
+  userId      String
+  level       CmtLevel
+  startedAt   DateTime @default(now())
+  expiresAt   DateTime
+  lastDripDay Int?     // per-trial drip-email idempotency (day 3 / day 6 nudges)
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, level])
+  @@index([expiresAt])
 }
 
 // Token-based password reset. We store only a SHA-256 HASH of the token — the
@@ -558,7 +579,7 @@ model BotQAPair {
   question  String
   answer    String   @db.Text
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @default(now()) @updatedAt
 
   @@index([botType])
 }

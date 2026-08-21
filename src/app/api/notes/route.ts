@@ -14,6 +14,10 @@ export async function GET(request: Request) {
     let subtopicId = searchParams.get('subtopicId') ?? searchParams.get('subtopic');
     let chapterId = searchParams.get('chapterId') ?? searchParams.get('chapter');
     const noteId = searchParams.get('note');
+    // Which level's first chapter to fall back to when nothing is selected —
+    // e.g. /user/notes?welcome=1&level=LEVEL_2 after starting a Level 2 trial.
+    // Defaults to LEVEL_1 to preserve behavior for existing links that omit it.
+    const fallbackLevel = (searchParams.get('level') as 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3' | null) ?? 'LEVEL_1';
 
     // When a specific note ID is given, resolve its subtopicId first
     if (noteId && !subtopicId && !chapterId) {
@@ -41,7 +45,7 @@ export async function GET(request: Request) {
           isDeleted: false,
           subtopic: {
             chapter: {
-              level: 'LEVEL_1',
+              level: fallbackLevel,
               isPublished: true,
               isDeleted: false,
               ...(access.full ? {} : { id: { in: [...access.chapterIds] } }),
