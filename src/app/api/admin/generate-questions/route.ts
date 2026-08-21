@@ -134,6 +134,7 @@ export async function POST(request: Request) {
     }
 
     const levelLabel = level.replace('_', ' ').replace('LEVEL', 'Level');
+    const isLevel2 = level === 'LEVEL_2';
 
     const systemPrompt = `You are a senior CMT (Chartered Market Technician) exam question writer with 15+ years of experience creating questions for the official CMT Level I, II, and III examinations. Your questions appear on real CMT exams. Every question you write must be publication-ready.
 
@@ -152,6 +153,37 @@ OUTPUT FORMAT — return ONLY valid JSON, no markdown, no extra text:
 }
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${isLevel2 ? `CMT LEVEL 2 — EXAM STYLE REQUIREMENTS
+Level 2 tests the ability to ANALYSE and APPLY — not just recall. Every question must demand judgment, not memory. A candidate who has only memorised definitions should struggle.
+
+QUESTION TYPE DISTRIBUTION — for every 10 questions generate:
+• 5 SCENARIO-BASED — Present a multi-signal market situation with real numbers, named instruments, and timeframes. The candidate must weigh the evidence and reach a conclusion. Every scenario must include at least TWO signals or data points (e.g. price pattern + volume + indicator reading).
+  ✅ Good: "A weekly chart of the S&P 500 shows a head-and-shoulders top completing near 5,200. RSI has failed to reach overbought on the right shoulder's rally, and On-Balance Volume has been falling for six weeks. The MOST appropriate analytical conclusion is..."
+  ❌ Bad: "A stock forms a head-and-shoulders pattern. What does this indicate?"
+
+• 3 APPLICATION — The candidate must choose between competing analytical approaches, decide which tool is MOST appropriate for a given situation, or interpret the practical implication of a signal.
+  ✅ Good: "An analyst is evaluating two securities with identical 6-month price returns but very different relative strength ratios versus their sector index. Which analytical step would BEST distinguish the stronger candidate for long exposure?"
+  ❌ Bad: "What does relative strength measure?"
+
+• 2 CONCEPTUAL/COMPARATIVE — Tests deep understanding of WHY a methodology works, its limitations versus alternatives, or how two related concepts interact.
+  ✅ Good: "Which of the following BEST explains why a bullish divergence on the MACD histogram is considered a less reliable signal when it occurs below the zero line compared to above it?"
+  ❌ Bad: "What is MACD divergence?"
+
+• NO pure formula-recall questions — if testing a calculation, embed it in a scenario where the candidate must decide what to calculate AND interpret the result.
+  ✅ Good: "A trader calculates a 14-period ATR of 3.2 points on a daily Nifty 50 chart. Using a 2× ATR stop, the position is entered at 22,400. Which of the following stop levels is correct, and what does this placement MOST effectively protect against?"
+  ❌ Bad: "What is the formula for ATR?"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DIFFICULTY DISTRIBUTION FOR LEVEL 2 — use EXACTLY these strings:
+• "EASY" (20%): Tests a specific Level 2 concept that a prepared candidate recalls immediately. Must still require having studied Level 2 material — not general knowledge.
+  ✅ Good EASY: "According to intermarket analysis, which asset class typically leads equities at a business cycle peak?"
+
+• "MEDIUM" (45%): Requires connecting two or more concepts, choosing between two analytical conclusions that are both partially correct, or interpreting a multi-signal scenario.
+
+• "HARD" (35%): Complex multi-step reasoning, conflicting signals pointing in opposite directions, nuanced edge cases, or situations where the obvious answer is wrong. A well-prepared candidate must think carefully — not just recall.
+  ✅ Good HARD: "A daily chart shows a symmetrical triangle breaking upward with a 40% expansion in volume. However, the weekly RSI is at 78 and the 20-week Bollinger Band upper band has been touched for three consecutive weeks. Which analytical framework should take precedence and why?"` : `CMT LEVEL 1 — EXAM STYLE REQUIREMENTS
+Level 1 tests foundational knowledge of technical analysis concepts, tools, and terminology.
+
 QUESTION TYPE DISTRIBUTION — for every 10 questions generate:
 • 4 SCENARIO-BASED — Describe a specific real market situation with concrete details (index name, indicator value, timeframe, price pattern). Student must apply knowledge.
   ✅ Good: "The Nifty 50 makes a new all-time high on Monday, but the Advance-Decline line for the NSE falls sharply the same day. According to breadth analysis, this MOST likely signals..."
@@ -170,14 +202,14 @@ QUESTION TYPE DISTRIBUTION — for every 10 questions generate:
   ❌ Bad: "What does ATR stand for?"
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-DIFFICULTY — use EXACTLY these strings:
+DIFFICULTY DISTRIBUTION FOR LEVEL 1 — use EXACTLY these strings:
 • "EASY" (30%): Tests specific factual knowledge a candidate who studied the material knows immediately. EASY does NOT mean common sense or general knowledge — it must require having studied the topic.
   ✅ Good EASY: "According to Dow Theory, which condition must be met before a primary trend change is confirmed?"
   ❌ Bad EASY: "What is plotted on the vertical axis of a chart?" (anyone knows this without studying)
 
 • "MEDIUM" (40%): Requires connecting two concepts, interpreting a market scenario, or choosing between two plausible answers that both sound correct.
 
-• "HARD" (30%): Multi-step reasoning, conflicting signals, edge cases, or nuanced judgment where even well-prepared candidates must think carefully.
+• "HARD" (30%): Multi-step reasoning, conflicting signals, edge cases, or nuanced judgment where even well-prepared candidates must think carefully.`}
 
 IMPORTANT: "difficulty" must be only EASY, MEDIUM, or HARD — never SCENARIO, APPLICATION, CONCEPTUAL, or FORMULA.
 
@@ -194,7 +226,8 @@ OPTION QUALITY RULES:
 2. Every option must be a COMPLETE, MEANINGFUL STATEMENT — minimum 8 words
   ✅ Good: "The trend is likely to reverse in the short term"
   ❌ Bad: "Higher volume" or "Trend reversal" (too short — not a real option)
-3. All 3 wrong options must be genuinely plausible to a student who partially studied the topic — they should reflect real misconceptions, not obvious nonsense
+3. All 3 wrong options must be genuinely plausible to a student who partially studied the topic — they should reflect real misconceptions, not obvious nonsense${isLevel2 ? `
+4. For Level 2: wrong options must represent real analytical mistakes — misapplying a rule, choosing the right tool for the wrong timeframe, or drawing the correct conclusion from the wrong signal` : ''}
 4. correctIndex is 0, 1, 2, or 3 — vary the position of the correct answer across questions
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
