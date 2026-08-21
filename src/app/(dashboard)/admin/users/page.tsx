@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db/prisma';
 import { UsersTable } from '@/components/admin/UsersTable';
-import { buildUserRow, type RawUserForAdmin } from '@/server/services/admin-users.service';
+import { buildUserRow, formatRevenue, type RawUserForAdmin } from '@/server/services/admin-users.service';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Users | Chartix Admin' };
@@ -44,10 +44,11 @@ export default async function AdminUsersPage() {
       take: 200,
     }),
     prisma.user.count(),
-    prisma.payment.aggregate({ where: { status: 'PAID' }, _sum: { amount: true } }),
+    prisma.payment.groupBy({ by: ['currency'], where: { status: 'PAID' }, _sum: { amount: true } }),
   ]);
 
   const initialUsers = users.map((u) => buildUserRow(u as unknown as RawUserForAdmin));
+  const revenueLabel = formatRevenue(revenueAgg.map((r) => ({ currency: r.currency, amountMinor: r._sum.amount ?? 0 })));
 
   return (
     <main className="min-h-screen bg-zinc-50/50 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
@@ -55,7 +56,7 @@ export default async function AdminUsersPage() {
         <UsersTable
           initialUsers={initialUsers}
           initialMeta={{ total, page: 1, limit: 200 }}
-          totalRevenuePaise={revenueAgg._sum.amount ?? 0}
+          revenueLabel={revenueLabel}
         />
       </div>
     </main>

@@ -63,10 +63,6 @@ function activeCoupon(u: User): string | null {
   return null;
 }
 
-function formatRupees(paise: number): string {
-  return `₹${Math.round(paise / 100).toLocaleString('en-IN')}`;
-}
-
 function activeWithinDays(iso: string | null, days: number): boolean {
   if (!iso) return false;
   return Date.now() - new Date(iso).getTime() <= days * 24 * 60 * 60 * 1000;
@@ -135,10 +131,10 @@ function LevelsCell({ u }: { u: User }) {
   );
 }
 
-export function UsersTable({ initialUsers, initialMeta, totalRevenuePaise }: { initialUsers: User[]; initialMeta: Meta; totalRevenuePaise: number }) {
+export function UsersTable({ initialUsers, initialMeta, revenueLabel }: { initialUsers: User[]; initialMeta: Meta; revenueLabel: string }) {
   const [users, setUsers] = useState<User[]>(initialUsers);
   const [meta, setMeta] = useState<Meta>(initialMeta);
-  const [revenuePaise, setRevenuePaise] = useState(totalRevenuePaise);
+  const [revenue, setRevenue] = useState(revenueLabel);
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [filter, setFilter] = useState<'all' | 'Email' | 'Google' | 'premium' | 'coupon' | 'free' | 'trial' | 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3'>('all');
@@ -199,7 +195,7 @@ export function UsersTable({ initialUsers, initialMeta, totalRevenuePaise }: { i
       if (json.success) {
         setUsers(json.data);
         setMeta(json.meta);
-        if (typeof json.totalRevenuePaise === 'number') setRevenuePaise(json.totalRevenuePaise);
+        if (typeof json.revenueLabel === 'string') setRevenue(json.revenueLabel);
       }
     } finally {
       setIsLoading(false);
@@ -314,7 +310,7 @@ export function UsersTable({ initialUsers, initialMeta, totalRevenuePaise }: { i
         <StatCard icon={Users} label="Total Users" value={meta.total} color="bg-emerald-700" />
         <StatCard icon={Activity} label="Active (7d)" value={activeThisWeek} color="bg-teal-600" />
         <StatCard icon={Crown} label="Premium Users" value={premiumCount} color="bg-amber-500" />
-        <StatCard icon={IndianRupee} label="Total Revenue" value={formatRupees(revenuePaise)} color="bg-emerald-600" />
+        <StatCard icon={IndianRupee} label="Total Revenue" value={revenue} color="bg-emerald-600" />
         <StatCard icon={Mail} label="Email Sign-ups" value={emailCount} color="bg-zinc-700" />
         <StatCard icon={Chrome} label="Google Sign-ups" value={googleCount} color="bg-blue-600" />
         <StatCard icon={Ticket} label="Coupon Users" value={couponCount} color="bg-violet-600" />

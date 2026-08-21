@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { AuthError, requireAdminUser } from '@/server/policies/auth';
 import { prisma } from '@/lib/db/prisma';
-import { buildUserRow, type RawUserForAdmin } from '@/server/services/admin-users.service';
+import { buildUserRow, formatRevenue, type RawUserForAdmin } from '@/server/services/admin-users.service';
 
 export const dynamic = 'force-dynamic';
 
@@ -64,16 +64,17 @@ export async function GET(request: Request) {
         skip,
       }),
       prisma.user.count({ where }),
-      prisma.payment.aggregate({ where: { status: 'PAID' }, _sum: { amount: true } }),
+      prisma.payment.groupBy({ by: ['currency'], where: { status: 'PAID' }, _sum: { amount: true } }),
     ]);
 
     const data = users.map((u) => buildUserRow(u as unknown as RawUserForAdmin));
+    const revenueLabel = formatRevenue(revenueAgg.map((r) => ({ currency: r.currency, amountMinor: r._sum.amount ?? 0 })));
 
     return NextResponse.json({
       success: true,
       data,
       meta: { total, page, limit },
-      totalRevenuePaise: revenueAgg._sum.amount ?? 0,
+      revenueLabel,
     });
   } catch (error) {
     if (error instanceof AuthError) {

@@ -59,6 +59,22 @@ export type RawUserForAdmin = {
   activity: { lastLoginAt: Date | null; loginCount: number; mcqAttempted: number; mockAttempted: number } | null;
 };
 
+export type RevenueByCurrency = { currency: string; amountMinor: number };
+
+const CURRENCY_SYMBOL: Record<string, string> = { INR: '₹', USD: '$', EUR: '€', GBP: '£' };
+
+// Payment.amount is stored in the smallest unit of whatever `currency` that
+// row is in (paise for INR, cents for USD, ...) — never assume INR paise.
+export function formatRevenue(rows: RevenueByCurrency[]): string {
+  if (rows.length === 0) return `${CURRENCY_SYMBOL.INR}0`;
+  return rows
+    .map((r) => {
+      const symbol = CURRENCY_SYMBOL[r.currency] ?? `${r.currency} `;
+      return `${symbol}${(r.amountMinor / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    })
+    .join(' + ');
+}
+
 export function buildUserRow(u: RawUserForAdmin): AdminUserRow {
   const now = new Date();
   const ent = u.entitlements[0] ?? null; // furthest-expiry entitlement, for the legacy coupon column
