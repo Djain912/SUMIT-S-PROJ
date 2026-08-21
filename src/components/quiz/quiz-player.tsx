@@ -59,9 +59,17 @@ function formatClock(totalSeconds: number): string {
 }
 
 type ApiResponse<T> = { success: boolean; data?: T; error?: { message?: string } };
+type LevelStatus = 'unavailable' | 'open' | 'trial-available' | 'expired';
+export type LevelStateMap = Record<Level, { status: LevelStatus; daysRemaining: number }>;
 
 const levelOptions: Level[] = ['LEVEL_1', 'LEVEL_2', 'LEVEL_3'];
-const lockedLevels: Level[] = ['LEVEL_2', 'LEVEL_3'];
+
+// Fallback used only when a caller doesn't pass real levelStates.
+const DEFAULT_LEVEL_STATES: LevelStateMap = {
+  LEVEL_1: { status: 'open', daysRemaining: 0 },
+  LEVEL_2: { status: 'unavailable', daysRemaining: 0 },
+  LEVEL_3: { status: 'unavailable', daysRemaining: 0 },
+};
 
 function tiptapToHtml(node: unknown): string {
   if (!node || typeof node !== 'object') return '';
@@ -129,7 +137,7 @@ async function apiJson<T>(url: string, options?: RequestInit): Promise<T> {
   return payload.data as T;
 }
 
-export function QuizPlayer() {
+export function QuizPlayer({ levelStates = DEFAULT_LEVEL_STATES }: { levelStates?: LevelStateMap }) {
   const [level, setLevel] = useState<Level>('LEVEL_1');
   const [mode, setMode] = useState<QuizMode>('SUBTOPIC');
   const [questionCount, setQuestionCount] = useState(10);
@@ -161,10 +169,13 @@ export function QuizPlayer() {
     const urlMode = params.get('mode');
     const urlChapter = params.get('chapter');
     const urlSubtopic = params.get('subtopic');
-    if (urlLevel && (['LEVEL_1'] as string[]).includes(urlLevel)) setLevel(urlLevel as Level);
+    if (urlLevel && levelOptions.includes(urlLevel as Level) && levelStates[urlLevel as Level]?.status !== 'unavailable') {
+      setLevel(urlLevel as Level);
+    }
     if (urlMode && (['SUBTOPIC', 'CHAPTER', 'CUSTOM', 'FULL_TEST'] as string[]).includes(urlMode)) setMode(urlMode as QuizMode);
     if (urlChapter) setSelectedChapterId(urlChapter);
     if (urlSubtopic) setSelectedSubtopicId(urlSubtopic);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once on mount to read the initial URL; levelStates is a stable server-computed prop, not something that should re-trigger this.
   }, []);
 
   const currentItem = useMemo(() => attempt?.items[currentIndex] ?? null, [attempt, currentIndex]);
@@ -387,8 +398,22 @@ export function QuizPlayer() {
             <div className="grid gap-4 sm:grid-cols-3">
               {[
                 { label: 'Level', field: (
-                  <select value={level} onChange={e => { const v = e.target.value as Level; if (!lockedLevels.includes(v)) setLevel(v); }} className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-300">
-                    {levelOptions.map(l => <option key={l} value={l} disabled={lockedLevels.includes(l)}>{l.replace('_', ' ')}{lockedLevels.includes(l) ? ' — Coming Soon' : ''}</option>)}
+                  <select
+                    value={level}
+                    onChange={e => {
+                      const v = e.target.value as Level;
+                      if (levelStates[v]?.status !== 'unavailable') setLevel(v);
+                    }}
+                    className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-300"
+                  >
+                    {levelOptions.map(l => {
+                      const unavailable = levelStates[l]?.status === 'unavailable';
+                      return (
+                        <option key={l} value={l} disabled={unavailable}>
+                          {l.replace('_', ' ')}{unavailable ? ' — Coming Soon' : ''}
+                        </option>
+                      );
+                    })}
                   </select>
                 )},
                 { label: 'Mode', field: (

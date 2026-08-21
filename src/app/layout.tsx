@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import { Inter, Plus_Jakarta_Sans, JetBrains_Mono } from 'next/font/google';
 import { Suspense } from 'react';
 import { Analytics } from '@vercel/analytics/next';
-import { GoogleAnalytics } from '@next/third-parties/google';
 import { Providers } from '@/components/providers';
+import { GaGate } from '@/components/analytics/ga-gate';
 import { AppNavbar } from '@/components/shared/app-navbar';
 import { PageProgress } from '@/components/shared/page-progress';
 import { siteConfig } from '@/lib/site';
@@ -88,9 +88,9 @@ export default async function RootLayout({
           </Suspense>
           <AppNavbar />
           {children}
+          {GA_ID && <GaGate gaId={GA_ID} />}
         </Providers>
         <Analytics />
-        {GA_ID && <GoogleAnalytics gaId={GA_ID} />}
       </body>
     </html>
   );

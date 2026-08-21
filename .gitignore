@@ -24,3 +24,7 @@ tsconfig.tsbuildinfo
 # Graphify
 graphify-out
 .next-build/
+
+# Daily insight scan — generated output + local state, not source
+scripts/social/output/
+scripts/social/state/

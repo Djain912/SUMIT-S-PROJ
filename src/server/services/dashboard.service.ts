@@ -40,7 +40,7 @@ export async function getUserDashboardData(userId: string, email: string, level:
   const targetLevel = level as 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3';
 
   const [chapterAccess, chapters, quizAttempts, attemptItems] = await Promise.all([
-    getChapterAccess(email),
+    getChapterAccess(email, targetLevel),
     prisma.chapter.findMany({
       where: { level: targetLevel, isPublished: true, isDeleted: false },
       orderBy: { orderIndex: 'asc' },

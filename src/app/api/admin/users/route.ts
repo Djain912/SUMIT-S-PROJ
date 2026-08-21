@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { AuthError, requireAdminUser } from '@/server/policies/auth';
 import { prisma } from '@/lib/db/prisma';
+import { buildUserRow, type RawUserForAdmin } from '@/server/services/admin-users.service';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,7 +26,7 @@ export async function GET(request: Request) {
 
     const now = new Date();
 
-    const [users, total] = await Promise.all([
+    const [users, total, revenueAgg] = await Promise.all([
       prisma.user.findMany({
         where,
         select: {
@@ -37,15 +38,25 @@ export async function GET(request: Request) {
           premiumUntil: true,
           couponRedeemed: true,
           passwordHash: true, // used only to detect sign-in method — not sent to client
+          createdAt: true,
           trialStartedAt: true,
           trialExpiresAt: true,
-          createdAt: true,
           _count: { select: { quizAttempts: true } },
           entitlements: {
             where: { expiresAt: { gt: now } },
-            select: { couponCode: true, expiresAt: true },
+            select: { couponCode: true, expiresAt: true, chapter: { select: { level: true } } },
             orderBy: { expiresAt: 'desc' },
-            take: 1,
+          },
+          levelTrials: {
+            select: { level: true, startedAt: true, expiresAt: true },
+          },
+          payments: {
+            where: { status: 'PAID' },
+            select: { level: true, amount: true, createdAt: true },
+            orderBy: { createdAt: 'desc' },
+          },
+          activity: {
+            select: { lastLoginAt: true, loginCount: true, mcqAttempted: true, mockAttempted: true },
           },
         },
         orderBy: { createdAt: 'desc' },
@@ -53,30 +64,17 @@ export async function GET(request: Request) {
         skip,
       }),
       prisma.user.count({ where }),
+      prisma.payment.aggregate({ where: { status: 'PAID' }, _sum: { amount: true } }),
     ]);
 
-    const data = users.map((u) => {
-      const ent = u.entitlements[0] ?? null;
-      return {
-        id: u.id,
-        email: u.email,
-        fullName: u.fullName ?? null,
-        role: u.role,
-        isPremium: u.isPremium,
-        premiumUntil: u.premiumUntil ? u.premiumUntil.toISOString() : null,
-        couponRedeemed: u.couponRedeemed ?? null,
-        // Scoped-coupon fields (entitlement-based access, no isPremium flag)
-        entitlementCoupon: ent?.couponCode ?? null,
-        entitlementExpiry: ent ? ent.expiresAt.toISOString() : null,
-        signInMethod: u.passwordHash ? 'Email' : 'Google',
-        quizAttempts: u._count.quizAttempts,
-        joinedAt: u.createdAt.toISOString(),
-        trialStartedAt: u.trialStartedAt ? u.trialStartedAt.toISOString() : null,
-        trialExpiresAt: u.trialExpiresAt ? u.trialExpiresAt.toISOString() : null,
-      };
-    });
+    const data = users.map((u) => buildUserRow(u as unknown as RawUserForAdmin));
 
-    return NextResponse.json({ success: true, data, meta: { total, page, limit } });
+    return NextResponse.json({
+      success: true,
+      data,
+      meta: { total, page, limit },
+      totalRevenuePaise: revenueAgg._sum.amount ?? 0,
+    });
   } catch (error) {
     if (error instanceof AuthError) {
       return NextResponse.json({ success: false, error: { message: error.message } }, { status: error.statusCode });

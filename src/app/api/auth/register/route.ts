@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db/prisma';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
-import { TRIAL_DAYS } from '@/lib/trial';
-import { sendTrialWelcomeEmail } from '@/lib/email/welcome';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -54,19 +52,11 @@ export async function POST(request: Request) {
 
     const role = adminEmails && email === adminEmails ? 'ADMIN' : 'USER';
 
-    const now = new Date();
-    const trialExpiresAt = new Date(now.getTime() + TRIAL_DAYS * 24 * 60 * 60 * 1000);
-
+    // No trial is granted here — the user picks which CMT level to start a
+    // 7-day trial for on /start-trial right after signing in.
     await prisma.user.create({
-      data: {
-        email, passwordHash, fullName, providerAccountId, role,
-        trialStartedAt: now,
-        trialExpiresAt,
-        subscriptionStatus: 'TRIAL',
-      },
+      data: { email, passwordHash, fullName, providerAccountId, role },
     });
-
-    sendTrialWelcomeEmail(email, fullName).catch((err) => console.error('[register] welcome email failed:', err));
 
     return NextResponse.json({ success: true });
   } catch {

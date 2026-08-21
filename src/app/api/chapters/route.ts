@@ -30,7 +30,7 @@ export async function GET(request: Request) {
     });
 
     // Scoped (coupon) users only see chapters they hold a live entitlement for.
-    const access = await getChapterAccess(user.email);
+    const access = await getChapterAccess(user.email, level ?? undefined);
     const data = access.full ? chapters : chapters.filter((c) => access.chapterIds.has(c.id));
 
     return NextResponse.json({ success: true, data }, {

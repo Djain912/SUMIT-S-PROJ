@@ -3,9 +3,10 @@ import { redirect } from 'next/navigation';
 import { MessageSquareHeart } from 'lucide-react';
 import { requireAuthenticatedUser } from '@/server/policies/auth';
 import { getUserDashboardData } from '@/server/services/dashboard.service';
-import { UserDashboardClient } from '@/components/user/user-dashboard';
+import { UserDashboardClient, type LevelStateMap } from '@/components/user/user-dashboard';
 import { TrialBanner } from '@/components/user/TrialBanner';
 import { OnboardingChecklist } from '@/components/user/OnboardingChecklist';
+import { getLevelAccessSummary } from '@/server/policies/access';
 import { prisma } from '@/lib/db/prisma';
 
 export default async function UserDashboardPage() {
@@ -32,7 +33,16 @@ export default async function UserDashboardPage() {
     }
   }
 
-  const initialData = await getUserDashboardData(user.id, user.email, 'LEVEL_1');
+  const summary = await getLevelAccessSummary(user.email);
+  const levelStates = Object.fromEntries(
+    summary.map((s) => [s.level, { status: s.status, daysRemaining: s.daysRemaining }]),
+  ) as LevelStateMap;
+
+  // Default to whichever level the user actually has open access to (paid,
+  // entitled, or an active trial) — a Level-2-only trial user shouldn't land
+  // on a fully-locked Level 1 board.
+  const defaultLevel = summary.find((s) => s.status === 'open')?.level ?? 'LEVEL_1';
+  const initialData = await getUserDashboardData(user.id, user.email, defaultLevel);
 
   return (
     <main className="min-h-screen bg-zinc-50/50 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
@@ -51,7 +61,7 @@ export default async function UserDashboardPage() {
         </div>
         <TrialBanner email={user.email} />
         <OnboardingChecklist userId={user.id} email={user.email} />
-        <UserDashboardClient initialData={initialData} />
+        <UserDashboardClient initialData={initialData} levelStates={levelStates} />
       </div>
     </main>
   );

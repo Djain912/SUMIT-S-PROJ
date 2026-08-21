@@ -277,6 +277,17 @@ export function UserNotesClient() {
     return () => window.removeEventListener('keydown', blockPrint);
   }, []);
 
+  // Fire-and-forget: powers the onboarding checklist and trial-drip emails.
+  // Never blocks or errors the reader if tracking fails.
+  useEffect(() => {
+    if (!selectedNote?.subtopicId) return;
+    apiJson('/api/user/activity/note-view', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subtopicId: selectedNote.subtopicId }),
+    }).catch(() => {});
+  }, [selectedNote?.subtopicId]);
+
   return (
     <>
       {/* Shown ONLY when the page is sent to a printer or "Save as PDF" */}

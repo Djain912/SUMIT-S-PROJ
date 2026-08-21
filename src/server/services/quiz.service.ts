@@ -355,6 +355,26 @@ export async function completeQuizAttempt(userId: string, attemptId: string) {
     },
   });
 
+  // Engagement counters for the onboarding checklist / trial-drip emails.
+  // Fire-and-forget, fail-soft — must never block the quiz result.
+  const timeSpentSeconds = attempt.items.reduce((sum, item) => sum + (item.timeSpentSeconds ?? 0), 0);
+  prisma.userActivity
+    .upsert({
+      where: { userId },
+      create: {
+        userId,
+        mcqAttempted: totalQuestions,
+        mockAttempted: attempt.mode === 'FULL_TEST' ? 1 : 0,
+        timeSpentSeconds,
+      },
+      update: {
+        mcqAttempted: { increment: totalQuestions },
+        mockAttempted: attempt.mode === 'FULL_TEST' ? { increment: 1 } : undefined,
+        timeSpentSeconds: { increment: timeSpentSeconds },
+      },
+    })
+    .catch((err) => console.error('[quiz] UserActivity update failed:', err));
+
   return attempt;
 }
 

@@ -143,8 +143,19 @@ function extractFirstName(fullName: string | null | undefined): string {
   return fullName.trim().split(/\s+/)[0];
 }
 
-export async function sendTrialWelcomeEmail(email: string, fullName: string | null | undefined) {
+const LEVEL_DISPLAY_NAME: Record<string, string> = {
+  LEVEL_1: 'CMT Level I',
+  LEVEL_2: 'CMT Level II',
+  LEVEL_3: 'CMT Level III',
+};
+
+export async function sendTrialWelcomeEmail(
+  email: string,
+  fullName: string | null | undefined,
+  level?: 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3',
+) {
   const firstName = extractFirstName(fullName);
+  const levelName = level ? LEVEL_DISPLAY_NAME[level] : null;
   await resend.emails.send({
     from: FROM_EMAIL,
     to: email,
@@ -153,7 +164,9 @@ export async function sendTrialWelcomeEmail(email: string, fullName: string | nu
     html: buildHtml({
       firstName,
       headline: 'Your free trial is live. 🎉',
-      subline: 'Your 7-day access starts now — notes, quizzes, mock tests and the AI tutor are ready to support your CMT preparation.',
+      subline: levelName
+        ? `Your 7-day ${levelName} trial starts now — notes, quizzes, mock tests and the AI tutor are ready to support your CMT preparation.`
+        : 'Your 7-day access starts now — notes, quizzes, mock tests and the AI tutor are ready to support your CMT preparation.',
       introLine: 'Thank you for starting your free trial. We\'re excited to have you on board and look forward to helping you prepare with confidence.',
       showOffer: true,
     }),

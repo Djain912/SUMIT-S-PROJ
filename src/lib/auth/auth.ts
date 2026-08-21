@@ -4,8 +4,6 @@ import Credentials from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db/prisma';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
-import { TRIAL_DAYS } from '@/lib/trial';
-import { sendTrialWelcomeEmail } from '@/lib/email/welcome';
 
 function getSuperAdminEmail(): string | null {
   const raw =
@@ -33,20 +31,13 @@ async function upsertOAuthUser(email: string, providerAccountId: string, fullNam
     return user;
   }
 
-  // First sign-in: every new user starts a 7-day freemium trial. Existing
-  // premium/coupon access is never touched (this branch only runs for new rows).
-  const now = new Date();
-  const trialExpiresAt = new Date(now.getTime() + TRIAL_DAYS * 24 * 60 * 60 * 1000);
+  // First sign-in: create the account with no trial yet — the user picks
+  // which CMT level to start a 7-day trial for on /start-trial (see
+  // hasUnusedTrialLevel in access.ts, which routes them there).
   const user = await prisma.user.create({
-    data: {
-      providerAccountId, email, fullName, avatarUrl, role,
-      trialStartedAt: now,
-      trialExpiresAt,
-      subscriptionStatus: 'TRIAL',
-    },
+    data: { providerAccountId, email, fullName, avatarUrl, role },
   });
   await trackLogin(user.id);
-  sendTrialWelcomeEmail(email, fullName).catch((err) => console.error('[oauth] welcome email failed:', err));
   return user;
 }
 
@@ -102,6 +93,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const valid = await bcrypt.compare(password, user.passwordHash);
         if (!valid) return null;
 
+        // OAuth logins are tracked via upsertOAuthUser → trackLogin. The
+        // signIn callback below skips credentials logins entirely, so this
+        // is the only place a password sign-in ever gets counted.
+        await trackLogin(user.id);
+
         return { id: user.providerAccountId, email: user.email, name: user.fullName, image: user.avatarUrl };
       },
     }),
@@ -129,7 +125,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
 
     async signIn({ user, account }) {
-      // Credentials: authorize() already validated
+      // Credentials: authorize() already validated and tracked the login
       if (!account || account.type === 'credentials') return true;
 
       // OAuth: must have email
