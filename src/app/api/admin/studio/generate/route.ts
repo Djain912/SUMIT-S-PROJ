@@ -78,6 +78,7 @@ export async function POST(request: Request) {
       );
     }
     const message = error instanceof Error ? error.message : 'Unexpected error';
+    console.error('[studio/generate] error:', error);
     return NextResponse.json({ success: false, error: { message } }, { status: 500 });
   }
 }
