@@ -26,7 +26,12 @@ export function ObservationsClient({ initialObs }: { initialObs: Obs[] }) {
     setError('');
     try {
       const r = await fetch('/api/admin/observations/generate', { method: 'POST' });
-      if (!r.ok) { setError('Generation failed — check console'); setLoading(false); return; }
+      if (!r.ok) {
+        const body = await r.json().catch(() => ({}));
+        setError(body?.error ?? `Generation failed (HTTP ${r.status})`);
+        setLoading(false);
+        return;
+      }
       // Reload page to get fresh data
       window.location.reload();
     } catch {
