@@ -85,7 +85,7 @@ export function ObservationsClient({ initialObs }: { initialObs: Obs[] }) {
             <div key={o.id} className="group overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
               {/* SVG preview */}
               <div
-                className="aspect-square w-full bg-[#0d0d0d]"
+                className="aspect-video w-full bg-white"
                 dangerouslySetInnerHTML={{ __html: o.chartSvg }}
               />
 
