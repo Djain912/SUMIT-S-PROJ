@@ -59,12 +59,15 @@ export function BuyButton({
   userEmail = '',
   currency = 'INR',
   baseAmountUnits,
+  level = 'LEVEL_1',
 }: {
   userName?: string;
   userEmail?: string;
   currency?: 'INR' | 'USD';
   baseAmountUnits: number;
+  level?: 'LEVEL_1' | 'LEVEL_2';
 }) {
+  const levelLabel = level === 'LEVEL_2' ? 'CMT Level II' : 'CMT Level I';
   const [open, setOpen] = useState(false);
   const [billing, setBilling] = useState<Billing>({
     name: userName,
@@ -157,6 +160,7 @@ export function BuyButton({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          level,
           currency,
           couponCode: applied?.code ?? null,
           billingName: billing.name.trim(),
@@ -179,7 +183,7 @@ export function BuyButton({
         currency: orderCurrency,
         order_id: orderId,
         name: 'Chartix',
-        description: 'CMT Level 1 — 6 months access',
+        description: `${levelLabel} — 6 months access`,
         prefill: {
           name: billing.name.trim(),
           email: billing.email.trim() || undefined,
@@ -248,7 +252,7 @@ export function BuyButton({
               >
                 <X className="h-4 w-4" />
               </button>
-              <p className="text-xs font-semibold uppercase tracking-widest text-emerald-600">CMT Level 1</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-emerald-600">{levelLabel}</p>
               <h2 className="mt-1 text-lg font-bold text-zinc-900">Complete your purchase</h2>
             </div>
 
@@ -441,7 +445,7 @@ export function BuyButton({
               {/* Price summary */}
               <div className="rounded-xl border border-zinc-100 bg-zinc-50 px-4 py-3 mb-3">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-zinc-500">CMT Level 1 · 6 months</span>
+                  <span className="text-zinc-500">{levelLabel} · 6 months</span>
                   {applied ? (
                     <span className="flex items-center gap-2">
                       <span className="text-xs text-zinc-400 line-through">{fmt(baseAmountUnits, currency)}</span>

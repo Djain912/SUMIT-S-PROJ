@@ -5,14 +5,14 @@ import { enforceRateLimit } from '@/server/policies/rate-limit';
 import { getAccessByEmail } from '@/server/policies/access';
 import { prisma } from '@/lib/db/prisma';
 import {
-  getRazorpay, razorpayConfigured, PLAN_LEVEL, applyDiscount, getPriceUnits,
-  type SupportedCurrency,
+  getRazorpay, razorpayConfigured, applyDiscount, getPriceUnits,
+  type SupportedCurrency, type PurchaseLevel,
 } from '@/lib/payments/razorpay';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-// Creates a Razorpay order for the Level I plan and records it as a pending
+// Creates a Razorpay order for the requested CMT level and records it as a pending
 // Payment. The client opens Razorpay Checkout with the returned orderId.
 export async function POST(request: Request) {
   try {
@@ -40,6 +40,7 @@ export async function POST(request: Request) {
 
     // Optional discount coupon — re-validate server-side even if client already checked.
     const body = await request.json().catch(() => ({})) as {
+      level?: string;
       currency?: string;
       couponCode?: string;
       billingName?: string;
@@ -51,6 +52,10 @@ export async function POST(request: Request) {
       billingPincode?: string;
       billingGst?: string;
     };
+
+    // Validate level — only Level 1 and Level 2 are purchasable.
+    const purchaseLevel: PurchaseLevel =
+      body.level === 'LEVEL_2' ? 'LEVEL_2' : 'LEVEL_1';
 
     // Validate currency — only INR and USD are supported.
     const currency: SupportedCurrency =
@@ -82,14 +87,14 @@ export async function POST(request: Request) {
     const order = await getRazorpay().orders.create({
       amount: chargeAmount,
       currency,
-      receipt: `cmt1_${user.id.slice(-10)}_${Date.now().toString(36)}`,
-      notes: { userId: user.id, level: PLAN_LEVEL },
+      receipt: `cmt_${purchaseLevel === 'LEVEL_2' ? 'l2' : 'l1'}_${user.id.slice(-10)}_${Date.now().toString(36)}`,
+      notes: { userId: user.id, level: purchaseLevel },
     });
 
     await prisma.payment.create({
       data: {
         userId: user.id,
-        level: PLAN_LEVEL,
+        level: purchaseLevel,
         amount: chargeAmount,
         currency,
         razorpayOrderId: order.id,

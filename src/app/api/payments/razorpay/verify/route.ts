@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { AuthError, requireAuthenticatedUser } from '@/server/policies/auth';
 import { validateCsrfOrigin } from '@/server/policies/csrf';
 import { prisma } from '@/lib/db/prisma';
-import { verifySignature, grantPremiumAccess } from '@/lib/payments/razorpay';
+import { verifySignature, grantLevelAccess, type PurchaseLevel } from '@/lib/payments/razorpay';
 import { issueInvoice } from '@/lib/invoices/send';
 import { sendPremiumWelcomeEmail } from '@/lib/email/welcome';
 
@@ -44,7 +44,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, data: { premiumUntil: payment.grantedUntil } });
     }
 
-    const premiumUntil = await grantPremiumAccess(user.id);
+    const level = (payment.level ?? 'LEVEL_1') as PurchaseLevel;
+    const premiumUntil = await grantLevelAccess(user.id, level);
     await prisma.payment.update({
       where: { id: payment.id },
       data: { status: 'PAID', razorpayPaymentId: paymentId, grantedUntil: premiumUntil },

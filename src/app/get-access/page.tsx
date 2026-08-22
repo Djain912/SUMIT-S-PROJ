@@ -15,14 +15,24 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-const FULL_ACCESS_FEATURES = [
-  'All Level I & Level II study notes (chapter-wise)',
-  '4,000+ practice MCQs at exam difficulty',
-  'Unlimited mock tests & custom quizzes',
-  'Performance analytics dashboard',
-  'Chartix Scholar (CMT-trained chatbot)',
-  'Progress tracking & streaks',
-];
+const LEVEL_FEATURES: Record<string, string[]> = {
+  LEVEL_1: [
+    'All Level I study notes (12 chapters)',
+    '1,000+ practice MCQs at exam difficulty',
+    'Unlimited mock tests & custom quizzes',
+    'Performance analytics dashboard',
+    'Chartix Scholar (CMT-trained chatbot)',
+    'Progress tracking & streaks',
+  ],
+  LEVEL_2: [
+    'All Level II study notes (12 chapters)',
+    '999 practice MCQs at exam difficulty',
+    'Unlimited mock tests & custom quizzes',
+    'Performance analytics dashboard',
+    'Chartix Scholar (CMT-trained chatbot)',
+    'Progress tracking & streaks',
+  ],
+};
 
 export default async function GetAccessPage() {
   const session = await auth();
@@ -72,61 +82,62 @@ export default async function GetAccessPage() {
             Unlock your CMT prep
           </h1>
           <p className="mt-3 text-sm text-zinc-500">
-            Get full access to Chartix — Level I &amp; Level II notes, quizzes, mock tests, analytics and Chartix Scholar.
+            Each plan gives 6 months of full access to that level — notes, quizzes, mock tests, analytics and Chartix Scholar.
           </p>
         </div>
 
-        {/* Full-access card — one purchase unlocks every live level */}
-        <div className="mx-auto mt-8 max-w-md rounded-2xl border border-emerald-200 bg-white p-7 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-emerald-600">CMT Level I &amp; II</p>
-              <div className="mt-1 flex items-end gap-1.5">
-                <span className="text-3xl font-extrabold text-emerald-900">
-                  {currency === 'USD' ? '$99' : '₹6,999'}
-                </span>
-                <span className="mb-1 text-sm text-zinc-400">full access</span>
+        {/* Per-level purchase cards */}
+        <div className="mx-auto mt-8 max-w-md space-y-5">
+          {(['LEVEL_1', 'LEVEL_2'] as const).map((lvl) => {
+            const label = lvl === 'LEVEL_2' ? 'CMT Level II' : 'CMT Level I';
+            const badge = lvl === 'LEVEL_2' ? 'L2' : 'L1';
+            return (
+              <div key={lvl} className="rounded-2xl border border-emerald-200 bg-white p-7 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-emerald-600">{label}</p>
+                    <div className="mt-1 flex items-end gap-1.5">
+                      <span className="text-3xl font-extrabold text-emerald-900">
+                        {currency === 'USD' ? '$99' : '₹6,999'}
+                      </span>
+                      <span className="mb-1 text-sm text-zinc-400">6 months access</span>
+                    </div>
+                  </div>
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-700 text-sm font-bold text-white">{badge}</div>
+                </div>
+
+                <ul className="mt-5 space-y-2.5">
+                  {LEVEL_FEATURES[lvl].map((f) => (
+                    <li key={f} className="flex items-start gap-2.5">
+                      <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                      <span className="text-sm text-zinc-600">{f}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <BuyButton
+                  userName={session?.user?.name ?? ''}
+                  userEmail={session?.user?.email ?? ''}
+                  currency={currency}
+                  baseAmountUnits={baseAmountUnits}
+                  level={lvl}
+                />
               </div>
-            </div>
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-700 text-sm font-bold text-white">L1+2</div>
-          </div>
+            );
+          })}
 
-          <div className="mt-3 flex items-center gap-1.5">
-            <Clock className="h-3.5 w-3.5 text-emerald-600" />
-            <span className="text-xs font-semibold text-emerald-700">6 months access</span>
-          </div>
-
-          <ul className="mt-5 space-y-2.5">
-            {FULL_ACCESS_FEATURES.map((f) => (
-              <li key={f} className="flex items-start gap-2.5">
-                <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                <span className="text-sm text-zinc-600">{f}</span>
-              </li>
-            ))}
-          </ul>
-
-          {/* Buy (shows live button once Razorpay keys are set, else a notice) */}
-          <BuyButton
-            userName={session?.user?.name ?? ''}
-            userEmail={session?.user?.email ?? ''}
-            currency={currency}
-            baseAmountUnits={baseAmountUnits}
-          />
-
-          {/* Coupon */}
-          <div className="mt-5 border-t border-zinc-100 pt-5">
+          {/* Coupon — applies to whichever level the user ends up buying */}
+          <div className="rounded-2xl border border-zinc-100 bg-white p-5">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-zinc-400">Have a promo code?</p>
             <CouponRedeemForm />
           </div>
         </div>
 
         {/* Level 3 — coming soon */}
         <div className="mx-auto mt-6 max-w-xs">
-          <p className="mb-3 text-center text-xs font-semibold uppercase tracking-widest text-zinc-400">
-            Also on the way
-          </p>
           <div className="rounded-2xl border border-dashed border-zinc-300 bg-white/60 p-5 text-center">
             <Lock className="mx-auto h-5 w-5 text-zinc-300" />
-            <p className="mt-2 text-sm font-semibold text-zinc-500">CMT Level 3</p>
+            <p className="mt-2 text-sm font-semibold text-zinc-500">CMT Level III</p>
             <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-amber-500">Coming Soon</p>
           </div>
         </div>
