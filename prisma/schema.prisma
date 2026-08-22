@@ -707,3 +707,14 @@ model CandidateFeedback {
   @@index([createdAt])
   @@index([level])
 }
+
+
+// Admin-defined captions for note images used by Scholar to identify diagrams.
+// Raw SQL table — no Prisma relations, accessed via $queryRawUnsafe.
+model ImageCaption {
+  url       String   @id @db.Text
+  caption   String   @default("") @db.Text
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("image_captions")
+}
