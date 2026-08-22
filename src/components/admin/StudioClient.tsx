@@ -62,9 +62,12 @@ export function StudioClient({ logoUrl }: { logoUrl?: string }) {
           chartCaptions: charts.map((c) => c.caption),
         }),
       });
-      const json = await res.json();
-      console.log('[studio] response', res.status, json);
-      if (!res.ok || !json.success) throw new Error(json?.error?.message ?? `Generation failed (HTTP ${res.status}: ${JSON.stringify(json)})`);
+      const text = await res.text();
+      let json: Record<string, unknown>;
+      try { json = JSON.parse(text); } catch {
+        throw new Error(`Server returned invalid response (HTTP ${res.status}): ${text.slice(0, 200)}`);
+      }
+      if (!res.ok || !json.success) throw new Error((json?.error as Record<string, string>)?.message ?? `Generation failed (HTTP ${res.status})`);
       setContent(json.data as StudioContent);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong');
