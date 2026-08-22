@@ -71,6 +71,10 @@ const DEFAULT_LEVEL_STATES: LevelStateMap = {
   LEVEL_3: { status: 'unavailable', daysRemaining: 0 },
 };
 
+function firstAccessibleLevel(states: LevelStateMap): Level {
+  return levelOptions.find(l => states[l]?.status !== 'unavailable') ?? 'LEVEL_1';
+}
+
 function tiptapToHtml(node: unknown): string {
   if (!node || typeof node !== 'object') return '';
   const n = node as { type?: string; text?: string; marks?: { type: string }[]; content?: unknown[]; attrs?: Record<string, unknown> };
@@ -138,7 +142,7 @@ async function apiJson<T>(url: string, options?: RequestInit): Promise<T> {
 }
 
 export function QuizPlayer({ levelStates = DEFAULT_LEVEL_STATES }: { levelStates?: LevelStateMap }) {
-  const [level, setLevel] = useState<Level>('LEVEL_1');
+  const [level, setLevel] = useState<Level>(() => firstAccessibleLevel(levelStates));
   const [mode, setMode] = useState<QuizMode>('SUBTOPIC');
   const [questionCount, setQuestionCount] = useState(10);
   const [chapters, setChapters] = useState<Chapter[]>([]);
@@ -171,6 +175,8 @@ export function QuizPlayer({ levelStates = DEFAULT_LEVEL_STATES }: { levelStates
     const urlSubtopic = params.get('subtopic');
     if (urlLevel && levelOptions.includes(urlLevel as Level) && levelStates[urlLevel as Level]?.status !== 'unavailable') {
       setLevel(urlLevel as Level);
+    } else {
+      setLevel(firstAccessibleLevel(levelStates));
     }
     if (urlMode && (['SUBTOPIC', 'CHAPTER', 'CUSTOM', 'FULL_TEST'] as string[]).includes(urlMode)) setMode(urlMode as QuizMode);
     if (urlChapter) setSelectedChapterId(urlChapter);
@@ -400,20 +406,12 @@ export function QuizPlayer({ levelStates = DEFAULT_LEVEL_STATES }: { levelStates
                 { label: 'Level', field: (
                   <select
                     value={level}
-                    onChange={e => {
-                      const v = e.target.value as Level;
-                      if (levelStates[v]?.status !== 'unavailable') setLevel(v);
-                    }}
+                    onChange={e => setLevel(e.target.value as Level)}
                     className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-300"
                   >
-                    {levelOptions.map(l => {
-                      const unavailable = levelStates[l]?.status === 'unavailable';
-                      return (
-                        <option key={l} value={l} disabled={unavailable}>
-                          {l.replace('_', ' ')}{unavailable ? ' — Coming Soon' : ''}
-                        </option>
-                      );
-                    })}
+                    {levelOptions.filter(l => levelStates[l]?.status !== 'unavailable').map(l => (
+                      <option key={l} value={l}>{l.replace('_', ' ')}</option>
+                    ))}
                   </select>
                 )},
                 { label: 'Mode', field: (
