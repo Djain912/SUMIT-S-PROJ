@@ -17,7 +17,7 @@ type Obs = {
 };
 
 export function ObservationsClient({ initialObs }: { initialObs: Obs[] }) {
-  const [obs, setObs] = useState<Obs[]>(initialObs);
+  const [obs] = useState<Obs[]>(initialObs);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -72,7 +72,7 @@ export function ObservationsClient({ initialObs }: { initialObs: Obs[] }) {
 
       {obs.length === 0 ? (
         <div className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50 py-16 text-center">
-          <p className="text-sm text-zinc-400">No observations yet. Click "Generate" to create today's posts.</p>
+          <p className="text-sm text-zinc-400">No observations yet. Click &quot;Generate&quot; to create today&apos;s posts.</p>
         </div>
       ) : (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
