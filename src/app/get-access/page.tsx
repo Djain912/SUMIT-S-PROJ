@@ -2,11 +2,12 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { CheckCircle, Lock, Clock } from 'lucide-react';
 import { auth } from '@/lib/auth/auth';
-import { getAccessByEmail, getTrialState } from '@/server/policies/access';
+import { getTrialState } from '@/server/policies/access';
 import { CouponRedeemForm } from '@/components/get-access-client';
 import { BuyButton } from '@/components/payments/BuyButton';
 import { getVisitorCurrency } from '@/lib/geo/country';
 import { getPriceUnits } from '@/lib/payments/razorpay';
+import { prisma } from '@/lib/db/prisma';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,10 +44,18 @@ export default async function GetAccessPage() {
   // Not signed in → send to sign-up, then back here.
   if (!email) redirect('/sign-up?next=/get-access');
 
-  // Already have real paid/scoped access → no need for this page. (Trial users
-  // are NOT bounced here — this is their upgrade page.)
-  const access = await getAccessByEmail(email);
-  if (access?.active) redirect('/user');
+  // Bounce only users with FULL all-levels access (admin or isPremium=true DB flag).
+  // Level-specific buyers (Entitlement rows only, isPremium=false on DB) are allowed
+  // in so they can purchase the other level.
+  const dbUser = await prisma.user.findUnique({
+    where: { email },
+    select: { role: true, isPremium: true, premiumUntil: true },
+  });
+  const now = new Date();
+  const hasFullAccess =
+    dbUser?.role === 'ADMIN' ||
+    (dbUser?.isPremium === true && (!dbUser.premiumUntil || dbUser.premiumUntil > now));
+  if (hasFullAccess) redirect('/user');
 
   const trial = await getTrialState(email);
   const trialExpired = trial?.expired ?? false;
