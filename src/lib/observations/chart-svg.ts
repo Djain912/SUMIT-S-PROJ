@@ -1,6 +1,8 @@
 // Generates self-contained SVG charts — clean white minimalist style,
 // Twitter-friendly 16:9 (1600×900).
 
+import { LOGO_DATA_URI } from './logo-data';
+
 const BG = '#ffffff';
 const LINE_COLOR = '#1a1a2e';
 const ACCENT_POS = '#10b981';   // emerald for positive
@@ -23,6 +25,14 @@ function fmt(n: number, decimals = 2) {
   if (Math.abs(n) >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
   if (Math.abs(n) >= 1_000) return n.toLocaleString('en-IN', { maximumFractionDigits: 0 });
   return n.toFixed(decimals);
+}
+
+// Logo: 200×97 original, rendered at ~100×48 in the footer area
+const LOGO_W = 100;
+const LOGO_H = 48;
+
+function logoSvg(x: number, y: number) {
+  return `<image href="${LOGO_DATA_URI}" x="${x}" y="${y}" width="${LOGO_W}" height="${LOGO_H}" opacity="0.85"/>`;
 }
 
 function fmtCompact(n: number) {
@@ -147,9 +157,9 @@ export function lineChartSvg(opts: {
   <circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="5" fill="${BRAND_ACCENT}"/>
 
   <!-- footer -->
-  <line x1="${PAD.left}" y1="${H - 52}" x2="${W - PAD.right}" y2="${H - 52}" stroke="${BORDER}" stroke-width="1"/>
-  <text x="${PAD.left}" y="${H - 28}" font-size="13" fill="${TEXT_MUTED}" font-family="'Inter',system-ui,sans-serif">chartix.in</text>
-  <text x="${W - PAD.right}" y="${H - 28}" text-anchor="end" font-size="13" fill="${TEXT_MUTED}" font-family="'Inter',system-ui,sans-serif">@chartixin</text>
+  <line x1="${PAD.left}" y1="${H - 58}" x2="${W - PAD.right}" y2="${H - 58}" stroke="${BORDER}" stroke-width="1"/>
+  ${logoSvg(W - PAD.right - LOGO_W, H - 52)}
+  <text x="${PAD.left}" y="${H - 22}" font-size="13" fill="${TEXT_MUTED}" font-family="'Inter',system-ui,sans-serif">@chartixin</text>
 </svg>`;
 }
 
@@ -164,7 +174,7 @@ export function barChartSvg(opts: {
 }): string {
   const { items, title, valueSuffix = '', highlightPositive = true } = opts;
 
-  const PAD = { top: 120, right: 80, bottom: 100, left: 80 };
+  const PAD = { top: 120, right: 80, bottom: 140, left: 80 };
   const cw = W - PAD.left - PAD.right;
   const ch = H - PAD.top - PAD.bottom;
   const n = items.length;
@@ -184,7 +194,7 @@ export function barChartSvg(opts: {
     const isPos = item.value >= 0;
     const by = isPos ? zeroY - barH : zeroY;
     const fill = highlightPositive ? (isPos ? ACCENT_POS : ACCENT_NEG) : BRAND_ACCENT;
-    const valY = isPos ? by - 10 : by + barH + 22;
+    const valY = isPos ? by - 10 : Math.min(by + barH + 22, PAD.top + ch + 18);
     return `
       <rect x="${(cx - barW / 2).toFixed(1)}" y="${by.toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.max(barH, 1).toFixed(1)}" fill="${fill}" rx="4"/>
       <text x="${cx.toFixed(1)}" y="${valY.toFixed(1)}" text-anchor="middle" font-size="14" font-weight="600" fill="${TEXT_PRIMARY}" font-family="'Inter',system-ui,sans-serif">${esc(fmt(item.value, 1) + valueSuffix)}</text>
@@ -207,9 +217,9 @@ export function barChartSvg(opts: {
   ${bars}
 
   <!-- footer -->
-  <line x1="${PAD.left}" y1="${H - 52}" x2="${W - PAD.right}" y2="${H - 52}" stroke="${BORDER}" stroke-width="1"/>
-  <text x="${PAD.left}" y="${H - 28}" font-size="13" fill="${TEXT_MUTED}" font-family="'Inter',system-ui,sans-serif">chartix.in</text>
-  <text x="${W - PAD.right}" y="${H - 28}" text-anchor="end" font-size="13" fill="${TEXT_MUTED}" font-family="'Inter',system-ui,sans-serif">@chartixin</text>
+  <line x1="${PAD.left}" y1="${H - 58}" x2="${W - PAD.right}" y2="${H - 58}" stroke="${BORDER}" stroke-width="1"/>
+  ${logoSvg(W - PAD.right - LOGO_W, H - 52)}
+  <text x="${PAD.left}" y="${H - 22}" font-size="13" fill="${TEXT_MUTED}" font-family="'Inter',system-ui,sans-serif">@chartixin</text>
 </svg>`;
 }
 
@@ -253,8 +263,8 @@ export function hbarChartSvg(opts: {
   ${rows}
 
   <!-- footer -->
-  <line x1="${PAD.left}" y1="${totalH - 46}" x2="${W - PAD.right}" y2="${totalH - 46}" stroke="${BORDER}" stroke-width="1"/>
-  <text x="${PAD.left}" y="${totalH - 22}" font-size="13" fill="${TEXT_MUTED}" font-family="'Inter',system-ui,sans-serif">Source: ${esc(source)}  ·  chartix.in</text>
-  <text x="${W - PAD.right}" y="${totalH - 22}" text-anchor="end" font-size="13" fill="${TEXT_MUTED}" font-family="'Inter',system-ui,sans-serif">@chartixin</text>
+  <line x1="${PAD.left}" y1="${totalH - 58}" x2="${W - PAD.right}" y2="${totalH - 58}" stroke="${BORDER}" stroke-width="1"/>
+  ${logoSvg(W - PAD.right - LOGO_W, totalH - 52)}
+  <text x="${PAD.left}" y="${totalH - 22}" font-size="13" fill="${TEXT_MUTED}" font-family="'Inter',system-ui,sans-serif">Source: ${esc(source)}  ·  @chartixin</text>
 </svg>`;
 }
