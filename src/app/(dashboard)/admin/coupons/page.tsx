@@ -28,6 +28,7 @@ export default async function AdminCouponsPage() {
     discountType: c.discountType,
     discountValue: c.discountValue,
     minOrderPaise: c.minOrderPaise,
+    appliesTo: c.appliesTo as 'LEVEL_1' | 'LEVEL_2' | null,
   }));
 
   return (

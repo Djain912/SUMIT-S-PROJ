@@ -56,8 +56,14 @@ export async function POST(request: Request) {
       }
       const minOrderPaise = body?.minOrderPaise ? Math.max(1, Math.floor(Number(body.minOrderPaise))) : null;
 
+      const VALID_LEVELS = ['LEVEL_1', 'LEVEL_2'] as const;
+      type ValidLevel = typeof VALID_LEVELS[number];
+      const appliesToRaw = body?.appliesTo;
+      const appliesTo: ValidLevel | null =
+        VALID_LEVELS.includes(appliesToRaw as ValidLevel) ? (appliesToRaw as ValidLevel) : null;
+
       coupon = await prisma.coupon.create({
-        data: { code, note, maxRedemptions, discountType, discountValue, minOrderPaise },
+        data: { code, note, maxRedemptions, discountType, discountValue, minOrderPaise, appliesTo },
       });
     } else {
       const days = Math.floor(Number(body?.days));

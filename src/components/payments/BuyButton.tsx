@@ -130,7 +130,7 @@ export function BuyButton({
       const res = await fetch('/api/payments/coupon-validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, currency }),
+        body: JSON.stringify({ code, currency, level }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) {

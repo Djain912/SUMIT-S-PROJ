@@ -92,6 +92,11 @@ export async function POST(request: Request) {
       if (coupon.maxRedemptions !== null && coupon.redeemedCount >= coupon.maxRedemptions) {
         return NextResponse.json({ success: false, error: { message: 'Coupon has reached its limit.' } }, { status: 400 });
       }
+      // Level restriction — a level-locked coupon cannot be applied to a different level purchase.
+      if (coupon.appliesTo && coupon.appliesTo !== purchaseLevel) {
+        const label = coupon.appliesTo === 'LEVEL_2' ? 'CMT Level II' : 'CMT Level I';
+        return NextResponse.json({ success: false, error: { message: `This coupon is only valid for ${label}.` } }, { status: 400 });
+      }
       // Fixed-amount coupons are defined in paise and cannot apply to USD orders.
       if (coupon.discountType === 'FIXED' && currency === 'USD') {
         return NextResponse.json({ success: false, error: { message: 'This coupon is only valid for INR payments.' } }, { status: 400 });

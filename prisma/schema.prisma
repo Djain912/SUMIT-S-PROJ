@@ -203,6 +203,7 @@ model Coupon {
   discountType   DiscountKind? // null = free-access; PERCENT/FIXED = price discount
   discountValue  Int?          // PERCENT: 1-90 (percentage points); FIXED: paise
   minOrderPaise  Int?          // optional minimum order amount in paise
+  appliesTo      CmtLevel?     // discount coupons only: null = any level; set = level-locked
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 }
