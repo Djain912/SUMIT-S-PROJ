@@ -41,12 +41,14 @@ export async function POST(request: Request) {
     const payload = await request.json();
     const selection = quizSelectionSchema.parse(payload);
 
-    // Trial users may take only a limited number of full-length mock tests.
-    // Paid/admin users are unlimited; scoped-coupon users are unaffected.
+    // Trial users may take only a limited number of full-length mock tests per level.
+    // Paid/admin users are unlimited; scoped-entitlement (level-paid) users are unaffected.
     if (selection.mode === 'FULL_TEST') {
       const trial = await getTrialState(user.email);
-      if (trial && !trial.hasFullAccess && trial.inTrial) {
-        const taken = await prisma.quizAttempt.count({ where: { userId: user.id, mode: 'FULL_TEST' } });
+      if (trial && !trial.hasFullAccess && trial.inTrial && trial.level) {
+        const taken = await prisma.quizAttempt.count({
+          where: { userId: user.id, mode: 'FULL_TEST', level: trial.level },
+        });
         if (taken >= TRIAL_MAX_MOCKS) {
           return NextResponse.json(
             {
