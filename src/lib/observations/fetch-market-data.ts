@@ -1,47 +1,8 @@
-// Fetches 1 year of daily price history from Yahoo Finance for a set of
-// symbols and returns closes + computed stats (52w high/low, % change).
+// Fetches 1 year of daily price history and returns closes + computed stats.
+// Uses the same Yahoo Finance endpoint as the index builder (query1, no crumb).
 
 const UA =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
-
-// Yahoo Finance requires a crumb + cookie from a consent/landing page visit.
-// We fetch one crumb per generate run and reuse it across all symbol requests.
-let _crumbCache: { crumb: string; cookie: string; ts: number } | null = null;
-
-async function getYahooCrumb(): Promise<{ crumb: string; cookie: string } | null> {
-  // Reuse for up to 10 minutes
-  if (_crumbCache && Date.now() - _crumbCache.ts < 10 * 60 * 1000) {
-    return { crumb: _crumbCache.crumb, cookie: _crumbCache.cookie };
-  }
-  try {
-    // Step 1: hit the consent/landing page to get a cookie
-    const consent = await fetch('https://finance.yahoo.com/', {
-      headers: { 'User-Agent': UA, Accept: 'text/html' },
-      redirect: 'follow',
-      cache: 'no-store',
-    });
-    const rawCookie = consent.headers.get('set-cookie') ?? '';
-    // Extract just the key=value pairs (strip attributes)
-    const cookie = rawCookie
-      .split(',')
-      .map((c) => c.split(';')[0].trim())
-      .filter(Boolean)
-      .join('; ');
-
-    // Step 2: fetch the crumb using that cookie
-    const crumbRes = await fetch('https://query1.finance.yahoo.com/v1/test/getcrumb', {
-      headers: { 'User-Agent': UA, Cookie: cookie },
-      cache: 'no-store',
-    });
-    const crumb = (await crumbRes.text()).trim();
-    if (!crumb || crumb.includes('<')) return null; // got HTML error page
-
-    _crumbCache = { crumb, cookie, ts: Date.now() };
-    return { crumb, cookie };
-  } catch {
-    return null;
-  }
-}
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36';
 
 export type PriceSeries = {
   symbol: string;
@@ -50,21 +11,20 @@ export type PriceSeries = {
   dates: string[];
   closes: number[];
   current: number;
-  prev: number;          // yesterday's close
-  pct1d: number;         // 1-day % change
+  prev: number;
+  pct1d: number;
   high52w: number;
   low52w: number;
-  pctFromHigh: number;   // current vs 52w high
-  pctFromLow: number;    // current vs 52w low
-  isAtHigh52w: boolean;  // within 0.5% of 52w high
+  pctFromHigh: number;
+  pctFromLow: number;
+  isAtHigh52w: boolean;
   isAtLow52w: boolean;
-  pct1m: number;         // 1-month % change
+  pct1m: number;
   pct3m: number;
   pct6m: number;
   pct1y: number;
 };
 
-// Symbols to track. Yahoo Finance codes.
 export const WATCH_SYMBOLS: { symbol: string; name: string; currency: string }[] = [
   { symbol: '^NSEI',    name: 'Nifty 50',         currency: 'INR' },
   { symbol: '^BSESN',   name: 'Sensex',            currency: 'INR' },
@@ -83,24 +43,25 @@ export const WATCH_SYMBOLS: { symbol: string; name: string; currency: string }[]
 
 async function fetchYahoo(
   symbol: string,
-  auth: { crumb: string; cookie: string } | null,
 ): Promise<{ dates: string[]; closes: number[] } | null> {
   const now = Math.floor(Date.now() / 1000);
-  const p1 = now - 400 * 86400; // ~13 months back
-  const crumbParam = auth ? `&crumb=${encodeURIComponent(auth.crumb)}` : '';
+  const p1 = now - 400 * 86400;
   const url =
-    `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}` +
-    `?interval=1d&period1=${p1}&period2=${now + 86400}&events=div${crumbParam}`;
+    `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}` +
+    `?interval=1d&period1=${p1}&period2=${now + 86400}&events=div,split`;
   try {
-    const headers: Record<string, string> = {
-      'User-Agent': UA,
-      Accept: 'application/json',
-      Referer: 'https://finance.yahoo.com/',
-    };
-    if (auth?.cookie) headers['Cookie'] = auth.cookie;
-
-    const r = await fetch(url, { headers, cache: 'no-store' });
-    if (!r.ok) return null;
+    const r = await fetch(url, {
+      headers: {
+        'User-Agent': UA,
+        Accept: 'application/json, text/plain, */*',
+        Referer: 'https://finance.yahoo.com/',
+      },
+      cache: 'no-store',
+    });
+    if (!r.ok) {
+      console.warn(`[observations] Yahoo ${symbol} HTTP ${r.status}`);
+      return null;
+    }
     const j = await r.json();
     const result = j?.chart?.result?.[0];
     if (!result) return null;
@@ -115,7 +76,8 @@ async function fetchYahoo(
       closes.push(c);
     }
     return { dates, closes };
-  } catch {
+  } catch (e) {
+    console.warn(`[observations] Yahoo ${symbol} fetch error:`, e);
     return null;
   }
 }
@@ -129,16 +91,12 @@ function closeNDaysAgo(closes: number[], n: number) {
 }
 
 export async function fetchAllSeries(): Promise<PriceSeries[]> {
-  // Get crumb once — reused for all 13 symbol requests
-  const auth = await getYahooCrumb();
-
   const results = await Promise.allSettled(
     WATCH_SYMBOLS.map(async ({ symbol, name, currency }) => {
-      const data = await fetchYahoo(symbol, auth);
+      const data = await fetchYahoo(symbol);
       if (!data || data.closes.length < 5) return null;
       const { dates, closes } = data;
 
-      // Keep last 252 trading days (≈ 1 year) for high/low calc
       const yr = closes.slice(-252);
       const current = closes[closes.length - 1];
       const prev = closes[closes.length - 2] ?? current;
@@ -168,8 +126,11 @@ export async function fetchAllSeries(): Promise<PriceSeries[]> {
     }),
   );
 
-  return results
+  const series = results
     .filter((r): r is PromiseFulfilledResult<PriceSeries | null> => r.status === 'fulfilled')
     .map((r) => r.value)
     .filter((v): v is PriceSeries => v !== null);
+
+  console.log(`[observations] fetched ${series.length}/${WATCH_SYMBOLS.length} symbols`);
+  return series;
 }
