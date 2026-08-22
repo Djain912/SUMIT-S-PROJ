@@ -63,7 +63,8 @@ export function StudioClient({ logoUrl }: { logoUrl?: string }) {
         }),
       });
       const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json?.error?.message ?? 'Generation failed');
+      console.log('[studio] response', res.status, json);
+      if (!res.ok || !json.success) throw new Error(json?.error?.message ?? `Generation failed (HTTP ${res.status}: ${JSON.stringify(json)})`);
       setContent(json.data as StudioContent);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong');
