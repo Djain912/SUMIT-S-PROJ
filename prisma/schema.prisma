@@ -669,6 +669,26 @@ model PublicBotSource {
   @@index([createdAt])
 }
 
+// ── Daily auto-generated market observation cards for Social Studio ──────────
+model MarketObservation {
+  id          String   @id @default(cuid())
+  date        String   // YYYY-MM-DD — one batch per day
+  symbol      String   // e.g. "^NSEI", "GC=F", "CUSTOM"
+  metricName  String   // e.g. "Nifty 50", "Gold (MCX)", "S&P 500 Breadth"
+  headline    String   @db.Text  // AI-generated punchy headline
+  subtext     String?  @db.Text  // optional second line
+  chartSvg    String   @db.Text  // inline SVG string
+  sourceLine  String   // e.g. "Source: NSE • chartix.in"
+  score       Float    // notability score — higher = more interesting
+  chartType   String   // "line" | "bar" | "hbar"
+  currentVal  Float
+  contextNote String   @db.Text  // internal context used to generate headline
+  createdAt   DateTime @default(now())
+
+  @@index([date])
+  @@index([score])
+}
+
 // ── Candidate feedback on prep materials (CMT Prep Provider guideline #5) ──
 // Structured feedback the CMT Association can request results from.
 model CandidateFeedback {

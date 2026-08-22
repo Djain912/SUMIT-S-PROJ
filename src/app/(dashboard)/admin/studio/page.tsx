@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { StudioTabs } from '@/components/admin/StudioTabs';
+import { prisma } from '@/lib/db/prisma';
 
 export const metadata: Metadata = {
   title: 'Studio | Admin — Chartix',
@@ -13,7 +14,12 @@ export const dynamic = 'force-dynamic';
  * Access is already restricted: every page under (dashboard)/admin runs
  * requireAdminUser() in the admin layout.
  */
-export default function StudioPage() {
+export default async function StudioPage() {
+  const today = new Date().toISOString().slice(0, 10);
+  const observations = await prisma.marketObservation.findMany({
+    where: { date: today },
+    orderBy: { score: 'desc' },
+  });
   return (
     <>
       {/* Carousel typography. Self-hosted, SIL Open Font Licence. */}
@@ -28,7 +34,7 @@ export default function StudioPage() {
         }}
       />
 
-      <StudioTabs logoUrl="/studio-logo.png" />
+      <StudioTabs logoUrl="/studio-logo.png" initialObs={observations} />
     </>
   );
 }
