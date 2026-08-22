@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { AuthError, requireAuthenticatedUser } from '@/server/policies/auth';
 import { validateCsrfOrigin } from '@/server/policies/csrf';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
-import { getAccessByEmail } from '@/server/policies/access';
+import { getChapterAccess } from '@/server/policies/access';
 import { prisma } from '@/lib/db/prisma';
 import {
   getRazorpay, razorpayConfigured, applyDiscount, getPriceUnits,
@@ -32,12 +32,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: { message: 'Too many attempts. Please try again shortly.' } }, { status: 429 });
     }
 
-    // Already have active access? No need to pay again.
-    const access = await getAccessByEmail(user.email);
-    if (access?.active) {
-      return NextResponse.json({ success: false, error: { message: 'You already have active access.' } }, { status: 409 });
-    }
-
     // Optional discount coupon — re-validate server-side even if client already checked.
     const body = await request.json().catch(() => ({})) as {
       level?: string;
@@ -56,6 +50,29 @@ export async function POST(request: Request) {
     // Validate level — only Level 1 and Level 2 are purchasable.
     const purchaseLevel: PurchaseLevel =
       body.level === 'LEVEL_2' ? 'LEVEL_2' : 'LEVEL_1';
+
+    // Block re-purchase only if the user already has full access OR paid entitlements
+    // for THIS specific level. A Level 1 buyer must still be able to buy Level 2.
+    const access = await getChapterAccess(user.email);
+    if (access.full) {
+      return NextResponse.json({ success: false, error: { message: 'You already have full access.' } }, { status: 409 });
+    }
+    if (!access.full) {
+      // Check paid entitlements scoped to this level
+      const now = new Date();
+      const levelChapterIds = (await prisma.chapter.findMany({
+        where: { level: purchaseLevel, isPublished: true, isDeleted: false },
+        select: { id: true },
+      })).map((c) => c.id);
+      if (levelChapterIds.length > 0) {
+        const paidEnts = await prisma.entitlement.count({
+          where: { userId: user.id, chapterId: { in: levelChapterIds }, expiresAt: { gt: now } },
+        });
+        if (paidEnts >= levelChapterIds.length) {
+          return NextResponse.json({ success: false, error: { message: 'You already have active access to this level.' } }, { status: 409 });
+        }
+      }
+    }
 
     // Validate currency — only INR and USD are supported.
     const currency: SupportedCurrency =

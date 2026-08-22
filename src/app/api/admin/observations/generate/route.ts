@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth/auth';
+import { validateCsrfOrigin } from '@/server/policies/csrf';
 import { prisma } from '@/lib/db/prisma';
 import { fetchAllSeries } from '@/lib/observations/fetch-market-data';
 import { detectObservations } from '@/lib/observations/detect-observations';
@@ -7,7 +8,10 @@ import { polishAllHeadlines } from '@/lib/observations/generate-headlines';
 
 export const maxDuration = 60;
 
-export async function POST() {
+export async function POST(request: Request) {
+  if (!validateCsrfOrigin(request)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
   const session = await auth();
   if (session?.user?.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
