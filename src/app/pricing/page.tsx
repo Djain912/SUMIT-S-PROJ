@@ -27,7 +27,7 @@ const plansData = [
   {
     level: 'CMT Level 2',
     badge: 'L2',
-    comingSoon: true,
+    comingSoon: false,
     priceINR: '₹6,999',
     priceUSD: '$99',
     period: 'per level',
@@ -75,8 +75,8 @@ const faqs = [
     a: "Your free trial gives you 7 days of access to chapter-wise notes, practice MCQs, one full mock test, and 10 daily questions on Chartix Scholar — our AI tutor. No credit card required. You'll see exactly what the platform is like before committing.",
   },
   {
-    q: 'What if Level 2 content is not ready when I need it?',
-    a: "Level 2 and 3 are listed as Coming Soon. If you've purchased Level 1 and need Level 2 content, reach out — we'll notify you the moment it's available and honour any early-adopter pricing.",
+    q: 'Is Level 2 content available now?',
+    a: "Yes — CMT Level II is fully live. All chapter-wise notes, practice MCQs, and mock tests for Level 2 are available now. Start a free 7-day Level II trial to explore the content before purchasing.",
   },
   {
     q: 'Is there a refund policy?',

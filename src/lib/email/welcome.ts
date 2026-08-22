@@ -105,9 +105,9 @@ function buildHtml({
 
       <!-- Signature -->
       <tr><td style="border-top:0.5px solid ${BORDER};padding-top:20px">
-        <p style="margin:0;font-size:13px;font-weight:600;color:${DARK}">Sumit Jain</p>
+        <p style="margin:0;font-size:13px;font-weight:600;color:${DARK}">Sumit Jain, CMT<sup>®</sup></p>
         <p style="margin:3px 0;font-size:12px;color:${GREEN}">Founder, Chartix.in</p>
-        <p style="margin:3px 0 0;font-size:11.5px;color:#9ca3af">CMT Level III Cleared · Equity Research Analyst</p>
+        <p style="margin:3px 0 0;font-size:11.5px;color:#9ca3af">CMT Charterholder · Equity Research Analyst</p>
       </td></tr>
 
     </table>
@@ -160,14 +160,16 @@ export async function sendTrialWelcomeEmail(
     from: FROM_EMAIL,
     to: email,
     bcc: [BCC_EMAIL],
-    subject: 'Your Chartix free trial is live 🎉',
+    subject: levelName ? `Your Chartix ${levelName} free trial is live 🎉` : 'Your Chartix free trial is live 🎉',
     html: buildHtml({
       firstName,
-      headline: 'Your free trial is live. 🎉',
+      headline: levelName ? `Your ${levelName} trial is live. 🎉` : 'Your free trial is live. 🎉',
       subline: levelName
         ? `Your 7-day ${levelName} trial starts now — notes, quizzes, mock tests and the AI tutor are ready to support your CMT preparation.`
         : 'Your 7-day access starts now — notes, quizzes, mock tests and the AI tutor are ready to support your CMT preparation.',
-      introLine: 'Thank you for starting your free trial. We\'re excited to have you on board and look forward to helping you prepare with confidence.',
+      introLine: levelName
+        ? `Thank you for starting your ${levelName} free trial. All the notes, practice questions, and mock tests for ${levelName} are unlocked and ready for you.`
+        : "Thank you for starting your free trial. We're excited to have you on board and look forward to helping you prepare with confidence.",
       showOffer: true,
     }),
   });

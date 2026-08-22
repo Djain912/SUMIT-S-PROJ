@@ -55,9 +55,9 @@ export default async function BlogPostPage({ params }: Props) {
     dateModified: post.updatedAt?.toISOString(),
     author: {
       '@type': 'Person',
-      name: 'Sumit Jain',
+      name: 'Sumit Jain, CMT®',
       url: siteConfig.url,
-      jobTitle: 'CMT Level III Cleared · Co-founder, Chartix.in',
+      jobTitle: 'CMT Charterholder · Co-founder, Chartix.in',
     },
     publisher: {
       '@type': 'Organization',
