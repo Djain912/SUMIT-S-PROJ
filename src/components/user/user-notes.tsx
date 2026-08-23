@@ -91,16 +91,30 @@ export function UserNotesClient() {
   const [readPct, setReadPct] = useState(0);
   const [showIndex, setShowIndex] = useState(false);
 
-  // Track reading progress on window scroll
+  // Track reading progress on window scroll.
+  // Throttled to one read per animation frame and only committed when the
+  // rounded percentage actually changes — otherwise every scroll event
+  // re-renders the whole note body (dangerouslySetInnerHTML) and the page
+  // visibly flickers while scrolling.
   useEffect(() => {
-    const update = () => {
-      const scrolled = window.scrollY;
+    let frame = 0;
+    const measure = () => {
+      frame = 0;
       const total = document.documentElement.scrollHeight - window.innerHeight;
-      setReadPct(total > 0 ? Math.min(100, Math.round((scrolled / total) * 100)) : 0);
+      const next = total > 0 ? Math.min(100, Math.round((window.scrollY / total) * 100)) : 0;
+      setReadPct(prev => (prev === next ? prev : next));
     };
-    window.addEventListener('scroll', update, { passive: true });
-    update();
-    return () => window.removeEventListener('scroll', update);
+    const onScroll = () => {
+      if (frame === 0) frame = window.requestAnimationFrame(measure);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    measure();
+    return () => {
+      if (frame !== 0) window.cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+    };
   }, [selectedNote]);
 
   const loadNotes = useCallback(async () => {
@@ -368,6 +382,45 @@ export function UserNotesClient() {
             </button>
           )}
 
+          {/* Sticky reading header. Deliberately a sibling of the grid rather
+              than a child of the note card — the card is `overflow-hidden` (to
+              clip the watermark to its rounded corners) and any clipping
+              ancestor silently kills `position: sticky`. */}
+          {selectedNote && (
+            <div className="sticky top-0 z-40 mb-4 overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm">
+              {/* Nav row: Library | Index | Note title */}
+              <div className="flex items-center gap-1 border-b border-zinc-100 px-4 py-2.5 sm:px-5">
+                <Link
+                  href="/user"
+                  className="flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-800"
+                >
+                  ← Library
+                </Link>
+                <span className="text-zinc-200">|</span>
+                <button
+                  type="button"
+                  onClick={() => setShowIndex(v => !v)}
+                  className={`flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${showIndex ? 'bg-emerald-50 text-emerald-700' : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800'}`}
+                >
+                  <List className="h-3.5 w-3.5" />
+                  Index
+                </button>
+                <span className="text-zinc-200">|</span>
+                <p className="min-w-0 flex-1 truncate text-xs font-semibold text-zinc-700">{selectedNote.title}</p>
+              </div>
+              {/* Progress bar row */}
+              <div className="flex items-center gap-3 px-4 py-2 sm:px-5">
+                <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-100">
+                  <div
+                    className="absolute inset-y-0 left-0 w-full origin-left rounded-full bg-emerald-600"
+                    style={{ transform: `scaleX(${readPct / 100})` }}
+                  />
+                </div>
+                <span className="shrink-0 text-xs font-semibold tabular-nums text-zinc-400">{readPct}% read</span>
+              </div>
+            </div>
+          )}
+
           <div className={`grid min-w-0 gap-4 ${selectedNote && !showIndex ? 'lg:grid-cols-1' : 'lg:grid-cols-[260px_minmax(0,1fr)]'}`}>
             {/* Sidebar — hidden on mobile when a note is selected; toggled by Index button */}
             <div className={`${selectedNote ? (showIndex ? 'block' : 'hidden lg:hidden') : 'block'} min-w-0 space-y-1.5`}>
@@ -422,40 +475,6 @@ export function UserNotesClient() {
                     Protected content paused after inactivity or tab switch. Click to resume viewing.
                   </button>
                 )}
-
-                {/* Preparoo-style sticky reading header */}
-                <div className="sticky top-0 z-30 -mx-5 -mt-5 sm:-mx-6 sm:-mt-6 mb-6">
-                  {/* Nav row: Library | Index | Note title */}
-                  <div className="flex items-center gap-1 border-b border-zinc-100 bg-white px-4 py-2.5 sm:px-5">
-                    <Link
-                      href="/user"
-                      className="flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800 transition"
-                    >
-                      ← Library
-                    </Link>
-                    <span className="text-zinc-200">|</span>
-                    <button
-                      type="button"
-                      onClick={() => setShowIndex(v => !v)}
-                      className={`flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${showIndex ? 'bg-emerald-50 text-emerald-700' : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800'}`}
-                    >
-                      <List className="h-3.5 w-3.5" />
-                      Index
-                    </button>
-                    <span className="text-zinc-200">|</span>
-                    <p className="min-w-0 flex-1 truncate text-xs font-semibold text-zinc-700">{selectedNote.title}</p>
-                  </div>
-                  {/* Progress bar row */}
-                  <div className="flex items-center gap-3 bg-white px-4 py-2 sm:px-5">
-                    <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-100">
-                      <div
-                        className="absolute inset-y-0 left-0 rounded-full bg-emerald-600 transition-[width] duration-150 ease-linear"
-                        style={{ width: `${readPct}%` }}
-                      />
-                    </div>
-                    <span className="shrink-0 text-xs font-semibold tabular-nums text-zinc-400">{readPct}% read</span>
-                  </div>
-                </div>
 
                 <div className="flex min-w-0 items-start justify-between">
                   <div className="prose prose-zinc protected-content relative z-20 min-w-0 w-full max-w-none flex-1">
