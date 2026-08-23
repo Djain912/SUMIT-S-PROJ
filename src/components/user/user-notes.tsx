@@ -42,6 +42,11 @@ function createWatermarkTileStyle(text: string, fontSize: number): CSSProperties
     backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(svg)}")`,
     backgroundRepeat: 'repeat',
     backgroundSize: '420px 260px',
+    // The tile covers the full height of a long note. Without its own
+    // compositing layer the browser re-rasterises the whole tiled background
+    // on every scroll frame, which reads as flickering over the text.
+    transform: 'translateZ(0)',
+    willChange: 'transform',
   };
 }
 
@@ -88,6 +93,10 @@ export function UserNotesClient() {
   const [protectionNotice, setProtectionNotice] = useState<string | null>(null);
   const [sessionEmail, setSessionEmail] = useState('learner');
   const [isObfuscated, setIsObfuscated] = useState(false);
+  // Mirrors isObfuscated so the activity listeners can read it without being
+  // a dependency — otherwise every toggle tore down and re-bound all of them.
+  const isObfuscatedRef = useRef(false);
+  useEffect(() => { isObfuscatedRef.current = isObfuscated; }, [isObfuscated]);
   const [readPct, setReadPct] = useState(0);
   const [showIndex, setShowIndex] = useState(false);
 
@@ -203,31 +212,37 @@ export function UserNotesClient() {
       }
     };
 
-    let idleTimer: number;
+    // Scrolling and wheel events count as activity. Reading a long note by
+    // trackpad never moves the cursor, so without these the idle timer fired
+    // mid-read and slammed the obfuscation overlay over the page — then the
+    // next tiny mouse jiggle cleared it. That flip-flop is what looked like
+    // the content flashing while scrolling.
+    let idleTimer = 0;
     const bumpActivity = () => {
-      if (isObfuscated) {
-        setIsObfuscated(false);
-      }
+      // Read through a ref so this effect never re-subscribes on state change.
+      if (isObfuscatedRef.current) setIsObfuscated(false);
       window.clearTimeout(idleTimer);
       idleTimer = window.setTimeout(() => setIsObfuscated(true), 90_000);
     };
 
+    const activityEvents = ['mousemove', 'keydown', 'touchstart', 'scroll', 'wheel', 'pointerdown'] as const;
+
     window.addEventListener('keydown', onKeyDown);
     document.addEventListener('visibilitychange', onVisibilityChange);
-    window.addEventListener('mousemove', bumpActivity);
-    window.addEventListener('keydown', bumpActivity);
-    window.addEventListener('touchstart', bumpActivity);
+    for (const evt of activityEvents) {
+      window.addEventListener(evt, bumpActivity, { passive: true });
+    }
     bumpActivity();
 
     return () => {
       window.clearTimeout(idleTimer);
       window.removeEventListener('keydown', onKeyDown);
       document.removeEventListener('visibilitychange', onVisibilityChange);
-      window.removeEventListener('mousemove', bumpActivity);
-      window.removeEventListener('keydown', bumpActivity);
-      window.removeEventListener('touchstart', bumpActivity);
+      for (const evt of activityEvents) {
+        window.removeEventListener(evt, bumpActivity);
+      }
     };
-  }, [isObfuscated]);
+  }, []);
 
   const watermark = useMemo(() => sanitizeWatermarkConfig(selectedNote?.watermarkConfig), [selectedNote?.watermarkConfig]);
   const selectedNoteHtml = useMemo(() => {
