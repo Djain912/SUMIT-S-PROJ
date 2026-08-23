@@ -139,18 +139,31 @@ export default async function BlogPostPage({ params }: Props) {
           {post.title}
         </h1>
 
-        {/* Meta */}
-        <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-zinc-400 border-b border-zinc-100 pb-6">
-          {post.publishedAt && (
+        {/* Author + Meta */}
+        <div className="mt-6 flex flex-wrap items-center gap-4 border-b border-zinc-100 pb-6">
+          {/* Author */}
+          <div className="flex items-center gap-3 mr-auto">
+            <div className="h-9 w-9 rounded-full bg-emerald-700 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+              SJ
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-zinc-900">Sumit Jain, CMT®</p>
+              <p className="text-xs text-zinc-400">CMT Charterholder · Co-founder, Chartix.in</p>
+            </div>
+          </div>
+          {/* Date + read time */}
+          <div className="flex items-center gap-4 text-sm text-zinc-400">
+            {post.publishedAt && (
+              <span className="flex items-center gap-1.5">
+                <Calendar className="h-4 w-4" />
+                {new Date(post.publishedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+              </span>
+            )}
             <span className="flex items-center gap-1.5">
-              <Calendar className="h-4 w-4" />
-              {new Date(post.publishedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+              <Clock className="h-4 w-4" />
+              {post.readMinutes} min read
             </span>
-          )}
-          <span className="flex items-center gap-1.5">
-            <Clock className="h-4 w-4" />
-            {post.readMinutes} min read
-          </span>
+          </div>
         </div>
 
         {/* Content — sanitized client-side to avoid jsdom in Vercel serverless */}
