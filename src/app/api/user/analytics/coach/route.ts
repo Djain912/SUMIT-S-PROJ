@@ -93,14 +93,14 @@ export async function GET() {
     // 100% accuracy on a handful of questions is NOT mastery — the coach needs
     // this to avoid over-praising a student who has barely started.
     const [chaptersTotal, subtopicsTotal] = await Promise.all([
-      prisma.chapter.count({ where: { level: 'LEVEL_1', isPublished: true, isDeleted: false } }),
-      prisma.subtopic.count({ where: { isPublished: true, isDeleted: false, chapter: { level: 'LEVEL_1', isPublished: true, isDeleted: false } } }),
+      prisma.chapter.count({ where: { isPublished: true, isDeleted: false } }),
+      prisma.subtopic.count({ where: { isPublished: true, isDeleted: false, chapter: { isPublished: true, isDeleted: false } } }),
     ]);
     const subtopicsAttempted = data.chapterAnalysis.reduce((n, ch) => n + ch.subtopics.length, 0);
     const lowCoverage = s.totalQuestions < LOW_COVERAGE_QUESTIONS || subtopicsAttempted < Math.max(3, subtopicsTotal * 0.5);
 
     const snapshot = `Overall: ${s.overallAccuracy}% accuracy, ${s.totalAttempts} quizzes, ${s.totalQuestions} questions answered, avg score ${s.averageScore}%. Current streak ${s.currentStreak} days (best ${s.longestStreak}).
-COVERAGE: attempted ${subtopicsAttempted} of ${subtopicsTotal} Level I topics across ${data.chapterAnalysis.length} of ${chaptersTotal} chapters. ${lowCoverage ? 'This is LOW coverage — the student has only sampled a small slice of the curriculum, so accuracy is NOT yet evidence of mastery.' : 'Coverage is reasonably broad.'}
+COVERAGE: attempted ${subtopicsAttempted} of ${subtopicsTotal} published topics across ${data.chapterAnalysis.length} of ${chaptersTotal} chapters. ${lowCoverage ? 'This is LOW coverage — the student has only sampled a small slice of the curriculum, so accuracy is NOT yet evidence of mastery.' : 'Coverage is reasonably broad.'}
 By level: ${levelLines || 'n/a'}.
 WEAK topics (<50%): ${weakLines}.
 STRONG topics (>=70%): ${strongLines}.`;

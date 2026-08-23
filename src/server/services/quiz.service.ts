@@ -118,8 +118,27 @@ async function pickFullTestQuestionIds(scope: ChapterScope, level: string): Prom
     return n;
   };
 
-  for (const d of Object.keys(cfg.weights) as CmtDomain[]) {
-    const domainTarget = Math.round(cfg.weights[d] * cfg.total);
+  // "Application of Technical Analysis" has no chapters of its own — it is
+  // examined across the whole syllabus. Its share is therefore redistributed
+  // across the domains that DO have chapters, in proportion to their weights.
+  // Without this the APP_TA allocation (17 of 170 questions at Level 2) drew a
+  // blank, and those 17 slots were quietly filled by the end-of-function
+  // backfill in whatever proportion the question pool happened to have — so
+  // the paper's composition depended on pool size rather than the blueprint.
+  const effectiveWeights = (() => {
+    const w = { ...cfg.weights };
+    const spare = w.APP_TA;
+    if (spare <= 0) return w;
+    w.APP_TA = 0;
+    const anchored = (Object.keys(w) as CmtDomain[]).filter(d => w[d] > 0);
+    const anchoredTotal = anchored.reduce((sum, d) => sum + w[d], 0);
+    if (anchoredTotal <= 0) return cfg.weights;
+    for (const d of anchored) w[d] += spare * (w[d] / anchoredTotal);
+    return w;
+  })();
+
+  for (const d of Object.keys(effectiveWeights) as CmtDomain[]) {
+    const domainTarget = Math.round(effectiveWeights[d] * cfg.total);
     if (domainTarget === 0) continue;
     const easyT = Math.round(DIFFICULTY_WEIGHTS.EASY * domainTarget);
     const hardT = Math.round(DIFFICULTY_WEIGHTS.HARD * domainTarget);

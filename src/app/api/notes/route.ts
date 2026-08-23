@@ -16,8 +16,17 @@ export async function GET(request: Request) {
     const noteId = searchParams.get('note');
     // Which level's first chapter to fall back to when nothing is selected —
     // e.g. /user/notes?welcome=1&level=LEVEL_2 after starting a Level 2 trial.
-    // Defaults to LEVEL_1 to preserve behavior for existing links that omit it.
-    const fallbackLevel = (searchParams.get('level') as 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3' | null) ?? 'LEVEL_1';
+    // When the link omits it we must NOT assume LEVEL_1: the first-visit
+    // redirect in /user/page.tsx is a bare `/user/notes?welcome=1`, so a
+    // Level-2-only trial user would be asked for LEVEL_1 chapters intersected
+    // with their LEVEL_2 access, match nothing, and land on an empty page on
+    // their very first visit. With no level given we search every level and
+    // let the access filter and ordering below pick the first chapter they
+    // can actually open.
+    const requestedLevel = searchParams.get('level');
+    const fallbackLevel = requestedLevel === 'LEVEL_1' || requestedLevel === 'LEVEL_2' || requestedLevel === 'LEVEL_3'
+      ? requestedLevel
+      : null;
 
     // When a specific note ID is given, resolve its subtopicId first
     if (noteId && !subtopicId && !chapterId) {
@@ -45,7 +54,7 @@ export async function GET(request: Request) {
           isDeleted: false,
           subtopic: {
             chapter: {
-              level: fallbackLevel,
+              ...(fallbackLevel ? { level: fallbackLevel } : {}),
               isPublished: true,
               isDeleted: false,
               ...(access.full ? {} : { id: { in: [...access.chapterIds] } }),
@@ -53,6 +62,9 @@ export async function GET(request: Request) {
           },
         },
         orderBy: [
+          // Level first, so an unscoped fallback is deterministic rather than
+          // dependent on chapters across levels sharing an orderIndex.
+          { subtopic: { chapter: { level: 'asc' } } },
           { subtopic: { chapter: { orderIndex: 'asc' } } },
           { subtopic: { orderIndex: 'asc' } },
           { orderIndex: 'asc' },
