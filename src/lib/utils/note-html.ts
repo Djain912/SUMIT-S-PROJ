@@ -110,13 +110,52 @@ export function normalizeNoteHtml(html: string): string {
     const el = img as HTMLImageElement;
     const src = el.getAttribute('src') ?? '';
     el.setAttribute('src', enhanceCloudinaryUrl(src));
+
+    // Read the authored dimensions BEFORE overwriting the inline styles below,
+    // otherwise `height: auto` wipes out the very value we need.
+    const ratio = readAspectRatio(el);
+
     // Crisp rendering + responsive sizing
     el.style.maxWidth = '100%';
     el.style.height = 'auto';
-    el.setAttribute('loading', 'lazy');
+    el.setAttribute('decoding', 'async');
+
+    // Reserve the image's box BEFORE it loads. `.prose img` forces
+    // `height: auto`, so an image with no known dimensions occupies zero
+    // height until it decodes and then snaps to full size, shoving the rest
+    // of the note down. Lazy loading makes that happen as the image scrolls
+    // into view, so a long note visibly jolts at every figure.
+    if (ratio) {
+      // Space is reserved from the first paint, so lazy loading is safe.
+      el.style.aspectRatio = ratio;
+      el.setAttribute('loading', 'lazy');
+    } else {
+      // Unknown size: nothing can reserve the box, so never let it arrive
+      // mid-scroll. Loading eagerly keeps the reflow at initial render.
+      el.removeAttribute('loading');
+    }
   });
 
   return doc.body.innerHTML;
+}
+
+/**
+ * Reads an image's intrinsic aspect ratio from its width/height attributes or
+ * inline styles, so its box can be reserved before the file loads. Returns
+ * null when the authored HTML carries no usable dimensions.
+ */
+function readAspectRatio(el: HTMLImageElement): string | null {
+  const parse = (raw: string | null | undefined): number | null => {
+    if (!raw) return null;
+    const n = parseFloat(String(raw).replace(/px$/i, '').trim());
+    return Number.isFinite(n) && n > 0 ? n : null;
+  };
+
+  const width = parse(el.getAttribute('width')) ?? parse(el.style.width);
+  const height = parse(el.getAttribute('height')) ?? parse(el.style.height);
+  if (!width || !height) return null;
+
+  return `${width} / ${height}`;
 }
 
 /**
