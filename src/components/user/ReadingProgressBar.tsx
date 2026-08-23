@@ -16,10 +16,8 @@ export function ReadingProgressBar() {
     return () => window.removeEventListener('scroll', update);
   }, []);
 
-  if (pct === 0) return null;
-
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 h-1 bg-transparent">
+    <div className="fixed top-0 left-0 right-0 z-50 h-1 bg-zinc-100">
       <div
         className="h-full bg-[#1e3a5f] transition-[width] duration-75 ease-linear rounded-r-full"
         style={{ width: `${pct}%` }}
