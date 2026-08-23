@@ -159,11 +159,22 @@ function readAspectRatio(el: HTMLImageElement): string | null {
 }
 
 /**
- * Inserts quality/format/enhancement transformations into a Cloudinary URL.
- *   q_auto:best  → highest automatic quality (minimal compression)
- *   f_auto       → best modern format (AVIF/WebP) for the browser
- *   dpr_auto     → serve 2x/3x pixels on retina screens (much sharper)
- *   e_improve    → auto colour/contrast enhancement
+ * Inserts sizing/quality/format transformations into a Cloudinary URL.
+ *   w_1600,c_limit → never send more than 1600px wide, and never upscale.
+ *                    The reading column is ~760px, so this is still >2x for
+ *                    retina. Source charts are often 3400px+, and shipping
+ *                    those untouched was the bulk of a note's weight.
+ *   q_auto         → automatic quality
+ *   f_auto         → best modern format (AVIF/WebP) for the browser
+ *
+ * Measured on a real 3416x1990 note chart: 397KB raw / 143KB under the old
+ * `q_auto:best,f_auto,dpr_auto,e_improve` / 52KB here.
+ *
+ * `dpr_auto` was dropped: it only does anything when the browser sends the
+ * DPR client hint, which we never opt into via Accept-CH, so it was a no-op.
+ * `e_improve` was dropped too — auto contrast/colour correction on technical
+ * analysis charts alters the very colours the chart is teaching.
+ *
  * Leaves non-Cloudinary URLs and already-transformed URLs untouched.
  */
 function enhanceCloudinaryUrl(src: string): string {
@@ -173,8 +184,12 @@ function enhanceCloudinaryUrl(src: string): string {
   if (idx === -1) return src;
 
   const after = src.slice(idx + marker.length);
-  // If our transformation is already present, don't double-apply
-  if (after.startsWith('q_auto')) return src;
-  const params = 'q_auto:best,f_auto,dpr_auto,e_improve';
+  // Don't double-apply. Anything before the version segment (v1234…) or the
+  // public id is an existing transformation, whether ours or hand-authored.
+  const firstSegment = after.split('/')[0];
+  const isExistingTransform = /^[a-z]+_/.test(firstSegment) && !/^v\d+$/.test(firstSegment);
+  if (isExistingTransform) return src;
+
+  const params = 'w_1600,c_limit,q_auto,f_auto';
   return `${src.slice(0, idx + marker.length)}${params}/${after}`;
 }
