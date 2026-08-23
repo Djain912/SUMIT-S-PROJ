@@ -451,8 +451,7 @@ export function QuizPlayer({ levelStates = DEFAULT_LEVEL_STATES }: { levelStates
               ))}
             </div>
 
-            {mode === 'FULL_TEST' && (
-              {(() => {
+            {mode === 'FULL_TEST' && (() => {
                 const cfg = FULL_TEST_CONFIG[level] ?? FULL_TEST_CONFIG['LEVEL_1'];
                 return (
                   <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5">
@@ -480,7 +479,6 @@ export function QuizPlayer({ levelStates = DEFAULT_LEVEL_STATES }: { levelStates
                   </div>
                 );
               })()}
-            )}
 
             {(mode === 'CHAPTER' || mode === 'SUBTOPIC' || mode === 'CUSTOM') && (
               <div>
