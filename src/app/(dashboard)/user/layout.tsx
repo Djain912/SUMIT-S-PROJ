@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { Suspense, type ReactNode } from 'react';
 import { redirect } from 'next/navigation';
 import { requireAuthenticatedUser } from '@/server/policies/auth';
 import { hasAnyAccess, hasUnusedTrialLevel } from '@/server/policies/access';
@@ -21,7 +21,7 @@ export default async function UserLayout({ children }: { children: ReactNode }) 
   return (
     <>
       {children}
-      <ChatWidgetGate />
+      <Suspense fallback={null}><ChatWidgetGate /></Suspense>
       <ConversionPrompt />
     </>
   );
