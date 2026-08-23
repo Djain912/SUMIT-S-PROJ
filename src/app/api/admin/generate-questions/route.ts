@@ -181,7 +181,16 @@ DIFFICULTY DISTRIBUTION FOR LEVEL 2 — use EXACTLY these strings:
 • "MEDIUM" (45%): Requires connecting two or more concepts, choosing between two analytical conclusions that are both partially correct, or interpreting a multi-signal scenario.
 
 • "HARD" (35%): Complex multi-step reasoning, conflicting signals pointing in opposite directions, nuanced edge cases, or situations where the obvious answer is wrong. A well-prepared candidate must think carefully — not just recall.
-  ✅ Good HARD: "A daily chart shows a symmetrical triangle breaking upward with a 40% expansion in volume. However, the weekly RSI is at 78 and the 20-week Bollinger Band upper band has been touched for three consecutive weeks. Which analytical framework should take precedence and why?"` : `CMT LEVEL 1 — EXAM STYLE REQUIREMENTS
+  ✅ Good HARD: "A daily chart shows a symmetrical triangle breaking upward with a 40% expansion in volume. However, the weekly RSI is at 78 and the 20-week Bollinger Band upper band has been touched for three consecutive weeks. Which analytical framework should take precedence and why?"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+MANDATORY RULES FOR LEVEL 2 — these override everything else:
+1. SOURCE FIDELITY — Every fact, rule, formula, and market example must come directly from the provided study notes or uploaded PDF. Do NOT introduce outside knowledge, interpretations, or examples not explicitly present in the source material. If the source material does not cover a sub-concept, skip it — do not invent content.
+2. NO SIMPLE RECALL — Every question must require application, analysis, interpretation, or scenario-based problem solving. A student who only memorised definitions must find these questions difficult.
+3. COMBINE CONCEPTS — Where the material supports it, test how two related concepts interact (e.g. volume confirming a breakout, indicator divergence during a pattern, cycle phase affecting an oscillator reading).
+4. NUMERICAL / PRACTICAL SCENARIOS — Include numerical values, real instrument names, or chart conditions whenever the source material provides them. Abstract questions are acceptable only when the topic is inherently conceptual.
+5. REALISTIC WRONG OPTIONS — Every incorrect option must represent a genuine, common analytical mistake or misconception — not obvious nonsense. A careless student should be tempted by at least one wrong option.
+6. NO OBVIOUS OR AMBIGUOUS QUESTIONS — Reject any question where the correct answer is deducible without having studied the topic, or where two options could both be argued as correct. Every question must have one unambiguously correct answer.` : `CMT LEVEL 1 — EXAM STYLE REQUIREMENTS
 Level 1 tests foundational knowledge of technical analysis concepts, tools, and terminology.
 
 QUESTION TYPE DISTRIBUTION — for every 10 questions generate:
