@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Flag, AlertTriangle } from 'lucide-react';
 import { sanitizeWatermarkConfig } from '@/lib/utils/watermark';
 import { normalizeNoteHtml } from '@/lib/utils/note-html';
+import { ReadingProgressBar } from '@/components/user/ReadingProgressBar';
 
 type Note = {
   id: string;
@@ -290,6 +291,7 @@ export function UserNotesClient() {
 
   return (
     <>
+      <ReadingProgressBar />
       {/* Shown ONLY when the page is sent to a printer or "Save as PDF" */}
       <div className="note-print-guard">
         <div>
