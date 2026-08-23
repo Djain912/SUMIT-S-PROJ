@@ -21,7 +21,7 @@ export default async function UserLayout({ children }: { children: ReactNode }) 
   return (
     <>
       {children}
-      <ChatWidgetGate level="LEVEL_1" />
+      <ChatWidgetGate />
       <ConversionPrompt />
     </>
   );
