@@ -39,15 +39,32 @@ type QuizAttempt = {
   selectionJson?: { timeLimitMinutes?: number; mode?: string } | null;
 };
 
-// Official CMT Level I exam format — shown on the Full Length Test setup screen.
-const FULL_TEST_QUESTIONS = 132;
-const FULL_TEST_MINUTES = 120;
-const CMT_DOMAINS = [
-  { label: 'Theory & History', pct: 38 },
-  { label: 'Classical Techniques', pct: 33 },
-  { label: 'Advanced Techniques', pct: 26 },
-  { label: 'Ethics', pct: 3 },
-];
+// Official CMT exam format per level — shown on the Full Length Test setup screen.
+const FULL_TEST_CONFIG: Record<string, { questions: number; minutes: number; label: string; domains: { label: string; pct: number }[] }> = {
+  LEVEL_1: {
+    questions: 132,
+    minutes: 120,
+    label: 'CMT Level I',
+    domains: [
+      { label: 'Theory & History', pct: 38 },
+      { label: 'Classical Techniques', pct: 33 },
+      { label: 'Advanced Techniques', pct: 26 },
+      { label: 'Ethics', pct: 3 },
+    ],
+  },
+  LEVEL_2: {
+    questions: 170,
+    minutes: 240,
+    label: 'CMT Level II',
+    domains: [
+      { label: 'Classical Techniques', pct: 40 },
+      { label: 'Advanced Techniques', pct: 40 },
+      { label: 'Application of TA', pct: 10 },
+      { label: 'Theory & History', pct: 7 },
+      { label: 'Ethics', pct: 3 },
+    ],
+  },
+};
 
 function formatClock(totalSeconds: number): string {
   const s = Math.max(0, totalSeconds);
@@ -59,9 +76,21 @@ function formatClock(totalSeconds: number): string {
 }
 
 type ApiResponse<T> = { success: boolean; data?: T; error?: { message?: string } };
+type LevelStatus = 'unavailable' | 'open' | 'trial-available' | 'expired';
+export type LevelStateMap = Record<Level, { status: LevelStatus; daysRemaining: number }>;
 
 const levelOptions: Level[] = ['LEVEL_1', 'LEVEL_2', 'LEVEL_3'];
-const lockedLevels: Level[] = ['LEVEL_2', 'LEVEL_3'];
+
+// Fallback used only when a caller doesn't pass real levelStates.
+const DEFAULT_LEVEL_STATES: LevelStateMap = {
+  LEVEL_1: { status: 'open', daysRemaining: 0 },
+  LEVEL_2: { status: 'unavailable', daysRemaining: 0 },
+  LEVEL_3: { status: 'unavailable', daysRemaining: 0 },
+};
+
+function firstAccessibleLevel(states: LevelStateMap): Level {
+  return levelOptions.find(l => states[l]?.status !== 'unavailable') ?? 'LEVEL_1';
+}
 
 function tiptapToHtml(node: unknown): string {
   if (!node || typeof node !== 'object') return '';
@@ -129,8 +158,8 @@ async function apiJson<T>(url: string, options?: RequestInit): Promise<T> {
   return payload.data as T;
 }
 
-export function QuizPlayer() {
-  const [level, setLevel] = useState<Level>('LEVEL_1');
+export function QuizPlayer({ levelStates = DEFAULT_LEVEL_STATES }: { levelStates?: LevelStateMap }) {
+  const [level, setLevel] = useState<Level>(() => firstAccessibleLevel(levelStates));
   const [mode, setMode] = useState<QuizMode>('SUBTOPIC');
   const [questionCount, setQuestionCount] = useState(10);
   const [chapters, setChapters] = useState<Chapter[]>([]);
@@ -161,10 +190,15 @@ export function QuizPlayer() {
     const urlMode = params.get('mode');
     const urlChapter = params.get('chapter');
     const urlSubtopic = params.get('subtopic');
-    if (urlLevel && (['LEVEL_1'] as string[]).includes(urlLevel)) setLevel(urlLevel as Level);
+    if (urlLevel && levelOptions.includes(urlLevel as Level) && levelStates[urlLevel as Level]?.status !== 'unavailable') {
+      setLevel(urlLevel as Level);
+    } else {
+      setLevel(firstAccessibleLevel(levelStates));
+    }
     if (urlMode && (['SUBTOPIC', 'CHAPTER', 'CUSTOM', 'FULL_TEST'] as string[]).includes(urlMode)) setMode(urlMode as QuizMode);
     if (urlChapter) setSelectedChapterId(urlChapter);
     if (urlSubtopic) setSelectedSubtopicId(urlSubtopic);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once on mount to read the initial URL; levelStates is a stable server-computed prop, not something that should re-trigger this.
   }, []);
 
   const currentItem = useMemo(() => attempt?.items[currentIndex] ?? null, [attempt, currentIndex]);
@@ -387,8 +421,14 @@ export function QuizPlayer() {
             <div className="grid gap-4 sm:grid-cols-3">
               {[
                 { label: 'Level', field: (
-                  <select value={level} onChange={e => { const v = e.target.value as Level; if (!lockedLevels.includes(v)) setLevel(v); }} className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-300">
-                    {levelOptions.map(l => <option key={l} value={l} disabled={lockedLevels.includes(l)}>{l.replace('_', ' ')}{lockedLevels.includes(l) ? ' — Coming Soon' : ''}</option>)}
+                  <select
+                    value={level}
+                    onChange={e => setLevel(e.target.value as Level)}
+                    className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-300"
+                  >
+                    {levelOptions.filter(l => levelStates[l]?.status !== 'unavailable').map(l => (
+                      <option key={l} value={l}>{l.replace('_', ' ')}</option>
+                    ))}
                   </select>
                 )},
                 { label: 'Mode', field: (
@@ -412,29 +452,34 @@ export function QuizPlayer() {
             </div>
 
             {mode === 'FULL_TEST' && (
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-emerald-700" />
-                  <p className="text-sm font-semibold text-emerald-900">Official CMT Level I exam format</p>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm text-zinc-700">
-                  <span><strong>{FULL_TEST_QUESTIONS}</strong> questions</span>
-                  <span><strong>{Math.round(FULL_TEST_MINUTES / 60)} hours</strong> ({FULL_TEST_MINUTES} min)</span>
-                  <span>Auto-submits when time runs out</span>
-                </div>
-                <p className="mt-3 mb-1.5 text-xs font-semibold uppercase tracking-wide text-zinc-500">Questions weighted by knowledge domain</p>
-                <div className="space-y-1.5">
-                  {CMT_DOMAINS.map(d => (
-                    <div key={d.label} className="flex items-center gap-2">
-                      <span className="w-40 shrink-0 text-xs text-zinc-600">{d.label}</span>
-                      <div className="h-2 flex-1 overflow-hidden rounded-full bg-white">
-                        <div className="h-full rounded-full bg-emerald-500" style={{ width: `${d.pct}%` }} />
-                      </div>
-                      <span className="w-9 shrink-0 text-right text-xs font-semibold tabular-nums text-zinc-700">{d.pct}%</span>
+              {(() => {
+                const cfg = FULL_TEST_CONFIG[level] ?? FULL_TEST_CONFIG['LEVEL_1'];
+                return (
+                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-emerald-700" />
+                      <p className="text-sm font-semibold text-emerald-900">Official {cfg.label} exam format</p>
                     </div>
-                  ))}
-                </div>
-              </div>
+                    <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm text-zinc-700">
+                      <span><strong>{cfg.questions}</strong> questions</span>
+                      <span><strong>{Math.round(cfg.minutes / 60)} hours</strong> ({cfg.minutes} min)</span>
+                      <span>Auto-submits when time runs out</span>
+                    </div>
+                    <p className="mt-3 mb-1.5 text-xs font-semibold uppercase tracking-wide text-zinc-500">Questions weighted by knowledge domain</p>
+                    <div className="space-y-1.5">
+                      {cfg.domains.map(d => (
+                        <div key={d.label} className="flex items-center gap-2">
+                          <span className="w-40 shrink-0 text-xs text-zinc-600">{d.label}</span>
+                          <div className="h-2 flex-1 overflow-hidden rounded-full bg-white">
+                            <div className="h-full rounded-full bg-emerald-500" style={{ width: `${d.pct}%` }} />
+                          </div>
+                          <span className="w-9 shrink-0 text-right text-xs font-semibold tabular-nums text-zinc-700">{d.pct}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             )}
 
             {(mode === 'CHAPTER' || mode === 'SUBTOPIC' || mode === 'CUSTOM') && (

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo, type CSSProperties } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef, type CSSProperties } from 'react';
 import Link from 'next/link';
-import { Flag, AlertTriangle } from 'lucide-react';
+import { Flag, AlertTriangle, List } from 'lucide-react';
 import { sanitizeWatermarkConfig } from '@/lib/utils/watermark';
 import { normalizeNoteHtml } from '@/lib/utils/note-html';
 
@@ -88,6 +88,20 @@ export function UserNotesClient() {
   const [protectionNotice, setProtectionNotice] = useState<string | null>(null);
   const [sessionEmail, setSessionEmail] = useState('learner');
   const [isObfuscated, setIsObfuscated] = useState(false);
+  const [readPct, setReadPct] = useState(0);
+  const [showIndex, setShowIndex] = useState(false);
+
+  // Track reading progress on window scroll
+  useEffect(() => {
+    const update = () => {
+      const scrolled = window.scrollY;
+      const total = document.documentElement.scrollHeight - window.innerHeight;
+      setReadPct(total > 0 ? Math.min(100, Math.round((scrolled / total) * 100)) : 0);
+    };
+    window.addEventListener('scroll', update, { passive: true });
+    update();
+    return () => window.removeEventListener('scroll', update);
+  }, [selectedNote]);
 
   const loadNotes = useCallback(async () => {
     setIsLoading(true);
@@ -277,6 +291,17 @@ export function UserNotesClient() {
     return () => window.removeEventListener('keydown', blockPrint);
   }, []);
 
+  // Fire-and-forget: powers the onboarding checklist and trial-drip emails.
+  // Never blocks or errors the reader if tracking fails.
+  useEffect(() => {
+    if (!selectedNote?.subtopicId) return;
+    apiJson('/api/user/activity/note-view', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subtopicId: selectedNote.subtopicId }),
+    }).catch(() => {});
+  }, [selectedNote?.subtopicId]);
+
   return (
     <>
       {/* Shown ONLY when the page is sent to a printer or "Save as PDF" */}
@@ -343,9 +368,9 @@ export function UserNotesClient() {
             </button>
           )}
 
-          <div className="grid min-w-0 gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
-            {/* Sidebar — hidden on mobile when a note is selected */}
-            <div className={`${selectedNote ? 'hidden lg:block' : 'block'} min-w-0 space-y-1.5`}>
+          <div className={`grid min-w-0 gap-4 ${selectedNote && !showIndex ? 'lg:grid-cols-1' : 'lg:grid-cols-[260px_minmax(0,1fr)]'}`}>
+            {/* Sidebar — hidden on mobile when a note is selected; toggled by Index button */}
+            <div className={`${selectedNote ? (showIndex ? 'block' : 'hidden lg:hidden') : 'block'} min-w-0 space-y-1.5`}>
               <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-zinc-400">{notes.length} note{notes.length !== 1 ? 's' : ''}</p>
               {notes.map((note) => (
                 <button key={note.id} onClick={() => setSelectedNote(note)}
@@ -398,13 +423,38 @@ export function UserNotesClient() {
                   </button>
                 )}
 
-                <div className="relative z-20 mb-3 flex items-center justify-between gap-2 border-b border-zinc-100 pb-3">
-                  <Link href="/user" className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700 hover:text-emerald-900">
-                    ← Dashboard
-                  </Link>
-                  {notes.length > 1 && currentIndex >= 0 && (
-                    <span className="text-xs font-medium text-zinc-400">Note {currentIndex + 1} of {notes.length}</span>
-                  )}
+                {/* Preparoo-style sticky reading header */}
+                <div className="sticky top-0 z-30 -mx-5 -mt-5 sm:-mx-6 sm:-mt-6 mb-6">
+                  {/* Nav row: Library | Index | Note title */}
+                  <div className="flex items-center gap-1 border-b border-zinc-100 bg-white px-4 py-2.5 sm:px-5">
+                    <Link
+                      href="/user"
+                      className="flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800 transition"
+                    >
+                      ← Library
+                    </Link>
+                    <span className="text-zinc-200">|</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowIndex(v => !v)}
+                      className={`flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${showIndex ? 'bg-emerald-50 text-emerald-700' : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800'}`}
+                    >
+                      <List className="h-3.5 w-3.5" />
+                      Index
+                    </button>
+                    <span className="text-zinc-200">|</span>
+                    <p className="min-w-0 flex-1 truncate text-xs font-semibold text-zinc-700">{selectedNote.title}</p>
+                  </div>
+                  {/* Progress bar row */}
+                  <div className="flex items-center gap-3 bg-white px-4 py-2 sm:px-5">
+                    <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-100">
+                      <div
+                        className="absolute inset-y-0 left-0 rounded-full bg-emerald-600 transition-[width] duration-150 ease-linear"
+                        style={{ width: `${readPct}%` }}
+                      />
+                    </div>
+                    <span className="shrink-0 text-xs font-semibold tabular-nums text-zinc-400">{readPct}% read</span>
+                  </div>
                 </div>
 
                 <div className="flex min-w-0 items-start justify-between">

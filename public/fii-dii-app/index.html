@@ -60,8 +60,7 @@
     "price": "0",
     "priceCurrency": "INR"
   },
-  "featureList": "Live FII/DII Cash Flows, F&O Derivatives Positioning, 24-Sector FPI Allocation, 45-Day Heatmaps, Daily/Weekly/Monthly Flow Matrices, AI Agent Synthesis",
-  "screenshot": "https://chartix.in/tools/fii-diiscreenshots/01_home_fii_dii_date.png",
+  "featureList": "Live FII/DII Cash Flows, F&O Derivatives Positioning, 24-Sector FPI Allocation, 45-Day Heatmaps, Daily/Weekly/Monthly Flow Matrices",
   "softwareVersion": "2.0.0"
 }
 </script>
@@ -2388,7 +2387,8 @@ html[data-theme="light"] footer > div { border-top:1px solid rgba(17,24,39,.07) 
         <button onclick="installPWA()" class="hdr-btn" id="btnInstall" style="display:none; color:var(--primary);">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Install App
         </button>
-        <button onclick="togglePushNotifications()" class="hdr-btn" id="btnNotify" title="Get push alerts when new FII/DII data arrives">
+        <!-- Get Alerts hidden: needs a service worker + push subscription backend that isn't deployed -->
+        <button onclick="togglePushNotifications()" class="hdr-btn" id="btnNotify" title="Get push alerts when new FII/DII data arrives" style="display:none;">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg> <span id="notifyLabel">Get Alerts</span>
         </button>
         <button onclick="toggleTheme()" class="hdr-btn" id="btnTheme">
@@ -2432,8 +2432,149 @@ html[data-theme="light"] footer > div { border-top:1px solid rgba(17,24,39,.07) 
     </div>
   </header>
 
-  <!-- LIVE MARKET TICKER BAR -->
-  <div class="market-ticker" id="marketTicker">
+  <!-- ── FLOW HERO: verdict · cumulative windows · one chart (Phase 1) ── -->
+  <section id="heroFlow" style="margin:14px 0 18px">
+    <style>
+      #heroFlow .hf-card{background:var(--l1);border:1px solid var(--sep);border-radius:14px;padding:18px 20px;margin-bottom:12px}
+      #heroFlow .hf-date{font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.55;margin-bottom:10px}
+      #heroFlow .hf-nums{display:flex;flex-wrap:wrap;gap:26px;align-items:baseline}
+      #heroFlow .hf-lbl{display:block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.55;margin-bottom:2px}
+      #heroFlow .hf-val{font-family:var(--font-display);font-weight:900;font-size:clamp(22px,2.4vw,32px);letter-spacing:-.02em}
+      #heroFlow .pos{color:#16a34a}#heroFlow .neg{color:#dc2626}
+      #heroFlow .hf-line{margin-top:10px;font-size:13.5px;line-height:1.55;color:var(--t1);opacity:.85}
+      #heroFlow .hf-table{width:100%;border-collapse:collapse;font-size:13px}
+      #heroFlow .hf-table th{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;opacity:.55;text-align:right;padding:7px 10px;border-bottom:1px solid var(--sep)}
+      #heroFlow .hf-table th:first-child{text-align:left}
+      #heroFlow .hf-table td{padding:8px 10px;text-align:right;font-family:var(--font-mono);font-weight:600;border-bottom:1px solid var(--sep)}
+      #heroFlow .hf-table td:first-child{text-align:left;font-family:var(--font-body);font-weight:700}
+      #heroFlow .hf-table tr:last-child td{border-bottom:none}
+      #heroFlow .hf-note{margin-top:8px;font-size:11px;opacity:.5}
+      #heroFlow .hf-chart-head{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;margin-bottom:10px}
+      #heroFlow .hf-chart-head span{font-size:12.5px;font-weight:700;opacity:.7}
+      #heroFlow .hf-rng{display:flex;gap:4px}
+      #heroFlow .hf-rng button{background:none;border:1px solid var(--sep);color:var(--t1);opacity:.65;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:8px;cursor:pointer}
+      #heroFlow .hf-rng button.on{background:var(--primary);border-color:var(--primary);color:#fff;opacity:1}
+      @media(max-width:640px){#heroFlow .hf-nums{gap:16px}}
+    </style>
+    <div class="hf-card" id="hfVerdict" style="display:none">
+      <div class="hf-date" id="hfDate"></div>
+      <div class="hf-nums">
+        <div><span class="hf-lbl">FII Net (Cash)</span><span class="hf-val" id="hfFii"></span></div>
+        <div><span class="hf-lbl">DII Net (Cash)</span><span class="hf-val" id="hfDii"></span></div>
+        <div><span class="hf-lbl">Combined</span><span class="hf-val" id="hfComb"></span></div>
+      </div>
+      <div class="hf-line" id="hfLine"></div>
+    </div>
+    <div class="hf-card" id="hfTableCard" style="display:none">
+      <div class="hf-chart-head"><span>Cumulative institutional flow (₹ Cr)</span></div>
+      <div style="overflow-x:auto"><table class="hf-table" id="hfTable"></table></div>
+      <div class="hf-note" id="hfNote"></div>
+    </div>
+    <div class="hf-card" id="hfChartCard" style="display:none">
+      <div class="hf-chart-head">
+        <span>Daily FII vs DII net · Nifty 50 overlay</span>
+        <div class="hf-rng" id="hfRng"></div>
+      </div>
+      <div style="position:relative;height:300px"><canvas id="hfChart"></canvas></div>
+    </div>
+  </section>
+
+  <script>
+  (function(){
+    var H=null, NF=null, chart=null, range=90;
+    function inr(v){var a=Math.abs(v);var s=a>=1000?(a/1000).toFixed(2).replace(/\.00$/,'')+'k':a.toFixed(0);return (v<0?'\u2212\u20B9':'+\u20B9')+s+' Cr';}
+    function cls(v){return v>=0?'pos':'neg';}
+    function fmtDate(iso){var d=new Date(iso);return d.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});}
+    function streak(rows,key,sign){var n=0;for(var i=rows.length-1;i>=0;i--){var v=rows[i][key];if((sign>0&&v>0)||(sign<0&&v<0))n++;else break;}return n;}
+    function verdictLine(rows){
+      var last=rows[rows.length-1],f=last.fiiNet,d=last.diiNet;
+      if(f<0&&d>0){var ds=streak(rows,'diiNet',1);return 'DIIs absorbed FII selling'+(ds>1?' \u2014 DII buying streak: '+ds+' straight sessions.':'.');}
+      if(f>0&&d>0){return 'Both FIIs and DIIs were net buyers \u2014 broad institutional support.';}
+      if(f>0&&d<0){return 'FIIs bought while DIIs booked profits.';}
+      var fs=streak(rows,'fiiNet',-1);return 'Both FIIs and DIIs sold \u2014 institutional risk-off'+(fs>1?' ('+fs+' straight FII selling days).':'.');
+    }
+    function buildTable(rows){
+      var WINDOWS=[['1 Week',7],['1 Month',30],['3 Months',91],['6 Months',182],['1 Year',365],['3 Years',1095]];
+      var lastD=new Date(rows[rows.length-1].date), firstD=new Date(rows[0].date);
+      var html='<tr><th>Window</th><th>FII Net</th><th>DII Net</th><th>Combined</th></tr>';
+      var anyPartial=false;
+      WINDOWS.forEach(function(w){
+        var from=new Date(lastD); from.setDate(from.getDate()-w[1]);
+        // Only show a window we have full history for. Beyond that we say so
+        // honestly instead of repeating a shorter window's total.
+        if(from < firstD){
+          anyPartial=true;
+          html+='<tr><td style="opacity:.6">'+w[0]+'</td><td colspan="3" style="text-align:center;opacity:.4;font-family:var(--font-body);font-weight:500;letter-spacing:.02em">accumulating history\u2026</td></tr>';
+          return;
+        }
+        var fii=0,dii=0;
+        rows.forEach(function(r){ if(new Date(r.date)>=from){fii+=r.fiiNet;dii+=r.diiNet;} });
+        html+='<tr><td>'+w[0]+'</td>'+
+          '<td class="'+cls(fii)+'">'+inr(fii)+'</td>'+
+          '<td class="'+cls(dii)+'">'+inr(dii)+'</td>'+
+          '<td class="'+cls(fii+dii)+'">'+inr(fii+dii)+'</td></tr>';
+      });
+      document.getElementById('hfTable').innerHTML=html;
+      document.getElementById('hfNote').textContent='Daily cash-market net (\u20B9 Cr). History from '+fmtDate(rows[0].date)+'.'+(anyPartial?' Longer windows unlock automatically as we log each session.':'');
+    }
+    function drawChart(){
+      if(!H)return;
+      var rows=H.slice(-range);
+      var labels=rows.map(function(r){return r.date.slice(0,10);});
+      var nmap={}; if(NF){for(var i=0;i<NF.dates.length;i++){nmap[NF.dates[i]]=NF.close[i];}}
+      var nifty=labels.map(function(d){return nmap[d]!=null?nmap[d]:null;});
+      var ctx=document.getElementById('hfChart').getContext('2d');
+      if(chart)chart.destroy();
+      chart=new Chart(ctx,{
+        data:{labels:labels.map(function(d){var x=new Date(d);return x.getDate()+' '+x.toLocaleString('en',{month:'short'});}),
+          datasets:[
+            {type:'bar',label:'FII net',data:rows.map(function(r){return r.fiiNet;}),backgroundColor:rows.map(function(r){return r.fiiNet>=0?'rgba(22,163,74,.75)':'rgba(220,38,38,.75)';}),borderRadius:3,yAxisID:'y'},
+            {type:'bar',label:'DII net',data:rows.map(function(r){return r.diiNet;}),backgroundColor:rows.map(function(r){return r.diiNet>=0?'rgba(22,163,74,.32)':'rgba(220,38,38,.32)';}),borderRadius:3,yAxisID:'y'},
+            {type:'line',label:'Nifty 50',data:nifty,borderColor:'#3b82f6',borderWidth:2,pointRadius:0,tension:.25,spanGaps:true,yAxisID:'y1'}
+          ]},
+        options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+          plugins:{legend:{labels:{boxWidth:10,font:{size:10.5},color:'#8a94a0'}}},
+          scales:{
+            x:{grid:{display:false},ticks:{color:'#8a94a0',font:{size:10},maxTicksLimit:10}},
+            y:{grid:{color:'rgba(128,128,128,.12)'},ticks:{color:'#8a94a0',font:{size:10}},title:{display:true,text:'\u20B9 Cr',color:'#8a94a0',font:{size:10}}},
+            y1:{position:'right',grid:{display:false},ticks:{color:'#3b82f6',font:{size:10}}}
+          }}
+      });
+    }
+    function buildRanges(){
+      var el=document.getElementById('hfRng');
+      [['1W',7],['1M',30],['3M',91],['6M',182],['1Y',365]].forEach(function(r){
+        var b=document.createElement('button');b.textContent=r[0];if(r[1]===range)b.className='on';
+        b.onclick=function(){range=r[1];el.querySelectorAll('button').forEach(function(x){x.className='';});b.className='on';drawChart();};
+        el.appendChild(b);
+      });
+    }
+    Promise.all([
+      fetch('/api/fii-dii/history?days=365').then(function(r){return r.json();}),
+      fetch('/api/index-tools/history?symbol='+encodeURIComponent('NIFTY 50')+'&start=2025-07-01&end=2099-01-01').then(function(r){return r.json();}).catch(function(){return null;})
+    ]).then(function(res){
+      var rows=res[0];
+      if(!Array.isArray(rows)||!rows.length)return;
+      rows.sort(function(a,b){return a.date<b.date?-1:1;});
+      H=rows; NF=res[1]&&res[1].dates?res[1]:null;
+      var last=rows[rows.length-1];
+      document.getElementById('hfDate').textContent='Latest session \u00b7 '+fmtDate(last.date);
+      var f=document.getElementById('hfFii');f.textContent=inr(last.fiiNet);f.className='hf-val '+cls(last.fiiNet);
+      var d=document.getElementById('hfDii');d.textContent=inr(last.diiNet);d.className='hf-val '+cls(last.diiNet);
+      var c=document.getElementById('hfComb');c.textContent=inr(last.fiiNet+last.diiNet);c.className='hf-val '+cls(last.fiiNet+last.diiNet);
+      document.getElementById('hfLine').textContent=verdictLine(rows);
+      buildTable(rows);
+      buildRanges();
+      document.getElementById('hfVerdict').style.display='';
+      document.getElementById('hfTableCard').style.display='';
+      document.getElementById('hfChartCard').style.display='';
+      drawChart();
+    }).catch(function(e){ /* fail silent — rest of dashboard unaffected */ });
+  })();
+  </script>
+
+  <!-- LIVE MARKET TICKER BAR — hidden: /api/market backend isn't deployed -->
+  <div class="market-ticker" id="marketTicker" style="display:none;">
     <div class="ticker-live-dot" id="tickerDot" title="Live market data"></div>
     <div class="ticker-item">
       <span class="ticker-label">Nifty 50</span>
@@ -2453,8 +2594,8 @@ html[data-theme="light"] footer > div { border-top:1px solid rgba(17,24,39,.07) 
     </div>
   </div>
 
-  <!-- AI SNIPER BRIEFING -->
-  <div class="terminal-panel sniper-briefing" id="sniperBriefingCard">
+  <!-- AI SNIPER BRIEFING — hidden: /api/agents/synthesis backend isn't deployed -->
+  <div class="terminal-panel sniper-briefing" id="sniperBriefingCard" style="display:none;">
     <div id="sniperLoading">
       <div class="sniper-skeleton-line skeleton"></div>
       <div class="sniper-skeleton-line skeleton"></div>
@@ -3396,7 +3537,6 @@ html[data-theme="light"] footer > div { border-top:1px solid rgba(17,24,39,.07) 
       <!-- Overview Section -->
       <div class="card" style="margin-bottom:24px; padding:24px;">
         <h3 style="font-size:18px; color:var(--t1); margin-bottom:16px; border-bottom:1px solid var(--sep2); padding-bottom:12px;"> 1. FII / DII Home Dashboard</h3>
-        <img src="screenshots/01_home_fii_dii_date.png" alt="Home Dashboard" style="width:100%; border-radius:12px; border:1px solid var(--sep2); margin-bottom:20px; box-shadow: var(--card-shadow);">
         <p style="font-size:14px; color:var(--t2); line-height:1.7; margin-bottom:16px;">The home dashboard provides an immediate snapshot of the primary liquidity flowing into or out of the Indian stock market. It relies on standard Daily Cash Market volume figures released by the NSE.</p>
         
         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px; margin-bottom:16px;">
@@ -3422,7 +3562,6 @@ html[data-theme="light"] footer > div { border-top:1px solid rgba(17,24,39,.07) 
       <!-- F&O Section -->
       <div class="card" style="margin-bottom:24px; padding:24px;">
         <h3 style="font-size:18px; color:var(--t1); margin-bottom:16px; border-bottom:1px solid var(--sep2); padding-bottom:12px;">🎲 2. F&O Positioning (Derivatives)</h3>
-        <img src="screenshots/02_fno_positions.png" alt="F&O Positioning" style="width:100%; border-radius:12px; border:1px solid var(--sep2); margin-bottom:20px; box-shadow: var(--card-shadow);">
         <p style="font-size:14px; color:var(--t2); line-height:1.7; margin-bottom:16px;">Instead of purely trusting Cash flow data, analyzing Futures & Options positioning gives you insight into the hedged direction professionals are betting on. DII footprint in options is minimal; FII rules this space.</p>
         
         <ul style="font-size:14px; color:var(--t3); line-height:1.8; list-style-type:none; padding-left:0; margin-bottom:16px;">
@@ -3436,7 +3575,6 @@ html[data-theme="light"] footer > div { border-top:1px solid rgba(17,24,39,.07) 
       <!-- Databases & Matrices Section -->
       <div class="card" style="margin-bottom:24px; padding:24px;">
         <h3 style="font-size:18px; color:var(--t1); margin-bottom:16px; border-bottom:1px solid var(--sep2); padding-bottom:12px;">🗄️ 3. Historical Flow Databases & Matrices</h3>
-        <img src="screenshots/03_databases_matrices.png" alt="Databases & Matrices" style="width:100%; border-radius:12px; border:1px solid var(--sep2); margin-bottom:20px; box-shadow: var(--card-shadow);">
         <p style="font-size:14px; color:var(--t2); line-height:1.7; margin-bottom:16px;">A dedicated tabular data layer tracking institutional money across different timeframes. Features ultra-precise <code>tabular-nums</code> rendering for Bloomberg-terminal grade reading accuracy.</p>
         
         <ul style="font-size:14px; color:var(--t3); line-height:1.8; list-style-type:none; padding-left:0;">
@@ -3449,7 +3587,6 @@ html[data-theme="light"] footer > div { border-top:1px solid rgba(17,24,39,.07) 
       <!-- Historical Trends Section -->
       <div class="card" style="margin-bottom:24px; padding:24px;">
         <h3 style="font-size:18px; color:var(--t1); margin-bottom:16px; border-bottom:1px solid var(--sep2); padding-bottom:12px;">📈 4. Historical Flow Trends (Interactive Charts)</h3>
-        <img src="screenshots/04_history.png" alt="Flow Trends" style="width:100%; border-radius:12px; border:1px solid var(--sep2); margin-bottom:20px; box-shadow: var(--card-shadow);">
         <p style="font-size:14px; color:var(--t2); line-height:1.7; margin-bottom:16px;">Visualizing capital injection is easier than reading raw matrices. This tab relies on a highly responsive HTML5 Canvas engine to plot exact FII (Blue) and DII (Green) multi-axis bars.</p>
         
         <ul style="font-size:14px; color:var(--t3); line-height:1.8; list-style-type:none; padding-left:0;">
@@ -3461,7 +3598,6 @@ html[data-theme="light"] footer > div { border-top:1px solid rgba(17,24,39,.07) 
       <!-- Sectors Section -->
       <div class="card" style="margin-bottom:24px; padding:24px;">
         <h3 style="font-size:18px; color:var(--t1); margin-bottom:16px; border-bottom:1px solid var(--sep2); padding-bottom:12px;">🌐 5. Sector Analytics (NSDL Data)</h3>
-        <img src="screenshots/05_sectors.png" alt="Sector Analytics" style="width:100%; border-radius:12px; border:1px solid var(--sep2); margin-bottom:20px; box-shadow: var(--card-shadow);">
         <p style="font-size:14px; color:var(--t2); line-height:1.7; margin-bottom:16px;">Published completely independent of NSE, this data tracks actual equity portfolios held by Foreign Portfolio Investors inside Indian Depositories via NSDL/CDSL. It is reported fortnightly.</p>
         
         <ul style="font-size:14px; color:var(--t3); line-height:1.8; list-style-type:none; padding-left:0;">
@@ -3475,7 +3611,6 @@ html[data-theme="light"] footer > div { border-top:1px solid rgba(17,24,39,.07) 
       <!-- Utilities Section -->
       <div class="card" style="margin-bottom:24px; padding:24px;">
         <h3 style="font-size:18px; color:var(--t1); margin-bottom:16px; border-bottom:1px solid var(--sep2); padding-bottom:12px;">⚙️ 6. Global Dashboard Utilities</h3>
-        <img src="screenshots/06_docs.png" alt="Dashboard Utilities" style="width:100%; border-radius:12px; border:1px solid var(--sep2); margin-bottom:20px; box-shadow: var(--card-shadow);">
         <p style="font-size:14px; color:var(--t2); line-height:1.7; margin-bottom:16px;">The dashboard comes packed with built-in tools for elite analysts.</p>
         
         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
@@ -3705,11 +3840,20 @@ function switchMainTab(id) {
       const el = document.getElementById(pid);
       if (el) { el.style.display = 'none'; el.classList.remove('active', 'exiting'); }
     });
-    
+
+    // #heroFlow (the "Latest session" summary + cumulative-flow table) lives
+    // OUTSIDE the .panel system entirely, ahead of it in the DOM, and only
+    // one script ever unhides it (on initial load). Without this, it stays
+    // visible above every tab forever, so switching to F&O / Analytics /
+    // Sectors appeared to do nothing - the real panel content was rendering
+    // over 1000px further down, past what heroFlow pushed off-screen.
+    const heroFlow = document.getElementById('heroFlow');
+    if (heroFlow) heroFlow.style.display = (id === 't-hero') ? '' : 'none';
+
     if (targetPanel) {
       targetPanel.style.display = 'block';
       // Force reflow to restart animations
-      void targetPanel.offsetWidth; 
+      void targetPanel.offsetWidth;
       targetPanel.classList.add('active');
     }
     
@@ -5315,14 +5459,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (btn) btn.innerHTML = `Loading Data...`;
 
   try {
-    const res = await fetch('/api/history-full');
-    if (res.ok) {
-        const fullData = await res.json();
-        if (fullData && fullData.length > 0) {
-            dailyData = fullData;
-            console.log('[INIT] ✅ Loaded full history from API');
-        }
-    }
+    // /api/history-full isn't deployed — go straight to the GitHub/local fallback below.
   } catch (err) {
       console.error('[INIT] Failed to load history API', err);
   }
@@ -6261,18 +6398,9 @@ function renderFnoHistoryChart(mode = _fnoHistoryMode) {
 
   let swRegistration = null;
 
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', async () => {
-      try {
-        swRegistration = await navigator.serviceWorker.register('/sw.js');
-        console.log('[PWA] ✅ Service Worker registered, scope:', swRegistration.scope);
-        // Check if already subscribed and update button
-        updateNotifyButton();
-      } catch (err) {
-        console.warn('[PWA] Service Worker failed:', err);
-      }
-    });
-  }
+  // Push alerts require a service worker + subscription backend that isn't
+  // deployed yet — registration disabled until that's built (Get Alerts
+  // button is hidden below in the meantime, so this is unreachable anyway).
 
   // ── Install App (PWA) ──────────────────────────────────────────────────────
   let deferredPrompt;
@@ -6704,8 +6832,8 @@ function renderFnoHistoryChart(mode = _fnoHistoryMode) {
     content.style.display = 'block';
   }
 
-  // Load briefing after initial data fetch
-  setTimeout(() => loadSniperBriefing(), 2000);
+  // AI Sniper Briefing disabled — /api/agents/synthesis backend isn't deployed
+  // setTimeout(() => loadSniperBriefing(), 2000);
 
   // ── PHASE 4: SSE Live Connection ─────────────────────────────────────────────
   function initSSE() {
@@ -6749,7 +6877,8 @@ function renderFnoHistoryChart(mode = _fnoHistoryMode) {
       // Auto-reconnect handled by EventSource
     };
   }
-  setTimeout(initSSE, 3000);
+  // SSE live connection disabled — /api/stream backend isn't deployed
+  // setTimeout(initSSE, 3000);
 
   // ── PHASE 6: Smooth Number Count-Up Animation ───────────────────────────────
   function animateValue(element, start, end, duration) {
@@ -6851,8 +6980,8 @@ function renderFnoHistoryChart(mode = _fnoHistoryMode) {
     _marketTimerId = setTimeout(fetchMarketData, interval);
   }
 
-  // Boot market ticker
-  setTimeout(fetchMarketData, 1500);
+  // Live market ticker disabled — /api/market backend isn't deployed
+  // setTimeout(fetchMarketData, 1500);
 
 </script>
 <div id="chartix-wm"><b>chartix.in</b> &middot; Free FII/DII Terminal</div>

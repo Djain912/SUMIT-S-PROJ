@@ -8,6 +8,7 @@ type Coupon = {
   id: string; code: string; days: number | null; allChapters: boolean; chapterIds: string[];
   isActive: boolean; maxRedemptions: number | null; redeemedCount: number; note: string | null; createdAt: string;
   discountType: 'PERCENT' | 'FIXED' | null; discountValue: number | null; minOrderPaise: number | null;
+  appliesTo: 'LEVEL_1' | 'LEVEL_2' | null;
 };
 
 const LEVEL_LABEL: Record<string, string> = { LEVEL_1: 'CMT Level I', LEVEL_2: 'CMT Level II', LEVEL_3: 'CMT Level III' };
@@ -24,6 +25,7 @@ export function CouponsManager({ chapters, initialCoupons }: { chapters: Chapter
   const [discountType, setDiscountType] = useState<'PERCENT' | 'FIXED'>('PERCENT');
   const [discountValue, setDiscountValue] = useState<string>('');
   const [minOrder, setMinOrder] = useState<string>('');
+  const [appliesTo, setAppliesTo] = useState<'LEVEL_1' | 'LEVEL_2' | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState('');
@@ -69,6 +71,7 @@ export function CouponsManager({ chapters, initialCoupons }: { chapters: Chapter
             discountType,
             discountValue: Number(discountValue),
             minOrderPaise: minOrder ? Number(minOrder) * 100 : null,
+            appliesTo,
             note: note.trim() || null,
             maxRedemptions: maxRedemptions === '' ? null : Number(maxRedemptions),
           }
@@ -90,7 +93,7 @@ export function CouponsManager({ chapters, initialCoupons }: { chapters: Chapter
       if (!res.ok || !json.success) { setError(json?.error?.message ?? 'Could not create coupon.'); return; }
       setCoupons((prev) => [json.data, ...prev]);
       setCode(''); setNote(''); setMaxRedemptions(''); setSelected(new Set());
-      setDays(30); setAccessType('chapters'); setDiscountValue(''); setMinOrder('');
+      setDays(30); setAccessType('chapters'); setDiscountValue(''); setMinOrder(''); setAppliesTo(null);
     } catch {
       setError('Network error. Please try again.');
     } finally {
@@ -185,6 +188,22 @@ export function CouponsManager({ chapters, initialCoupons }: { chapters: Chapter
                   className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none" />
               </label>
             </>
+          )}
+          {couponPurpose === 'discount' && (
+            <div className="text-sm sm:col-span-2 lg:col-span-4">
+              <p className="font-medium text-zinc-700">Applies to <span className="text-zinc-400">(optional)</span></p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {([null, 'LEVEL_1', 'LEVEL_2'] as const).map((val) => {
+                  const label = val === null ? 'Both levels' : val === 'LEVEL_1' ? 'Level I only' : 'Level II only';
+                  return (
+                    <button key={String(val)} type="button" onClick={() => setAppliesTo(val)}
+                      className={`rounded-lg border px-3 py-1.5 text-sm font-semibold transition ${appliesTo === val ? 'border-violet-600 bg-violet-50 text-violet-700' : 'border-zinc-200 text-zinc-600 hover:border-zinc-300'}`}>
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           )}
 
           <label className="text-sm">
@@ -281,6 +300,7 @@ export function CouponsManager({ chapters, initialCoupons }: { chapters: Chapter
                         <span className="font-semibold text-violet-600">
                           {c.discountType === 'PERCENT' ? `${c.discountValue}% off` : `₹${((c.discountValue ?? 0) / 100).toLocaleString('en-IN')} off`}
                         </span>
+                        {c.appliesTo ? ` · ${c.appliesTo === 'LEVEL_1' ? 'Level I only' : 'Level II only'}` : ' · Both levels'}
                         {c.minOrderPaise ? ` · min order ₹${Math.round(c.minOrderPaise / 100).toLocaleString('en-IN')}` : ''}
                         {' · '}Price discount at checkout
                       </>

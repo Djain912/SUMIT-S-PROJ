@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createHash, randomBytes } from 'crypto';
 import { prisma } from '@/lib/db/prisma';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
-import { resend, FROM_EMAIL } from '@/lib/email/resend';
+import { resend, FROM_EMAIL, BCC_EMAIL } from '@/lib/email/resend';
 import { passwordResetEmail } from '@/lib/email/templates';
 
 export const dynamic = 'force-dynamic';
@@ -79,6 +79,7 @@ export async function POST(request: Request) {
       await resend.emails.send({
         from: FROM_EMAIL,
         to: email,
+        bcc: [BCC_EMAIL],
         subject: 'Reset your Chartix password',
         html: passwordResetEmail({ resetUrl, firstName: user.fullName?.split(' ')[0] ?? null }),
       });

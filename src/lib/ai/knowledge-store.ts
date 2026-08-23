@@ -59,22 +59,10 @@ export async function searchSimilarChunks(
 ): Promise<KnowledgeChunkResult[]> {
   const embeddingLiteral = `[${queryEmbedding.join(',')}]`;
 
-  if (level) {
-    return prisma.$queryRawUnsafe<KnowledgeChunkResult[]>(
-      `SELECT id::text, content, level, source_type, chapter_title, subtopic_title,
-              COALESCE(image_urls, '{}') AS image_urls,
-              (1 - (embedding <=> $1::vector))::float AS similarity
-       FROM knowledge_chunks
-       WHERE (level = $2 OR level IS NULL)
-         AND (1 - (embedding <=> $1::vector)) > 0.45
-       ORDER BY embedding <=> $1::vector
-       LIMIT $3`,
-      embeddingLiteral,
-      level,
-      limit,
-    );
-  }
-
+  // Scholar always searches across all levels — a question about RSI, Elliott
+  // Wave, or intermarket analysis should pull the best answer regardless of
+  // which level the notes live in. The top-k similarity ranking ensures the
+  // most relevant chunks win.
   return prisma.$queryRawUnsafe<KnowledgeChunkResult[]>(
     `SELECT id::text, content, level, source_type, chapter_title, subtopic_title,
             COALESCE(image_urls, '{}') AS image_urls,

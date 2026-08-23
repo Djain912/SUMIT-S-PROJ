@@ -28,7 +28,7 @@ export default function TermsPage() {
           <p>Welcome to Chartix. By accessing or using our platform at <strong>chartix.in</strong>, you agree to be bound by these Terms and Conditions. Please read them carefully before using our services.</p>
 
           <h2>1. About Chartix</h2>
-          <p>Chartix is an online education platform designed to help candidates prepare for the CMT (Chartered Market Technician) examination. We provide study notes, practice questions, quizzes, analytics, and AI-powered study assistance. Chartix is not affiliated with or endorsed by the CMT Association.</p>
+          <p>Chartix is an online education platform designed to help candidates prepare for the CMT (Chartered Market Technician) examination. We provide study notes, practice questions, quizzes, analytics, and AI-powered study assistance. Chartix is a Participating Prep Provider of the CMT Association under its Prep Provider Program; this participation does not constitute an endorsement or sponsorship of our products by the CMT Association, nor an authorized or exclusive partnership. CMT® and Chartered Market Technician® are registered trademarks owned by the CMT Association.</p>
 
           <h2>2. Eligibility</h2>
           <p>You must be at least 18 years of age to use Chartix. By creating an account, you confirm that you meet this requirement and that the information you provide is accurate and complete.</p>

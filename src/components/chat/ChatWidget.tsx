@@ -26,6 +26,29 @@ function renderInline(text: string): React.ReactNode {
 // Matches a markdown image: ![caption](https://...)
 const IMAGE_RE = /!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g;
 
+// A diagram embedded by the AI. If the URL is broken or hallucinated, the image
+// hides itself on load error so the user never sees a broken-image icon — the
+// answer just reads as text.
+function DiagramImage({ url, caption }: { url: string; caption: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return null;
+  return (
+    <figure className="my-2">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={url}
+        alt={caption || 'Diagram from notes'}
+        loading="lazy"
+        onError={() => setFailed(true)}
+        className="w-full rounded-lg border border-zinc-200"
+      />
+      {caption && (
+        <figcaption className="mt-1 text-center text-[11px] text-zinc-500">{caption}</figcaption>
+      )}
+    </figure>
+  );
+}
+
 // ── Block renderer: headings, bullet lists, numbered lists, paragraphs ───────
 function MarkdownMessage({ content }: { content: string }) {
   const lines = cleanLatex(content).split('\n');
@@ -53,20 +76,7 @@ function MarkdownMessage({ content }: { content: string }) {
         }
         const caption = m[1];
         const url = m[2];
-        elements.push(
-          <figure key={key++} className="my-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={url}
-              alt={caption || 'Diagram from notes'}
-              loading="lazy"
-              className="w-full rounded-lg border border-zinc-200"
-            />
-            {caption && (
-              <figcaption className="mt-1 text-center text-[11px] text-zinc-500">{caption}</figcaption>
-            )}
-          </figure>,
-        );
+        elements.push(<DiagramImage key={key++} url={url} caption={caption} />);
         lastIndex = m.index + m[0].length;
       }
       const after = line.slice(lastIndex).trim();

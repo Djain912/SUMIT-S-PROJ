@@ -8,6 +8,7 @@ import { BlogSubscribeForm } from '@/components/blog/BlogSubscribeForm';
 import { BlogContent } from '@/components/blog/BlogContent';
 import { generateBlogMetadata } from '@/lib/seo/blog-metadata';
 import { siteConfig } from '@/lib/site';
+import { ScrollPopup } from '@/components/marketing/ScrollPopup';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -52,7 +53,12 @@ export default async function BlogPostPage({ params }: Props) {
     image: post.coverImageUrl ?? undefined,
     datePublished: post.publishedAt?.toISOString(),
     dateModified: post.updatedAt?.toISOString(),
-    author: { '@type': 'Organization', name: 'Chartix', url: siteConfig.url },
+    author: {
+      '@type': 'Person',
+      name: 'Sumit Jain, CMT®',
+      url: siteConfig.url,
+      jobTitle: 'CMT Charterholder · Co-founder, Chartix.in',
+    },
     publisher: {
       '@type': 'Organization',
       name: 'Chartix',
@@ -63,12 +69,37 @@ export default async function BlogPostPage({ params }: Props) {
     keywords: post.tags.join(', ') || undefined,
   };
 
+  // Extract h3 questions from the FAQ section for Google's "People Also Ask" boxes
+  const faqMatches = [...post.contentHtml.matchAll(/<h3[^>]*>(.*?)<\/h3>\s*<p[^>]*>([\s\S]*?)<\/p>/g)];
+  const faqItems = faqMatches
+    .map((m) => ({
+      q: m[1].replace(/<[^>]+>/g, '').trim(),
+      a: m[2].replace(/<[^>]+>/g, '').trim(),
+    }))
+    .filter((item) => item.q.endsWith('?'));
+
+  const faqJsonLd = faqItems.length > 0 ? {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqItems.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: { '@type': 'Answer', text: item.a },
+    })),
+  } : null;
+
   return (
     <div className="min-h-screen bg-white">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
       />
+      {faqJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        />
+      )}
       {/* Nav */}
       <nav className="border-b border-zinc-100 bg-white/80 backdrop-blur sticky top-0 z-10">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
@@ -84,14 +115,14 @@ export default async function BlogPostPage({ params }: Props) {
         </div>
       </nav>
 
-      {/* Cover image */}
+      {/* Cover image — show the full graphic without cropping on any screen */}
       {post.coverImageUrl && (
-        <div className="h-64 sm:h-80 w-full overflow-hidden bg-zinc-100">
+        <div className="w-full bg-zinc-100">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={post.coverImageUrl}
             alt={post.title}
-            className="h-full w-full object-cover"
+            className="mx-auto block h-auto w-full max-w-4xl object-contain"
           />
         </div>
       )}
@@ -102,17 +133,6 @@ export default async function BlogPostPage({ params }: Props) {
         <Link href="/blog" className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-zinc-900 transition mb-8">
           <ArrowLeft className="h-3.5 w-3.5" /> All posts
         </Link>
-
-        {/* Tags */}
-        {post.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-4">
-            {post.tags.map((tag) => (
-              <span key={tag} className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-600">
-                <Tag className="h-3 w-3" /> {tag}
-              </span>
-            ))}
-          </div>
-        )}
 
         {/* Title */}
         <h1 className="text-3xl font-bold tracking-tight text-zinc-950 sm:text-4xl leading-tight">
@@ -151,6 +171,33 @@ export default async function BlogPostPage({ params }: Props) {
             prose-img:rounded-xl prose-img:shadow-sm
             prose-hr:border-zinc-200"
         />
+
+        {/* Tags — shown at the end of the post */}
+        {post.tags.length > 0 && (
+          <div className="mt-10 flex flex-wrap items-center gap-2 border-t border-zinc-100 pt-6">
+            {post.tags.map((tag) => (
+              <span key={tag} className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-600">
+                <Tag className="h-3 w-3" /> {tag}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Post-article CTA — shown on every blog post */}
+        <div className="mt-12 rounded-2xl bg-emerald-50 border border-emerald-100 px-6 py-8 text-center not-prose">
+          <p className="text-xs font-semibold uppercase tracking-widest text-emerald-700 mb-2">Preparing for CMT?</p>
+          <h3 className="text-xl font-bold text-zinc-900 mb-2">Study smarter with Chartix</h3>
+          <p className="text-sm text-zinc-500 mb-6 max-w-md mx-auto">
+            Structured notes, topic-wise practice questions, and an AI tutor trained on the full CMT curriculum — built by someone who cleared all three levels.
+          </p>
+          <Link
+            href="/sign-up"
+            className="inline-flex items-center gap-2 rounded-full bg-emerald-700 px-6 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800"
+          >
+            Start your free 7-day trial →
+          </Link>
+          <p className="mt-3 text-xs text-zinc-400">No credit card required</p>
+        </div>
       </article>
 
       {/* Subscribe */}
@@ -177,6 +224,9 @@ export default async function BlogPostPage({ params }: Props) {
         </div>
         <p className="mt-3">© {new Date().getFullYear()} Chartix. All rights reserved.</p>
       </footer>
+
+      {/* Scroll-triggered popup — fires at 60% scroll depth */}
+      <ScrollPopup />
     </div>
   );
 }

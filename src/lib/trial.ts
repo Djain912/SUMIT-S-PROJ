@@ -3,7 +3,7 @@
 
 export const TRIAL_DAYS = 7;
 export const TRIAL_SCHOLAR_DAILY = 10; // Chartix Scholar questions/day during trial
-export const TRIAL_MAX_MOCKS = 2; // full-length mock tests allowed during trial
+export const TRIAL_MAX_MOCKS = 3; // full-length mock tests allowed during trial (per level)
 
 export type TrialState = {
   inTrial: boolean; // within an active (unexpired) trial window

@@ -21,6 +21,7 @@ type Props = {
   userName: string | null;
   userEmail?: string | null;
   access?: Access;
+  levelLabel?: string;
 };
 
 // Derive a friendly access summary from the raw access record.
@@ -45,7 +46,7 @@ function describeAccess(access: Access): { badge: string; tone: string; status: 
   return { badge: 'Free', tone: 'bg-zinc-100 text-zinc-500', status: 'No active plan', daysLeft: null };
 }
 
-export function AppNavbarClient({ isLoggedIn, role, userName, userEmail, access }: Props) {
+export function AppNavbarClient({ isLoggedIn, role, userName, userEmail, access, levelLabel = 'CMT Level I' }: Props) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
@@ -196,8 +197,7 @@ export function AppNavbarClient({ isLoggedIn, role, userName, userEmail, access 
                       <div className="flex items-start justify-between gap-3">
                         <span className="flex items-center gap-1.5 text-zinc-500"><BookOpen className="h-3.5 w-3.5" /> Level</span>
                         <span className="text-right text-xs font-medium text-zinc-700">
-                          CMT Level I
-                          <span className="mt-0.5 block text-[11px] text-zinc-400">Level II &amp; III coming soon</span>
+                          {levelLabel}
                         </span>
                       </div>
 

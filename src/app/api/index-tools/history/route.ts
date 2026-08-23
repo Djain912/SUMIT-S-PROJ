@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { Redis } from '@upstash/redis';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
+import { prisma } from '@/lib/db/prisma';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -99,6 +100,31 @@ async function fetchFullHistory(symbol: string): Promise<FullHistory | null> {
   };
 }
 
+// Our own clean EOD store (Neon `stock_eod`, sourced from official NSE bhavcopy).
+// Symbols arrive suffixed (e.g. RELIANCE.NS); the table keys on the base symbol.
+async function fetchFromDb(symbol: string): Promise<FullHistory | null> {
+  const base = symbol.replace(/\.(NS|BO)$/i, '').toUpperCase();
+  try {
+    const rows = await prisma.$queryRawUnsafe<
+      Array<{ d: Date; o: number | null; h: number | null; l: number | null; c: number | null }>
+    >(`SELECT d, o, h, l, c FROM stock_eod WHERE symbol = $1 ORDER BY d`, base);
+    if (!rows || rows.length < 20) return null; // not in our store yet → caller falls back
+    const full: FullHistory = {
+      symbol, dates: [], open: [], high: [], low: [], close: [], adjclose: null,
+    };
+    for (const r of rows) {
+      full.dates.push(r.d.toISOString().slice(0, 10));
+      full.open.push(r.o ?? null);
+      full.high.push(r.h ?? null);
+      full.low.push(r.l ?? null);
+      full.close.push(r.c ?? null);
+    }
+    return full;
+  } catch {
+    return null; // any DB issue → fall back to Yahoo, never break the build
+  }
+}
+
 export async function GET(request: Request) {
   const rl = await enforceRateLimit({
     request,
@@ -136,7 +162,17 @@ export async function GET(request: Request) {
     }
   }
 
-  // 2. Cache miss → fetch the full history once from Yahoo, cache it, then slice.
+  // 2. Try our own clean EOD store (official NSE bhavcopy data). For library
+  //    constituents this is the fast, reliable path — no Yahoo dependency.
+  const fromDb = await fetchFromDb(symbol);
+  if (fromDb) {
+    if (cache) {
+      try { await cache.set(cacheKey, fromDb, { ex: FULL_TTL_SECONDS }); } catch { /* ignore */ }
+    }
+    return NextResponse.json(sliceRange(fromDb, start, end), { headers: { 'X-Cache': 'DB' } });
+  }
+
+  // 3. Not in our store → fetch the full history once from Yahoo, cache it, then slice.
   try {
     const full = await fetchFullHistory(symbol);
     if (!full) {

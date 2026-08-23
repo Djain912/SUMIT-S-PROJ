@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import { prisma } from '@/lib/db/prisma';
 import { BlogAdminClient } from '@/components/admin/BlogAdminClient';
-import { FileText, Eye, EyeOff } from 'lucide-react';
+import { BlogSubscribersPanel } from '@/components/admin/BlogSubscribersPanel';
+import { FileText, Eye, EyeOff, Mail } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Blog | Admin — Chartix',
@@ -31,8 +32,17 @@ async function getPosts() {
   } catch { return []; }
 }
 
+async function getSubscribers() {
+  try {
+    return await prisma.blogSubscriber.findMany({
+      select: { email: true, subscribedAt: true },
+      orderBy: { subscribedAt: 'desc' },
+    });
+  } catch { return []; }
+}
+
 export default async function AdminBlogPage() {
-  const posts = await getPosts();
+  const [posts, subscribers] = await Promise.all([getPosts(), getSubscribers()]);
 
   const published = posts.filter((p) => p.isPublished).length;
   const drafts = posts.length - published;
@@ -48,7 +58,7 @@ export default async function AdminBlogPage() {
       </div>
 
       {/* Stats */}
-      <div className="mb-6 grid grid-cols-3 gap-4">
+      <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <div className="rounded-2xl border border-zinc-200 bg-white p-4 text-center">
           <FileText className="mx-auto h-5 w-5 text-zinc-400 mb-2" />
           <p className="text-2xl font-bold text-zinc-950">{posts.length}</p>
@@ -64,6 +74,11 @@ export default async function AdminBlogPage() {
           <p className="text-2xl font-bold text-zinc-700">{drafts}</p>
           <p className="text-xs text-zinc-500">Drafts</p>
         </div>
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-center">
+          <Mail className="mx-auto h-5 w-5 text-emerald-500 mb-2" />
+          <p className="text-2xl font-bold text-emerald-700">{subscribers.length}</p>
+          <p className="text-xs text-emerald-600">Subscribers</p>
+        </div>
       </div>
 
       {/* Client component */}
@@ -73,6 +88,14 @@ export default async function AdminBlogPage() {
         createdAt: p.createdAt.toISOString(),
         updatedAt: p.updatedAt.toISOString(),
       }))} />
+
+      {/* Subscribers */}
+      <BlogSubscribersPanel
+        subscribers={subscribers.map((s) => ({
+          email: s.email,
+          subscribedAt: s.subscribedAt.toISOString(),
+        }))}
+      />
     </div>
   );
 }

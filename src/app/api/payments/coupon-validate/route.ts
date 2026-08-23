@@ -14,6 +14,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const code = String(body?.code ?? '').trim().toUpperCase();
     const currency: SupportedCurrency = body?.currency === 'USD' ? 'USD' : 'INR';
+    const level: string | null = body?.level === 'LEVEL_2' ? 'LEVEL_2' : body?.level === 'LEVEL_1' ? 'LEVEL_1' : null;
     if (!code) {
       return NextResponse.json({ success: false, error: { message: 'Enter a coupon code.' } }, { status: 400 });
     }
@@ -29,6 +30,12 @@ export async function POST(request: Request) {
     if (coupon.maxRedemptions !== null && coupon.redeemedCount >= coupon.maxRedemptions) {
       return NextResponse.json({ success: false, error: { message: 'This coupon has reached its redemption limit.' } }, { status: 400 });
     }
+    // Level restriction: if the coupon is locked to a specific level, reject mismatches.
+    if (coupon.appliesTo && level && coupon.appliesTo !== level) {
+      const label = coupon.appliesTo === 'LEVEL_2' ? 'CMT Level II' : 'CMT Level I';
+      return NextResponse.json({ success: false, error: { message: `This coupon is only valid for ${label}.` } }, { status: 400 });
+    }
+
     // Fixed-amount coupons are defined in paise and only apply to INR orders.
     if (coupon.discountType === 'FIXED' && currency === 'USD') {
       return NextResponse.json({ success: false, error: { message: 'This coupon is only valid for INR payments.' } }, { status: 400 });

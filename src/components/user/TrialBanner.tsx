@@ -1,34 +1,53 @@
 import Link from 'next/link';
 import { Clock, CheckCircle, Lock, Sparkles } from 'lucide-react';
 import { prisma } from '@/lib/db/prisma';
-import { getTrialState } from '@/server/policies/access';
+import { getTrialState, hasUnusedTrialLevel, type Level } from '@/server/policies/access';
 import { TRIAL_DAYS, TRIAL_MAX_MOCKS } from '@/lib/trial';
 
-// Trial status card for the student dashboard. Renders only for users who are
-// in (or just out of) their 7-day trial — paid/admin and scoped-coupon users
-// see nothing.
-export async function TrialBanner({ email }: { email: string }) {
-  const [trial, freeChapters, totalChapters] = await Promise.all([
-    getTrialState(email),
-    prisma.chapter.count({ where: { level: 'LEVEL_1', isPublished: true, isDeleted: false, isTrialFree: true } }),
-    prisma.chapter.count({ where: { level: 'LEVEL_1', isPublished: true, isDeleted: false } }),
-  ]);
+const LEVEL_DISPLAY_NAME: Record<Level, string> = {
+  LEVEL_1: 'CMT Level I',
+  LEVEL_2: 'CMT Level II',
+  LEVEL_3: 'CMT Level III',
+};
 
+// Trial status card for the student dashboard. Renders only for users who are
+// in (or just out of) a 7-day trial — paid/admin and scoped-coupon users see
+// nothing. `level` is optional: pass it to show a specific level's trial
+// (e.g. whichever level tab is selected); omit it to show whichever trial
+// getTrialState resolves to by default (active with the furthest expiry, or
+// the most recently expired one).
+export async function TrialBanner({ email, level }: { email: string; level?: Level }) {
+  const trial = await getTrialState(email, level);
   if (!trial || trial.hasFullAccess) return null;
   if (!trial.inTrial && !trial.expired) return null; // no trial window at all
 
+  const bannerLevel = trial.level;
+  if (!bannerLevel) return null;
+
+  const [freeChapters, totalChapters] = await Promise.all([
+    prisma.chapter.count({ where: { level: bannerLevel, isPublished: true, isDeleted: false, isTrialFree: true } }),
+    prisma.chapter.count({ where: { level: bannerLevel, isPublished: true, isDeleted: false } }),
+  ]);
+
   const lockedChapters = Math.max(0, totalChapters - freeChapters);
+  const levelName = LEVEL_DISPLAY_NAME[bannerLevel];
 
   if (trial.expired) {
+    const anotherLevelAvailable = await hasUnusedTrialLevel(email);
     return (
       <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
             <Clock className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
             <div>
-              <p className="text-base font-bold text-amber-900">Your free trial has ended</p>
+              <p className="text-base font-bold text-amber-900">Your {levelName} free trial has ended</p>
               <p className="mt-1 text-sm text-amber-700">
                 Unlock full access to continue your preparation — all your progress is saved.
+                {anotherLevelAvailable && (
+                  <>
+                    {' '}Or <Link href="/start-trial" className="font-semibold underline underline-offset-2">try another level free</Link>.
+                  </>
+                )}
               </p>
             </div>
           </div>
@@ -65,7 +84,7 @@ export async function TrialBanner({ email }: { email: string }) {
       <div className="flex flex-col gap-3 border-b border-emerald-100 bg-emerald-50/70 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
         <div>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-white">
-            <Sparkles className="h-3 w-3" /> Free Trial Active
+            <Sparkles className="h-3 w-3" /> Free Trial Active — {levelName}
           </span>
           <p className="mt-2 text-xl font-bold text-emerald-900">
             Day {trial.dayOfTrial} of {TRIAL_DAYS}

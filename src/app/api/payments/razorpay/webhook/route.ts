@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
-import { verifySignature, grantPremiumAccess } from '@/lib/payments/razorpay';
+import { verifySignature, grantLevelAccess, type PurchaseLevel } from '@/lib/payments/razorpay';
 import { issueInvoice } from '@/lib/invoices/send';
 
 export const dynamic = 'force-dynamic';
@@ -35,7 +35,8 @@ export async function POST(request: Request) {
       if (orderId) {
         const payment = await prisma.payment.findUnique({ where: { razorpayOrderId: orderId } });
         if (payment && payment.status !== 'PAID') {
-          const premiumUntil = await grantPremiumAccess(payment.userId);
+          const level = (payment.level ?? 'LEVEL_1') as PurchaseLevel;
+          const premiumUntil = await grantLevelAccess(payment.userId, level);
           await prisma.payment.update({
             where: { id: payment.id },
             data: { status: 'PAID', razorpayPaymentId: paymentId ?? payment.razorpayPaymentId, grantedUntil: premiumUntil },

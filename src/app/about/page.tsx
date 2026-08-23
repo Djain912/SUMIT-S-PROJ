@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowRight, BookOpen, Target, TrendingUp, Shield, Zap, Linkedin, Mail, Brain, Instagram, Twitter } from 'lucide-react';
 import { siteConfig } from '@/lib/site';
 
@@ -241,10 +242,19 @@ export default function AboutPage() {
                   SJ
                 </div>
                 <div className="text-center sm:text-left">
-                  <h3 className="text-xl font-bold text-zinc-950">Sumit Jain</h3>
-                  <p className="mt-1 text-sm font-semibold text-emerald-700">Founder, Chartix · CMT Level 3 Cleared</p>
+                  <div className="flex flex-col items-center gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+                    <h3 className="text-xl font-bold text-zinc-950">Sumit Jain, CMT®</h3>
+                    <Image
+                      src="/cmt-charterholder-badge.png"
+                      alt="CMT Charterholder"
+                      width={40}
+                      height={40}
+                      className="shrink-0"
+                    />
+                  </div>
+                  <p className="mt-1 text-sm font-semibold text-emerald-700">Founder, Chartix · CMT® Charterholder</p>
                   <div className="mt-2 flex flex-wrap justify-center gap-2 sm:justify-start">
-                    {['CMT Level 3 Cleared', 'BSE/NSE Certified', 'Mutual Fund Distributor', 'Equity & Derivatives Trader'].map((tag) => (
+                    {['CMT® Charterholder', 'BSE/NSE Certified', 'Mutual Fund Distributor', 'Equity & Derivatives Trader'].map((tag) => (
                       <span key={tag} className="rounded-full border border-zinc-200 bg-white px-2.5 py-0.5 text-[11px] font-medium text-zinc-600">
                         {tag}
                       </span>
@@ -255,7 +265,7 @@ export default function AboutPage() {
 
               <div className="mt-8 space-y-4 text-base leading-7 text-zinc-600">
                 <p>
-                  Hi, I&apos;m <span className="font-semibold text-zinc-900">Sumit Jain</span> — founder of Chartix and <span className="font-semibold text-zinc-900">CMT Level 3 cleared</span>, based in Mumbai.
+                  Hi, I&apos;m <span className="font-semibold text-zinc-900">Sumit Jain</span> — founder of Chartix and a <span className="font-semibold text-zinc-900">CMT® charterholder</span>, based in Mumbai.
                 </p>
                 <p>
                   I work as an Equity Research Analyst at a Mumbai-based family office, where I&apos;ve spent the last 4+ years analysing the markets across both technical and fundamental angles. I&apos;m BSE/NSE certified, a registered Mutual Fund Distributor, and an active equity &amp; derivatives trader — with deep hands-on experience in chart reading, options strategies, and financial instruments.
@@ -326,9 +336,12 @@ export default function AboutPage() {
               <Link href="/sign-in" className="text-xs text-zinc-400 hover:text-zinc-950 transition">Sign in</Link>
             </div>
           </div>
-          <p className="mt-5 border-t border-zinc-50 pt-5 text-center text-[11px] leading-5 text-zinc-400 sm:text-left">
-            CMT® and Chartered Market Technician® are registered trademarks owned by the CMT Association. Chartix is not affiliated with, endorsed by, or sponsored by the CMT Association.
-          </p>
+          <div className="mt-5 flex flex-col items-center gap-3 border-t border-zinc-50 pt-5 sm:flex-row sm:items-center sm:text-left">
+            <Image src="/cmt-prep-provider-badge.png" alt="CMT Association Participating Prep Provider" width={64} height={64} className="shrink-0" />
+            <p className="text-center text-[11px] leading-5 text-zinc-400 sm:text-left">
+              Chartix is a <strong className="font-semibold text-zinc-500">Participating Prep Provider</strong> of the CMT Association. CMT® and Chartered Market Technician® are registered trademarks owned by the CMT Association.
+            </p>
+          </div>
         </div>
       </footer>
     </>

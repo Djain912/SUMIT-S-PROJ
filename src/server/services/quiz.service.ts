@@ -15,19 +15,25 @@ function shuffle<T>(items: T[]) {
 // Pass 'ALL' for admins / full-premium users (no restriction).
 export type ChapterScope = 'ALL' | string[];
 
-// ── Full-length mock test: official CMT Level I exam format ──────────────────
-// 132 questions, 2-hour limit, drawn in the official knowledge-domain weights.
-export const FULL_TEST_TOTAL = 132;
-export const FULL_TEST_TIME_MINUTES = 120;
+// ── Full-length mock test: official CMT exam format per level ────────────────
+export const FULL_TEST_TOTAL = 132; // L1 default (kept for backwards compat)
+export const FULL_TEST_TIME_MINUTES = 120; // L1 default
 
-type CmtDomain = 'THEORY' | 'CLASSICAL' | 'ADVANCED' | 'ETHICS';
+type CmtDomain = 'THEORY' | 'CLASSICAL' | 'ADVANCED' | 'APP_TA' | 'ETHICS';
 
-// Official CMT L1 domain weighting (from the curriculum knowledge-domain breakdown).
-const DOMAIN_WEIGHTS: Record<CmtDomain, number> = {
-  THEORY: 0.38,
-  CLASSICAL: 0.33,
-  ADVANCED: 0.26,
-  ETHICS: 0.03,
+type FullTestConfig = { total: number; minutes: number; weights: Record<CmtDomain, number> };
+
+const FULL_TEST_CONFIG: Record<string, FullTestConfig> = {
+  LEVEL_1: {
+    total: 132,
+    minutes: 120,
+    weights: { THEORY: 0.38, CLASSICAL: 0.33, ADVANCED: 0.26, APP_TA: 0.00, ETHICS: 0.03 },
+  },
+  LEVEL_2: {
+    total: 170,
+    minutes: 240,
+    weights: { THEORY: 0.07, CLASSICAL: 0.40, ADVANCED: 0.40, APP_TA: 0.10, ETHICS: 0.03 },
+  },
 };
 
 // Target difficulty mix WITHIN each domain's allocation (exam-realistic).
@@ -38,41 +44,39 @@ const DIFFICULTY_WEIGHTS: Record<Difficulty, number> = {
   HARD: 0.25,
 };
 
-// Maps each unit (chapter.orderIndex) to its CMT knowledge domain. Adjust here
-// if the curriculum mapping changes. Units with no questions yet (e.g. XI
-// Volatility, and Ethics which has no unit) are simply backfilled from others.
-const DOMAIN_BY_UNIT: Record<number, CmtDomain> = {
-  1: 'THEORY',        // Unit I: Theory & History
-  7: 'THEORY',        // Unit VII: Behavioral Finance
-  2: 'CLASSICAL',     // Unit II: Charts
-  3: 'CLASSICAL',     // Unit III: Trend Analysis
-  4: 'CLASSICAL',     // Unit IV: Chart Pattern Analysis
-  5: 'CLASSICAL',     // Unit V: Technical Indicators
-  8: 'CLASSICAL',     // Unit VIII: Sentiment
-  9: 'CLASSICAL',     // Unit IX: Cycle Analysis
-  6: 'ADVANCED',      // Unit VI: Statistics
-  10: 'ADVANCED',     // Unit X: Comparative Market Analysis
-  11: 'ADVANCED',     // Unit XI: Volatility
-  12: 'ADVANCED',     // Unit XII: Systems & Quantitative Methods
-  13: 'ETHICS',       // Unit XIII: Ethics
+// Maps each unit (chapter.orderIndex) to its CMT knowledge domain per level.
+const DOMAIN_BY_UNIT_L1: Record<number, CmtDomain> = {
+  1: 'THEORY',     7: 'THEORY',
+  2: 'CLASSICAL',  3: 'CLASSICAL',  4: 'CLASSICAL',  5: 'CLASSICAL',  8: 'CLASSICAL',  9: 'CLASSICAL',
+  6: 'ADVANCED',   10: 'ADVANCED',  11: 'ADVANCED',  12: 'ADVANCED',
+  13: 'ETHICS',
 };
 
-// Picks ~132 question IDs for a full mock test, weighted by CMT domain. If a
-// domain is short (or empty, like Ethics today), the shortfall is backfilled
-// from the remaining pool so the student still gets a full-length paper.
-async function pickFullTestQuestionIds(scope: ChapterScope): Promise<string[]> {
+const DOMAIN_BY_UNIT_L2: Record<number, CmtDomain> = {
+  1: 'THEORY',     2: 'THEORY',
+  3: 'CLASSICAL',  4: 'CLASSICAL',  5: 'CLASSICAL',  6: 'CLASSICAL',  7: 'CLASSICAL',
+  8: 'ADVANCED',   9: 'ADVANCED',   10: 'ADVANCED',  11: 'ADVANCED',  12: 'ADVANCED',
+  // Application of TA is tested across all chapters — backfilled from pool
+  13: 'ETHICS',
+};
+
+// Picks question IDs for a full mock test, weighted by CMT domain for the given level.
+async function pickFullTestQuestionIds(scope: ChapterScope, level: string): Promise<string[]> {
+  const cfg = FULL_TEST_CONFIG[level] ?? FULL_TEST_CONFIG['LEVEL_1'];
+  const domainMap = level === 'LEVEL_2' ? DOMAIN_BY_UNIT_L2 : DOMAIN_BY_UNIT_L1;
+
   const chapters = await prisma.chapter.findMany({
-    where: { level: 'LEVEL_1', isPublished: true, isDeleted: false },
+    where: { level: level as 'LEVEL_1' | 'LEVEL_2', isPublished: true, isDeleted: false },
     select: { id: true, orderIndex: true },
   });
   const domainByChapter = new Map<string, CmtDomain>();
   for (const c of chapters) {
-    const d = DOMAIN_BY_UNIT[c.orderIndex];
+    const d = domainMap[c.orderIndex];
     if (d) domainByChapter.set(c.id, d);
   }
 
   const where: Prisma.QuestionWhereInput = {
-    level: 'LEVEL_1',
+    level: level as 'LEVEL_1' | 'LEVEL_2',
     isPublished: true,
     isDeleted: false,
   };
@@ -86,16 +90,14 @@ async function pickFullTestQuestionIds(scope: ChapterScope): Promise<string[]> {
     select: { id: true, chapterId: true, difficulty: true, subtopic: { select: { chapterId: true } } },
   });
 
-  // Bucket question IDs by domain → difficulty (via their effective chapter).
   const emptyDiff = (): Record<Difficulty, string[]> => ({ EASY: [], MEDIUM: [], HARD: [] });
   const byDomain: Record<CmtDomain, Record<Difficulty, string[]>> = {
-    THEORY: emptyDiff(), CLASSICAL: emptyDiff(), ADVANCED: emptyDiff(), ETHICS: emptyDiff(),
+    THEORY: emptyDiff(), CLASSICAL: emptyDiff(), ADVANCED: emptyDiff(), APP_TA: emptyDiff(), ETHICS: emptyDiff(),
   };
   for (const q of questions) {
     const chapterId = q.chapterId ?? q.subtopic?.chapterId ?? null;
     const domain = chapterId ? domainByChapter.get(chapterId) : undefined;
     if (!domain) continue;
-    // Treat any unset difficulty as MEDIUM so it still gets used.
     const diff: Difficulty = q.difficulty === 'EASY' || q.difficulty === 'HARD' ? q.difficulty : 'MEDIUM';
     byDomain[domain][diff].push(q.id);
   }
@@ -105,8 +107,6 @@ async function pickFullTestQuestionIds(scope: ChapterScope): Promise<string[]> {
     }
   }
 
-  // Pull up to n IDs from a pool, skipping ones already chosen. Returns the
-  // shortfall (how many we still owe) so callers can backfill.
   const selected = new Set<string>();
   const pull = (pool: string[], n: number): number => {
     for (const id of pool) {
@@ -118,37 +118,29 @@ async function pickFullTestQuestionIds(scope: ChapterScope): Promise<string[]> {
     return n;
   };
 
-  // Domain weighting first, then the difficulty mix inside each domain.
-  for (const d of Object.keys(DOMAIN_WEIGHTS) as CmtDomain[]) {
-    const domainTarget = Math.round(DOMAIN_WEIGHTS[d] * FULL_TEST_TOTAL);
+  for (const d of Object.keys(cfg.weights) as CmtDomain[]) {
+    const domainTarget = Math.round(cfg.weights[d] * cfg.total);
+    if (domainTarget === 0) continue;
     const easyT = Math.round(DIFFICULTY_WEIGHTS.EASY * domainTarget);
     const hardT = Math.round(DIFFICULTY_WEIGHTS.HARD * domainTarget);
-    const medT = domainTarget - easyT - hardT; // remainder → medium (the largest share)
-
+    const medT = domainTarget - easyT - hardT;
     let short = 0;
     short += pull(byDomain[d].EASY, easyT);
     short += pull(byDomain[d].MEDIUM, medT);
     short += pull(byDomain[d].HARD, hardT);
-
-    // Backfill a difficulty shortfall from the SAME domain first (keeps the
-    // domain weighting intact even if one difficulty bucket runs dry).
-    if (short > 0) {
-      pull(shuffle([...byDomain[d].EASY, ...byDomain[d].MEDIUM, ...byDomain[d].HARD]), short);
-    }
+    if (short > 0) pull(shuffle([...byDomain[d].EASY, ...byDomain[d].MEDIUM, ...byDomain[d].HARD]), short);
   }
 
-  // Global backfill for any remaining shortfall (e.g. empty Ethics domain),
-  // drawn from everything not yet chosen so the paper still reaches 132.
-  if (selected.size < FULL_TEST_TOTAL) {
+  if (selected.size < cfg.total) {
     const everything = shuffle(
       (Object.keys(byDomain) as CmtDomain[]).flatMap(d =>
         [...byDomain[d].EASY, ...byDomain[d].MEDIUM, ...byDomain[d].HARD],
       ),
     );
-    pull(everything, FULL_TEST_TOTAL - selected.size);
+    pull(everything, cfg.total - selected.size);
   }
 
-  return shuffle([...selected]).slice(0, FULL_TEST_TOTAL);
+  return shuffle([...selected]).slice(0, cfg.total);
 }
 
 // Fetches full question data for a fixed set of IDs (used by the full test),
@@ -244,9 +236,11 @@ export async function startQuizAttempt(userId: string, selection: QuizSelectionI
   let questions;
   let effectiveSelection = selection;
   if (selection.mode === 'FULL_TEST') {
-    const ids = await pickFullTestQuestionIds(scope);
+    const level = selection.level ?? 'LEVEL_1';
+    const cfg = FULL_TEST_CONFIG[level] ?? FULL_TEST_CONFIG['LEVEL_1'];
+    const ids = await pickFullTestQuestionIds(scope, level);
     questions = await fetchQuestionsByIds(ids);
-    effectiveSelection = { ...selection, level: 'LEVEL_1', timeLimitMinutes: FULL_TEST_TIME_MINUTES };
+    effectiveSelection = { ...selection, level, timeLimitMinutes: cfg.minutes };
   } else {
     questions = await resolveQuizQuestions(selection, scope);
   }
@@ -354,6 +348,26 @@ export async function completeQuizAttempt(userId: string, attemptId: string) {
       items: { orderBy: { questionOrder: 'asc' } },
     },
   });
+
+  // Engagement counters for the onboarding checklist / trial-drip emails.
+  // Fire-and-forget, fail-soft — must never block the quiz result.
+  const timeSpentSeconds = attempt.items.reduce((sum, item) => sum + (item.timeSpentSeconds ?? 0), 0);
+  prisma.userActivity
+    .upsert({
+      where: { userId },
+      create: {
+        userId,
+        mcqAttempted: totalQuestions,
+        mockAttempted: attempt.mode === 'FULL_TEST' ? 1 : 0,
+        timeSpentSeconds,
+      },
+      update: {
+        mcqAttempted: { increment: totalQuestions },
+        mockAttempted: attempt.mode === 'FULL_TEST' ? { increment: 1 } : undefined,
+        timeSpentSeconds: { increment: timeSpentSeconds },
+      },
+    })
+    .catch((err) => console.error('[quiz] UserActivity update failed:', err));
 
   return attempt;
 }

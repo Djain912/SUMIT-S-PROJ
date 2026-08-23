@@ -34,18 +34,63 @@ function replaceImagesWithMarkers(html: string): string {
   });
 }
 
-// Build a map of image URL → its caption (alt text), so each image can be
-// labelled with the admin's own description and the AI picks the right one.
+// Strip all HTML tags and decode common entities, returning plain text.
+function htmlToText(html: string): string {
+  return html
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&ndash;/g, '–')
+    .replace(/&mdash;/g, '—')
+    .replace(/&#\d+;/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Build a map of image URL → its caption.
+// Priority: (1) alt attribute, (2) figure caption in the preceding <p> tag.
+// Most notes were authored without alt text but have "Figure X.Y — ..." captions
+// as a <p> immediately before or after the <img> tag.
 function extractImageAltMap(html: string): Map<string, string> {
   const map = new Map<string, string>();
-  for (const m of html.matchAll(/<img\b[^>]*>/gi)) {
-    const tag = m[0];
-    const src = tag.match(/src\s*=\s*["']([^"']+)["']/i);
-    if (!src) continue;
-    const alt = tag.match(/alt\s*=\s*["']([^"']*)["']/i);
-    const caption = (alt?.[1] ?? '').trim();
-    if (caption) map.set(src[1], caption);
+
+  // Split on block tags so we can look at what comes before each <img>.
+  // We keep track of the last non-empty paragraph text before each image.
+  const tokens = html.split(/(<img\b[^>]*>)/gi);
+  let lastParaText = '';
+
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+    if (/^<img\b/i.test(token)) {
+      const src = token.match(/src\s*=\s*["']([^"']+)["']/i);
+      if (!src) continue;
+      const url = src[1];
+      // 1. alt attribute
+      const alt = token.match(/alt\s*=\s*["']([^"']*)["']/i);
+      const altText = (alt?.[1] ?? '').trim();
+      if (altText) { map.set(url, altText); lastParaText = ''; continue; }
+      // 2. figure caption from the preceding paragraph text
+      if (lastParaText && /figure/i.test(lastParaText)) {
+        map.set(url, lastParaText.slice(0, 120));
+        lastParaText = '';
+        continue;
+      }
+      // 3. Next sibling paragraph (caption sometimes appears AFTER the image)
+      const next = tokens[i + 1] ?? '';
+      const nextText = htmlToText(next).trim();
+      if (nextText && /figure/i.test(nextText)) {
+        map.set(url, nextText.slice(0, 120));
+      }
+      lastParaText = '';
+    } else {
+      const text = htmlToText(token).trim();
+      if (text) lastParaText = text;
+    }
   }
+
   return map;
 }
 

@@ -2,17 +2,17 @@ import { NextResponse } from 'next/server';
 import { AuthError, requireAuthenticatedUser } from '@/server/policies/auth';
 import { validateCsrfOrigin } from '@/server/policies/csrf';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
-import { getAccessByEmail } from '@/server/policies/access';
+import { getChapterAccess } from '@/server/policies/access';
 import { prisma } from '@/lib/db/prisma';
 import {
-  getRazorpay, razorpayConfigured, PLAN_LEVEL, applyDiscount, getPriceUnits,
-  type SupportedCurrency,
+  getRazorpay, razorpayConfigured, applyDiscount, getPriceUnits,
+  type SupportedCurrency, type PurchaseLevel,
 } from '@/lib/payments/razorpay';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-// Creates a Razorpay order for the Level I plan and records it as a pending
+// Creates a Razorpay order for the requested CMT level and records it as a pending
 // Payment. The client opens Razorpay Checkout with the returned orderId.
 export async function POST(request: Request) {
   try {
@@ -32,14 +32,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: { message: 'Too many attempts. Please try again shortly.' } }, { status: 429 });
     }
 
-    // Already have active access? No need to pay again.
-    const access = await getAccessByEmail(user.email);
-    if (access?.active) {
-      return NextResponse.json({ success: false, error: { message: 'You already have active access.' } }, { status: 409 });
-    }
-
     // Optional discount coupon — re-validate server-side even if client already checked.
     const body = await request.json().catch(() => ({})) as {
+      level?: string;
       currency?: string;
       couponCode?: string;
       billingName?: string;
@@ -51,6 +46,33 @@ export async function POST(request: Request) {
       billingPincode?: string;
       billingGst?: string;
     };
+
+    // Validate level — only Level 1 and Level 2 are purchasable.
+    const purchaseLevel: PurchaseLevel =
+      body.level === 'LEVEL_2' ? 'LEVEL_2' : 'LEVEL_1';
+
+    // Block re-purchase only if the user already has full access OR paid entitlements
+    // for THIS specific level. A Level 1 buyer must still be able to buy Level 2.
+    const access = await getChapterAccess(user.email);
+    if (access.full) {
+      return NextResponse.json({ success: false, error: { message: 'You already have full access.' } }, { status: 409 });
+    }
+    if (!access.full) {
+      // Check paid entitlements scoped to this level
+      const now = new Date();
+      const levelChapterIds = (await prisma.chapter.findMany({
+        where: { level: purchaseLevel, isPublished: true, isDeleted: false },
+        select: { id: true },
+      })).map((c) => c.id);
+      if (levelChapterIds.length > 0) {
+        const paidEnts = await prisma.entitlement.count({
+          where: { userId: user.id, chapterId: { in: levelChapterIds }, expiresAt: { gt: now } },
+        });
+        if (paidEnts >= levelChapterIds.length) {
+          return NextResponse.json({ success: false, error: { message: 'You already have active access to this level.' } }, { status: 409 });
+        }
+      }
+    }
 
     // Validate currency — only INR and USD are supported.
     const currency: SupportedCurrency =
@@ -70,6 +92,11 @@ export async function POST(request: Request) {
       if (coupon.maxRedemptions !== null && coupon.redeemedCount >= coupon.maxRedemptions) {
         return NextResponse.json({ success: false, error: { message: 'Coupon has reached its limit.' } }, { status: 400 });
       }
+      // Level restriction — a level-locked coupon cannot be applied to a different level purchase.
+      if (coupon.appliesTo && coupon.appliesTo !== purchaseLevel) {
+        const label = coupon.appliesTo === 'LEVEL_2' ? 'CMT Level II' : 'CMT Level I';
+        return NextResponse.json({ success: false, error: { message: `This coupon is only valid for ${label}.` } }, { status: 400 });
+      }
       // Fixed-amount coupons are defined in paise and cannot apply to USD orders.
       if (coupon.discountType === 'FIXED' && currency === 'USD') {
         return NextResponse.json({ success: false, error: { message: 'This coupon is only valid for INR payments.' } }, { status: 400 });
@@ -82,14 +109,14 @@ export async function POST(request: Request) {
     const order = await getRazorpay().orders.create({
       amount: chargeAmount,
       currency,
-      receipt: `cmt1_${user.id.slice(-10)}_${Date.now().toString(36)}`,
-      notes: { userId: user.id, level: PLAN_LEVEL },
+      receipt: `cmt_${purchaseLevel === 'LEVEL_2' ? 'l2' : 'l1'}_${user.id.slice(-10)}_${Date.now().toString(36)}`,
+      notes: { userId: user.id, level: purchaseLevel },
     });
 
     await prisma.payment.create({
       data: {
         userId: user.id,
-        level: PLAN_LEVEL,
+        level: purchaseLevel,
         amount: chargeAmount,
         currency,
         razorpayOrderId: order.id,

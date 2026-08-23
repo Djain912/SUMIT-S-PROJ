@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db/prisma';
 import { generateInvoicePdf } from './generate';
-import { resend, FROM_EMAIL } from '@/lib/email/resend';
+import { resend, FROM_EMAIL, BCC_EMAIL } from '@/lib/email/resend';
 
 function pad(n: number) {
   return String(n).padStart(4, '0');
@@ -78,6 +78,7 @@ export async function issueInvoice(paymentId: string): Promise<void> {
       await resend.emails.send({
         from: FROM_EMAIL,
         to: toEmail,
+        bcc: [BCC_EMAIL],
         subject: `Your Chartix invoice ${invoiceNumber}`,
         html: `<p>Hi ${payment.billingName ?? ''},</p>
 <p>Thank you for your purchase! Please find your invoice <strong>${invoiceNumber}</strong> attached.</p>

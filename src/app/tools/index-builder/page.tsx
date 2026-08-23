@@ -3,6 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight, BookOpen, Scale, BarChart3, Download, Rocket } from 'lucide-react';
 import { siteConfig } from '@/lib/site';
+import { IndexBuilderTimedBanner } from '@/components/marketing/IndexBuilderTimedBanner';
 
 export const metadata: Metadata = {
   title: 'Custom Index Builder — Build Market-Cap & Equal-Weight Indices | Chartix',
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
 };
 
 // The actual interactive tool (self-contained app served from /public).
-const APP_URL = '/index-builder-app/index.html?v=26';
+const APP_URL = '/index-builder-app/index.html?v=42';
 
 const features = [
   { icon: BookOpen, title: '4,900+ NSE/BSE stocks', desc: 'Search any listed Indian stock by name or symbol and add it to your index.' },
@@ -208,6 +209,9 @@ export default function IndexBuilderPage() {
           </Link>
         </p>
       </footer>
+
+      {/* 3-minute timed CMT promo banner */}
+      <IndexBuilderTimedBanner />
     </div>
   );
 }

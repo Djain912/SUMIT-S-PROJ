@@ -2,16 +2,17 @@ import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import { prisma } from '@/lib/db/prisma';
 
-// Level I plan pricing — matches the pricing page.
-export const LEVEL1_PRICE_PAISE     = 699900; // ₹6,999 for Indian users
-export const LEVEL1_PRICE_USD_CENTS =   9900; // $99.00 for international users
+// Per-level pricing — all levels same price, matches the pricing page.
+export const PRICE_PAISE     = 699900; // ₹6,999 for Indian users
+export const PRICE_USD_CENTS =   9900; // $99.00 for international users
 export const ACCESS_MONTHS = 6;
-export const PLAN_LEVEL = 'LEVEL_1' as const;
+
+export type PurchaseLevel = 'LEVEL_1' | 'LEVEL_2';
 
 export type SupportedCurrency = 'INR' | 'USD';
 
 export function getPriceUnits(currency: SupportedCurrency): number {
-  return currency === 'USD' ? LEVEL1_PRICE_USD_CENTS : LEVEL1_PRICE_PAISE;
+  return currency === 'USD' ? PRICE_USD_CENTS : PRICE_PAISE;
 }
 
 let client: Razorpay | null = null;
@@ -53,8 +54,32 @@ export function applyDiscount(
   return { discountPaise: orderPaise - finalPaise, finalPaise };
 }
 
-// Grants 6 months of premium access, extending any existing access rather than
-// shortening it. Returns the resulting premium expiry.
+// Grants 6 months access to all published chapters of a specific CMT level
+// via Entitlements. Per-level: buying Level 1 does not unlock Level 2, and
+// vice versa. Idempotent — safe to call twice (extends expiry on re-purchase).
+export async function grantLevelAccess(userId: string, level: PurchaseLevel): Promise<Date> {
+  const expiresAt = new Date();
+  expiresAt.setMonth(expiresAt.getMonth() + ACCESS_MONTHS);
+
+  const chapters = await prisma.chapter.findMany({
+    where: { level, isPublished: true, isDeleted: false },
+    select: { id: true },
+  });
+
+  await prisma.$transaction(
+    chapters.map((ch) =>
+      prisma.entitlement.upsert({
+        where: { userId_chapterId: { userId, chapterId: ch.id } },
+        create: { userId, chapterId: ch.id, expiresAt },
+        update: { expiresAt },
+      }),
+    ),
+  );
+
+  return expiresAt;
+}
+
+// Legacy: grants full (all-level) premium access. Kept for admin/coupon grants.
 export async function grantPremiumAccess(userId: string): Promise<Date> {
   const sixMonths = new Date();
   sixMonths.setMonth(sixMonths.getMonth() + ACCESS_MONTHS);
