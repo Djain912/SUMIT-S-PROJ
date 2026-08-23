@@ -19,21 +19,42 @@ type ResolvedItem = {
 };
 type BookmarkGroup = { chapterId: string; chapterTitle: string; items: ResolvedItem[] };
 
-// Tiled, rotated watermark used as a TOP overlay (visible above the content cards).
+// Tiled, rotated watermark drawn as a TOP overlay (above the content cards) so
+// it survives a screenshot. It sits directly over body text, so it is kept
+// deliberately faint and sparse — at the old 0.18 alpha on a 360x200 tile it
+// competed with the text it was protecting and made the sheet hard to read.
+// Legible enough to identify the account in a leaked screenshot, quiet enough
+// to read through.
 function createWatermarkStyle(text: string): CSSProperties {
   const safe = text.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="360" height="200"><g transform="translate(20,120) rotate(-24)"><text x="0" y="0" font-size="15" font-weight="600" fill="rgba(15,118,90,0.18)" font-family="Arial,sans-serif">${safe}</text></g></svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="520" height="300"><g transform="translate(30,180) rotate(-24)"><text x="0" y="0" font-size="13" font-weight="500" fill="rgba(15,118,90,0.055)" font-family="Arial,sans-serif">${safe}</text></g></svg>`;
   return {
     backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(svg)}")`,
     backgroundRepeat: 'repeat',
-    backgroundSize: '360px 200px',
+    backgroundSize: '520px 300px',
+    // Own compositing layer: a full-height tiled background otherwise
+    // re-rasterises on every scroll frame.
+    transform: 'translateZ(0)',
   };
 }
 
+// Stays hidden until the row is hovered or focused, so a page of takeaways
+// isn't a column of grey icons floating far from the text they belong to.
+// An active bookmark always shows — it's state, not an affordance.
 function BookmarkBtn({ on, onClick }: { on: boolean; onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} title={on ? 'Remove bookmark' : 'Bookmark this'}
-      className={`ml-auto flex-none rounded-md p-1.5 transition-colors ${on ? 'text-emerald-600 hover:text-emerald-700' : 'text-zinc-300 hover:text-zinc-500'}`}>
+    <button
+      type="button"
+      onClick={onClick}
+      title={on ? 'Remove bookmark' : 'Bookmark this'}
+      aria-label={on ? 'Remove bookmark' : 'Bookmark this'}
+      aria-pressed={on}
+      className={`mt-0.5 flex-none rounded-lg p-1.5 transition focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
+        on
+          ? 'text-emerald-600 opacity-100 hover:bg-emerald-50'
+          : 'text-zinc-300 opacity-0 hover:bg-zinc-100 hover:text-zinc-500 group-hover:opacity-100'
+      }`}
+    >
       {on ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
     </button>
   );
@@ -57,26 +78,62 @@ function Section({ title, icon, color, children, defaultOpen = true }: {
 
 // ── Shared item renderers (used by both browse + bookmarks views) ──
 function TextItem({ text, n, on, onToggle, tone }: { text: string; n?: number; on: boolean; onToggle: () => void; tone: 'emerald' | 'rose' }) {
-  const ring = tone === 'emerald' ? 'border-zinc-100 bg-zinc-50/60 hover:bg-emerald-50/40' : 'border-rose-100 bg-rose-50/30';
+  const shell = tone === 'emerald'
+    ? 'border-zinc-200/80 bg-white hover:border-emerald-200 hover:bg-emerald-50/40'
+    : 'border-rose-200/70 bg-rose-50/40 hover:bg-rose-50/70';
   return (
-    <li className={`flex items-start gap-3 rounded-xl border px-4 py-3 transition ${ring}`}>
+    <li className={`group flex items-start gap-3.5 rounded-xl border px-4 py-3.5 transition-colors ${
+      on ? 'border-emerald-300 bg-emerald-50/50' : shell
+    }`}>
       {n != null
-        ? <span className="mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-full bg-emerald-100 text-[10px] font-bold text-emerald-700">{n}</span>
-        : <span className="mt-1 flex-none text-rose-400">▸</span>}
-      <span className="flex-1 text-sm leading-relaxed text-zinc-700">{text}</span>
+        ? (
+          <span className="mt-px flex h-6 w-6 flex-none items-center justify-center rounded-full bg-emerald-600 text-[11px] font-bold tabular-nums text-white">
+            {n}
+          </span>
+        )
+        : <span className="mt-1.5 h-1.5 w-1.5 flex-none rounded-full bg-rose-400" />}
+      {/* Capped measure: full-width lines across a wide card are hard to track. */}
+      <span className="min-w-0 flex-1 max-w-[68ch] text-[15px] leading-7 text-zinc-800">{text}</span>
       <BookmarkBtn on={on} onClick={onToggle} />
     </li>
   );
 }
-function ConceptItem({ c, on, onToggle }: { c: KeyConcept; on: boolean; onToggle: () => void }) {
+// "Why it matters" and "Exam angle" were 12px grey runs trailing the
+// definition, so they read as footnotes rather than the two things a student
+// actually revises from. They're now labelled rows, set off from the
+// definition by a divider and carrying their own accent.
+function MetaRow({ label, tone, children }: { label: string; tone: 'zinc' | 'amber'; children: React.ReactNode }) {
+  const chip = tone === 'amber'
+    ? 'bg-amber-100 text-amber-700'
+    : 'bg-zinc-100 text-zinc-600';
   return (
-    <div className="rounded-xl border border-sky-100 bg-sky-50/30 px-4 py-3">
-      <div className="flex items-start gap-2">
-        <div className="flex-1">
-          <p className="text-sm font-bold text-sky-900">{c.name}</p>
-          {c.definition && <p className="mt-1 text-sm leading-relaxed text-zinc-700">{c.definition}</p>}
-          {c.whyItMatters && <p className="mt-1.5 text-xs leading-relaxed text-zinc-500"><span className="font-semibold text-zinc-600">Why it matters:</span> {c.whyItMatters}</p>}
-          {c.examAngle && <p className="mt-1 text-xs leading-relaxed text-amber-700"><span className="font-semibold">Exam angle:</span> {c.examAngle}</p>}
+    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+      <span className={`flex-none rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${chip}`}>
+        {label}
+      </span>
+      <span className="min-w-0 flex-1 text-[13px] leading-6 text-zinc-600">{children}</span>
+    </div>
+  );
+}
+
+function ConceptItem({ c, on, onToggle }: { c: KeyConcept; on: boolean; onToggle: () => void }) {
+  const hasMeta = Boolean(c.whyItMatters || c.examAngle);
+  return (
+    <div className={`group rounded-xl border px-4 py-3.5 transition-colors ${
+      on ? 'border-emerald-300 bg-emerald-50/40' : 'border-sky-100 bg-sky-50/30 hover:bg-sky-50/60'
+    }`}>
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-[15px] font-bold leading-6 text-sky-900">{c.name}</p>
+          {c.definition && (
+            <p className="mt-1.5 max-w-[68ch] text-[15px] leading-7 text-zinc-800">{c.definition}</p>
+          )}
+          {hasMeta && (
+            <div className="mt-3 space-y-2 border-t border-sky-100 pt-3">
+              {c.whyItMatters && <MetaRow label="Why it matters" tone="zinc">{c.whyItMatters}</MetaRow>}
+              {c.examAngle && <MetaRow label="Exam angle" tone="amber">{c.examAngle}</MetaRow>}
+            </div>
+          )}
         </div>
         <BookmarkBtn on={on} onClick={onToggle} />
       </div>
@@ -85,12 +142,18 @@ function ConceptItem({ c, on, onToggle }: { c: KeyConcept; on: boolean; onToggle
 }
 function FormulaItem({ f, on, onToggle }: { f: Formula; on: boolean; onToggle: () => void }) {
   return (
-    <div className="rounded-xl border border-violet-100 bg-violet-50/30 px-4 py-3">
-      <div className="flex items-start gap-2">
-        <div className="flex-1">
-          <p className="text-xs font-bold uppercase tracking-widest text-violet-600">{f.label}</p>
-          <p className="mt-1.5 font-mono text-sm font-semibold text-zinc-800">{f.expression}</p>
-          {f.notes && <p className="mt-1 text-xs leading-relaxed text-zinc-500">{f.notes}</p>}
+    <div className={`group rounded-xl border px-4 py-3.5 transition-colors ${
+      on ? 'border-emerald-300 bg-emerald-50/40' : 'border-violet-100 bg-violet-50/30 hover:bg-violet-50/60'
+    }`}>
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-violet-600">{f.label}</p>
+          {/* The expression is the thing being memorised — give it a surface of
+              its own instead of letting it blend into the note text. */}
+          <p className="mt-2 overflow-x-auto rounded-lg border border-violet-100 bg-white px-3 py-2.5 font-mono text-[15px] font-semibold leading-6 text-zinc-900">
+            {f.expression}
+          </p>
+          {f.notes && <p className="mt-2 max-w-[68ch] text-[13px] leading-6 text-zinc-600">{f.notes}</p>}
         </div>
         <BookmarkBtn on={on} onClick={onToggle} />
       </div>
@@ -99,11 +162,23 @@ function FormulaItem({ f, on, onToggle }: { f: Formula; on: boolean; onToggle: (
 }
 function TipItem({ t, on, onToggle }: { t: ExamTip; on: boolean; onToggle: () => void }) {
   return (
-    <div className="rounded-xl border border-amber-100 bg-amber-50/30 px-4 py-3">
-      <div className="flex items-start gap-2">
-        <div className="flex-1 space-y-1.5">
-          {t.remember && <p className="flex items-start gap-2 text-sm leading-relaxed text-zinc-700"><span className="flex-none">✅</span><span>{t.remember}</span></p>}
-          {t.mistake && <p className="flex items-start gap-2 text-sm leading-relaxed text-zinc-700"><span className="flex-none">❌</span><span>{t.mistake}</span></p>}
+    <div className={`group rounded-xl border px-4 py-3.5 transition-colors ${
+      on ? 'border-emerald-300 bg-emerald-50/40' : 'border-amber-100 bg-amber-50/30 hover:bg-amber-50/60'
+    }`}>
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1 space-y-2.5">
+          {t.remember && (
+            <p className="flex items-start gap-2.5 max-w-[68ch] text-[15px] leading-7 text-zinc-800">
+              <span className="mt-1 flex h-4 w-4 flex-none items-center justify-center rounded-full bg-emerald-100 text-[9px] font-bold text-emerald-700">✓</span>
+              <span>{t.remember}</span>
+            </p>
+          )}
+          {t.mistake && (
+            <p className="flex items-start gap-2.5 max-w-[68ch] text-[15px] leading-7 text-zinc-800">
+              <span className="mt-1 flex h-4 w-4 flex-none items-center justify-center rounded-full bg-rose-100 text-[9px] font-bold text-rose-700">✕</span>
+              <span>{t.mistake}</span>
+            </p>
+          )}
         </div>
         <BookmarkBtn on={on} onClick={onToggle} />
       </div>
