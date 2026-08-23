@@ -6,6 +6,7 @@ import {
   Target, Clock, Zap, Award, AlertTriangle, CheckCircle2,
   BookOpen, BarChart3, TrendingUp, TrendingDown, ArrowRight,
   Flame, ListChecks, Layers, Sparkles, Send, Loader2,
+  Grid2X2, ChevronRight,
 } from 'lucide-react';
 
 interface LevelSummary {
@@ -33,6 +34,7 @@ interface SubtopicAnalysis {
   averageTimePerQuestion: number;
   lastAttemptAt: string | null;
   isWeak: boolean;
+  examWeight: number;
 }
 
 interface ChapterAnalysis {
@@ -43,6 +45,7 @@ interface ChapterAnalysis {
   totalQuestions: number;
   correctAnswers: number;
   accuracy: number;
+  examWeight: number;
   subtopics: SubtopicAnalysis[];
 }
 
@@ -133,6 +136,7 @@ function AccuracyBar({ value, label, sub }: { value: number; label: string; sub?
 }
 
 const tabs = [
+  { id: 'swot', label: 'SWOT', icon: Grid2X2 },
   { id: 'overview', label: 'Chapters', icon: Layers },
   { id: 'weak', label: 'Needs Work', icon: AlertTriangle },
   { id: 'strong', label: 'Strong', icon: CheckCircle2 },
@@ -140,6 +144,241 @@ const tabs = [
 ] as const;
 
 type Tab = typeof tabs[number]['id'];
+
+// ── SWOT matrix: score (x) vs exam importance (y) ────────────────────────────
+// A topic is "high importance" when it carries at least an average share of the
+// paper, so the threshold moves with the syllabus instead of being hardcoded.
+const SWOT_SCORE_CUT = 70;
+
+interface SwotItem {
+  id: string;
+  title: string;
+  subtitle?: string;
+  score: number;
+  weight: number;
+  quizHref: string;
+  children?: SwotItem[];
+}
+
+type QuadrantId = 'S' | 'W' | 'O' | 'T';
+
+const QUADRANTS: Record<QuadrantId, {
+  title: string; letter: string; tint: string; chip: string; dot: string; rule: (cut: string) => string;
+}> = {
+  T: {
+    title: 'Threats', letter: 'T',
+    tint: 'bg-rose-50/70', chip: 'bg-rose-100 text-rose-600', dot: 'bg-rose-500',
+    rule: (c) => `Score < ${SWOT_SCORE_CUT}%, Weight ≥ ${c}`,
+  },
+  S: {
+    title: 'Strengths', letter: 'S',
+    tint: 'bg-emerald-50/70', chip: 'bg-emerald-100 text-emerald-600', dot: 'bg-emerald-500',
+    rule: (c) => `Score ≥ ${SWOT_SCORE_CUT}%, Weight ≥ ${c}`,
+  },
+  W: {
+    title: 'Weaknesses', letter: 'W',
+    tint: 'bg-amber-50/70', chip: 'bg-amber-100 text-amber-600', dot: 'bg-amber-500',
+    rule: (c) => `Score < ${SWOT_SCORE_CUT}%, Weight < ${c}`,
+  },
+  O: {
+    title: 'Opportunities', letter: 'O',
+    tint: 'bg-sky-50/70', chip: 'bg-sky-100 text-sky-600', dot: 'bg-sky-500',
+    rule: (c) => `Score ≥ ${SWOT_SCORE_CUT}%, Weight < ${c}`,
+  },
+};
+
+function quadrantOf(item: SwotItem, weightCut: number): QuadrantId {
+  const heavy = item.weight >= weightCut;
+  const strong = item.score >= SWOT_SCORE_CUT;
+  if (heavy) return strong ? 'S' : 'T';
+  return strong ? 'O' : 'W';
+}
+
+function SwotQuadrant({
+  id, items, weightCut, expandedId, onToggle,
+}: {
+  id: QuadrantId;
+  items: SwotItem[];
+  weightCut: number;
+  expandedId: string | null;
+  onToggle: (id: string) => void;
+}) {
+  const q = QUADRANTS[id];
+  return (
+    <div className={`flex flex-col gap-3 p-4 sm:p-5 ${q.tint}`}>
+      <div className="flex items-center gap-3">
+        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-bold ${q.chip}`}>
+          {q.letter}
+        </span>
+        <div className="min-w-0">
+          <p className="text-base font-semibold text-zinc-900">{q.title}</p>
+          <p className="text-xs text-zinc-500">{q.rule(`${weightCut}%`)}</p>
+        </div>
+      </div>
+
+      {items.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-zinc-200 px-3 py-6 text-center text-xs text-zinc-400">
+          Nothing here yet
+        </p>
+      ) : (
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-end gap-4 pr-7 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
+            <span className="w-10 text-right">Weight</span>
+            <span className="w-10 text-right">Score</span>
+          </div>
+          {items.map((item) => {
+            const isOpen = expandedId === item.id;
+            const hasChildren = (item.children?.length ?? 0) > 0;
+            return (
+              <div key={item.id} className="overflow-hidden rounded-lg bg-white/80 ring-1 ring-black/5">
+                <button
+                  type="button"
+                  onClick={() => hasChildren && onToggle(item.id)}
+                  className={`flex w-full items-center gap-3 px-3 py-2.5 text-left ${hasChildren ? 'hover:bg-white' : 'cursor-default'}`}
+                >
+                  <span className={`h-2 w-2 shrink-0 rounded-full ${q.dot}`} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium text-zinc-900">{item.title}</span>
+                    {item.subtitle && <span className="block truncate text-xs text-zinc-400">{item.subtitle}</span>}
+                  </span>
+                  <span className="w-10 shrink-0 text-right text-sm tabular-nums text-zinc-500">{item.weight}%</span>
+                  <span className={`w-10 shrink-0 text-right text-sm font-semibold tabular-nums ${scoreColor(item.score)}`}>{item.score}%</span>
+                  {hasChildren
+                    ? <ChevronRight className={`h-4 w-4 shrink-0 text-zinc-300 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+                    : <span className="w-4 shrink-0" />}
+                </button>
+
+                {isOpen && hasChildren && (
+                  <div className="divide-y divide-zinc-50 border-t border-zinc-100 bg-white">
+                    {item.children!.map((child) => (
+                      <div key={child.id} className="flex items-center gap-3 px-3 py-2 pl-8">
+                        <span className="min-w-0 flex-1 truncate text-xs text-zinc-600">{child.title}</span>
+                        <span className="w-10 shrink-0 text-right text-xs tabular-nums text-zinc-400">{child.weight}%</span>
+                        <span className={`w-10 shrink-0 text-right text-xs font-semibold tabular-nums ${scoreColor(child.score)}`}>{child.score}%</span>
+                        <Link
+                          href={child.quizHref}
+                          className="shrink-0 rounded-md bg-zinc-900 px-2 py-1 text-[11px] font-medium text-white transition hover:bg-zinc-700"
+                        >
+                          Quiz
+                        </Link>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SwotMatrix({ chapters }: { chapters: ChapterAnalysis[] }) {
+  const [view, setView] = useState<'topics' | 'subtopics'>('topics');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const items: SwotItem[] = view === 'topics'
+    ? chapters.map((ch) => ({
+        id: ch.id,
+        title: ch.title,
+        score: ch.accuracy,
+        weight: ch.examWeight,
+        quizHref: `/user/quiz?mode=CHAPTER&chapter=${ch.id}`,
+        children: ch.subtopics.map((st) => ({
+          id: st.id,
+          title: st.title,
+          score: st.accuracy,
+          weight: st.examWeight,
+          quizHref: `/user/quiz?mode=SUBTOPIC&subtopic=${st.id}`,
+        })),
+      }))
+    : chapters.flatMap((ch) => ch.subtopics.map((st) => ({
+        id: st.id,
+        title: st.title,
+        subtitle: ch.title,
+        score: st.accuracy,
+        weight: st.examWeight,
+        quizHref: `/user/quiz?mode=SUBTOPIC&subtopic=${st.id}`,
+      })));
+
+  if (items.length === 0) {
+    return (
+      <div className="py-14 text-center">
+        <Grid2X2 className="mx-auto mb-3 h-10 w-10 text-zinc-200" />
+        <p className="text-sm text-zinc-500">Attempt a few quizzes to build your SWOT.</p>
+        <Link href="/user/quiz" className="mt-4 inline-flex items-center gap-2 rounded-full bg-zinc-900 px-5 py-2 text-sm font-semibold text-white hover:bg-zinc-700">
+          Start a quiz <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
+      </div>
+    );
+  }
+
+  // Average exam weight of what's on screen — the horizontal split line.
+  const weightCut = Math.round(
+    (items.reduce((sum, i) => sum + i.weight, 0) / items.length) * 10,
+  ) / 10;
+
+  const buckets: Record<QuadrantId, SwotItem[]> = { S: [], W: [], O: [], T: [] };
+  for (const item of items) buckets[quadrantOf(item, weightCut)].push(item);
+  for (const key of Object.keys(buckets) as QuadrantId[]) {
+    buckets[key].sort((a, b) => b.weight - a.weight || a.score - b.score);
+  }
+
+  return (
+    <div>
+      <div className="mb-5 flex flex-col items-center gap-2">
+        <div className="inline-flex rounded-full bg-zinc-100 p-1">
+          {(['topics', 'subtopics'] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => { setView(v); setExpandedId(null); }}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium capitalize transition ${
+                view === v ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-800'
+              }`}
+            >
+              {v === 'topics' ? 'Topics' : 'Sub-topics'}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-zinc-400">
+          {view === 'topics' ? 'Click a topic to drill into its sub-topics' : 'Every sub-topic you have attempted'}
+        </p>
+      </div>
+
+      <div className="flex gap-3">
+        {/* Y axis */}
+        <div className="hidden w-6 shrink-0 flex-col items-center justify-between py-1 sm:flex">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-300">High</span>
+          <span className="whitespace-nowrap text-xs font-semibold text-zinc-500 [writing-mode:vertical-rl] rotate-180">
+            Exam Importance
+          </span>
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-300">Low</span>
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="grid overflow-hidden rounded-2xl border border-zinc-200 sm:grid-cols-2">
+            <div className="border-b border-zinc-200 sm:border-r"><SwotQuadrant id="T" items={buckets.T} weightCut={weightCut} expandedId={expandedId} onToggle={(id) => setExpandedId(expandedId === id ? null : id)} /></div>
+            <div className="border-b border-zinc-200"><SwotQuadrant id="S" items={buckets.S} weightCut={weightCut} expandedId={expandedId} onToggle={(id) => setExpandedId(expandedId === id ? null : id)} /></div>
+            <div className="border-b border-zinc-200 sm:border-b-0 sm:border-r"><SwotQuadrant id="W" items={buckets.W} weightCut={weightCut} expandedId={expandedId} onToggle={(id) => setExpandedId(expandedId === id ? null : id)} /></div>
+            <div><SwotQuadrant id="O" items={buckets.O} weightCut={weightCut} expandedId={expandedId} onToggle={(id) => setExpandedId(expandedId === id ? null : id)} /></div>
+          </div>
+
+          {/* X axis */}
+          <div className="mt-2 flex items-center justify-between px-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-300">Low</span>
+            <div className="text-center">
+              <p className="text-xs font-semibold text-zinc-500">Current Score</p>
+              <p className="text-[10px] text-zinc-400">Correct ÷ attempted</p>
+            </div>
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-300">High</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ── AI Coach: summary + study plan ───────────────────────────────────────────
 interface CoachData {
@@ -372,7 +611,7 @@ export function UserAnalyticsClient() {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<Tab>('overview');
+  const [activeTab, setActiveTab] = useState<Tab>('swot');
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -522,6 +761,7 @@ export function UserAnalyticsClient() {
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const count =
+              tab.id === 'swot' ? 0 :
               tab.id === 'weak' ? weakTopics.length :
               tab.id === 'strong' ? strongTopics.length :
               tab.id === 'history' ? recentAttempts.length :
@@ -553,6 +793,9 @@ export function UserAnalyticsClient() {
         </div>
 
         <div className="p-5 sm:p-6">
+
+          {/* SWOT */}
+          {activeTab === 'swot' && <SwotMatrix chapters={chapterAnalysis} />}
 
           {/* Chapter Analysis */}
           {activeTab === 'overview' && (

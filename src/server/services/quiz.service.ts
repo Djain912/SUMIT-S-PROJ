@@ -19,11 +19,11 @@ export type ChapterScope = 'ALL' | string[];
 export const FULL_TEST_TOTAL = 132; // L1 default (kept for backwards compat)
 export const FULL_TEST_TIME_MINUTES = 120; // L1 default
 
-type CmtDomain = 'THEORY' | 'CLASSICAL' | 'ADVANCED' | 'APP_TA' | 'ETHICS';
+export type CmtDomain = 'THEORY' | 'CLASSICAL' | 'ADVANCED' | 'APP_TA' | 'ETHICS';
 
 type FullTestConfig = { total: number; minutes: number; weights: Record<CmtDomain, number> };
 
-const FULL_TEST_CONFIG: Record<string, FullTestConfig> = {
+export const FULL_TEST_CONFIG: Record<string, FullTestConfig> = {
   LEVEL_1: {
     total: 132,
     minutes: 120,
@@ -45,14 +45,14 @@ const DIFFICULTY_WEIGHTS: Record<Difficulty, number> = {
 };
 
 // Maps each unit (chapter.orderIndex) to its CMT knowledge domain per level.
-const DOMAIN_BY_UNIT_L1: Record<number, CmtDomain> = {
+export const DOMAIN_BY_UNIT_L1: Record<number, CmtDomain> = {
   1: 'THEORY',     7: 'THEORY',
   2: 'CLASSICAL',  3: 'CLASSICAL',  4: 'CLASSICAL',  5: 'CLASSICAL',  8: 'CLASSICAL',  9: 'CLASSICAL',
   6: 'ADVANCED',   10: 'ADVANCED',  11: 'ADVANCED',  12: 'ADVANCED',
   13: 'ETHICS',
 };
 
-const DOMAIN_BY_UNIT_L2: Record<number, CmtDomain> = {
+export const DOMAIN_BY_UNIT_L2: Record<number, CmtDomain> = {
   1: 'THEORY',     2: 'THEORY',
   3: 'CLASSICAL',  4: 'CLASSICAL',  5: 'CLASSICAL',  6: 'CLASSICAL',  7: 'CLASSICAL',
   8: 'ADVANCED',   9: 'ADVANCED',   10: 'ADVANCED',  11: 'ADVANCED',  12: 'ADVANCED',

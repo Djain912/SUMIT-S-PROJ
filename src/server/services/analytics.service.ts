@@ -1,4 +1,44 @@
 import { prisma } from '@/lib/db/prisma';
+import {
+  FULL_TEST_CONFIG,
+  DOMAIN_BY_UNIT_L1,
+  DOMAIN_BY_UNIT_L2,
+  type CmtDomain,
+} from '@/server/services/quiz.service';
+
+// Exam importance of a chapter, in % of the paper. Derived from the official
+// CMT domain weights already used to build the full mock test: each domain's
+// share is split evenly across the published chapters that belong to it, and
+// the "Application of TA" slice — which has no chapters of its own and is
+// tested across the whole syllabus — is spread evenly over every chapter.
+function computeChapterWeights(
+  chapters: { id: string; level: string; orderIndex: number }[],
+): Map<string, number> {
+  const weights = new Map<string, number>();
+
+  for (const level of ['LEVEL_1', 'LEVEL_2', 'LEVEL_3']) {
+    const cfg = FULL_TEST_CONFIG[level];
+    const levelChapters = chapters.filter(c => c.level === level);
+    if (!cfg || levelChapters.length === 0) continue;
+
+    const domainMap = level === 'LEVEL_2' ? DOMAIN_BY_UNIT_L2 : DOMAIN_BY_UNIT_L1;
+    const countByDomain = new Map<CmtDomain, number>();
+    for (const c of levelChapters) {
+      const d = domainMap[c.orderIndex];
+      if (d) countByDomain.set(d, (countByDomain.get(d) ?? 0) + 1);
+    }
+
+    const spreadEach = (cfg.weights.APP_TA * 100) / levelChapters.length;
+    for (const c of levelChapters) {
+      const d = domainMap[c.orderIndex];
+      const n = d ? countByDomain.get(d) ?? 0 : 0;
+      const own = d && n > 0 ? (cfg.weights[d] * 100) / n : 0;
+      weights.set(c.id, Math.round((own + spreadEach) * 10) / 10);
+    }
+  }
+
+  return weights;
+}
 
 interface SubtopicAnalysis {
   id: string;
@@ -13,6 +53,8 @@ interface SubtopicAnalysis {
   averageTimePerQuestion: number;
   lastAttemptAt: string | null;
   isWeak: boolean;
+  /** Share of the exam this subtopic carries, in % (its chapter's weight, split evenly). */
+  examWeight: number;
 }
 
 interface ChapterAnalysis {
@@ -23,6 +65,8 @@ interface ChapterAnalysis {
   totalQuestions: number;
   correctAnswers: number;
   accuracy: number;
+  /** Share of the exam this chapter carries, in % of the paper. */
+  examWeight: number;
   subtopics: SubtopicAnalysis[];
 }
 
@@ -89,6 +133,7 @@ export async function getUserAnalyticsData(userId: string): Promise<AnalyticsDat
         id: true,
         title: true,
         level: true,
+        orderIndex: true,
         subtopics: {
           where: { isPublished: true, isDeleted: false },
           select: { id: true, title: true },
@@ -208,10 +253,16 @@ export async function getUserAnalyticsData(userId: string): Promise<AnalyticsDat
     }
   }
 
+  const chapterWeights = computeChapterWeights(chapters);
+
   const subtopicAnalysisByChapter = new Map<string, SubtopicAnalysis[]>();
   const subtopicAnalysis: SubtopicAnalysis[] = [];
 
   for (const ch of chapters) {
+    const chWeight = chapterWeights.get(ch.id) ?? 0;
+    const stWeight = ch.subtopics.length > 0
+      ? Math.round((chWeight / ch.subtopics.length) * 10) / 10
+      : 0;
     for (const st of ch.subtopics) {
       const stats = subtopicStats.get(st.id);
       if (!stats || stats.questions === 0) continue;
@@ -229,6 +280,7 @@ export async function getUserAnalyticsData(userId: string): Promise<AnalyticsDat
         averageTimePerQuestion: Math.round(stats.totalTime / stats.questions),
         lastAttemptAt: stats.lastAt?.toISOString() ?? null,
         isWeak: accuracy > 0 && accuracy < 50,
+        examWeight: stWeight,
       };
       subtopicAnalysis.push(entry);
       const arr = subtopicAnalysisByChapter.get(ch.id) ?? [];
@@ -252,6 +304,7 @@ export async function getUserAnalyticsData(userId: string): Promise<AnalyticsDat
         totalQuestions: stats.questions,
         correctAnswers: stats.correct,
         accuracy: Math.round((stats.correct / stats.questions) * 100),
+        examWeight: chapterWeights.get(ch.id) ?? 0,
         subtopics: subtopicAnalysisByChapter.get(ch.id) ?? [],
       }];
     });
