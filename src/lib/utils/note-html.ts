@@ -118,6 +118,7 @@ export function normalizeNoteHtml(html: string): string {
     // Crisp rendering + responsive sizing
     el.style.maxWidth = '100%';
     el.style.height = 'auto';
+    el.style.cursor = 'zoom-in';
     el.setAttribute('decoding', 'async');
 
     // Reserve the image's box BEFORE it loads. `.prose img` forces

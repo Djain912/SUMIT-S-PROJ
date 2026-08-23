@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo, useRef, type CSSProperties } from 'react';
 import Link from 'next/link';
-import { Flag, AlertTriangle, List } from 'lucide-react';
+import { Flag, AlertTriangle, List, X } from 'lucide-react';
 import { sanitizeWatermarkConfig } from '@/lib/utils/watermark';
 import { normalizeNoteHtml } from '@/lib/utils/note-html';
 
@@ -99,6 +99,7 @@ export function UserNotesClient() {
   useEffect(() => { isObfuscatedRef.current = isObfuscated; }, [isObfuscated]);
   const [readPct, setReadPct] = useState(0);
   const [showIndex, setShowIndex] = useState(false);
+  const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null);
 
   // Track reading progress on window scroll.
   // Throttled to one read per animation frame and only committed when the
@@ -125,6 +126,35 @@ export function UserNotesClient() {
       window.removeEventListener('resize', onScroll);
     };
   }, [selectedNote]);
+
+  // Lightbox: close on Escape, and freeze the page behind it so scrolling the
+  // overlay doesn't drag the note along underneath.
+  useEffect(() => {
+    if (!lightbox) return;
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLightbox(null);
+    };
+    window.addEventListener('keydown', onKey);
+
+    const { overflow } = document.body.style;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = overflow;
+    };
+  }, [lightbox]);
+
+  // Note HTML is injected with dangerouslySetInnerHTML, so there are no React
+  // nodes to attach handlers to — catch image clicks by delegation instead.
+  const onNoteClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.tagName !== 'IMG') return;
+    const img = target as HTMLImageElement;
+    // currentSrc resolves whatever the browser actually picked (AVIF/WebP).
+    setLightbox({ src: img.currentSrc || img.src, alt: img.alt || 'Note figure' });
+  }, []);
 
   const loadNotes = useCallback(async () => {
     setIsLoading(true);
@@ -496,6 +526,7 @@ export function UserNotesClient() {
                     <h2 className="text-xl font-semibold text-zinc-900 break-words">{selectedNote.title}</h2>
                     <div
                       className="note-content mt-4 max-w-full overflow-x-auto text-zinc-700"
+                      onClick={onNoteClick}
                       dangerouslySetInnerHTML={{
                         __html: selectedNoteHtml,
                       }}
@@ -585,6 +616,39 @@ export function UserNotesClient() {
           </div>
         </div>
         </>
+      )}
+
+      {/* Image lightbox. Rendered inside notes-protected-root so the existing
+          right-click / copy / drag guards still apply to the enlarged image. */}
+      {lightbox && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={lightbox.alt}
+          onClick={() => setLightbox(null)}
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-zinc-950/85 p-4 sm:p-8"
+        >
+          <button
+            type="button"
+            onClick={() => setLightbox(null)}
+            aria-label="Close image"
+            className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-xl leading-none text-white transition hover:bg-white/20 sm:right-5 sm:top-5"
+          >
+            <X className="h-5 w-5" />
+          </button>
+
+          {/* Stop clicks on the image itself from closing the overlay. */}
+          <img
+            src={lightbox.src}
+            alt={lightbox.alt}
+            onClick={(e) => e.stopPropagation()}
+            className="max-h-full max-w-full cursor-zoom-out rounded-lg object-contain shadow-2xl"
+          />
+
+          <p className="pointer-events-none absolute bottom-4 left-0 right-0 text-center text-xs text-white/60">
+            Click anywhere or press Esc to close
+          </p>
+        </div>
       )}
       </div>
     </>
