@@ -53,10 +53,17 @@ export const DOMAIN_BY_UNIT_L1: Record<number, CmtDomain> = {
 };
 
 export const DOMAIN_BY_UNIT_L2: Record<number, CmtDomain> = {
-  1: 'THEORY',     2: 'THEORY',
-  3: 'CLASSICAL',  4: 'CLASSICAL',  5: 'CLASSICAL',  6: 'CLASSICAL',  7: 'CLASSICAL',
-  8: 'ADVANCED',   9: 'ADVANCED',   10: 'ADVANCED',  11: 'ADVANCED',  12: 'ADVANCED',
-  // Application of TA is tested across all chapters — backfilled from pool
+  1: 'THEORY',     2: 'THEORY',      // Theory & History, Behavioral Finance
+  // Classical = the charting tradition itself: reading price on a chart.
+  3: 'CLASSICAL',  4: 'CLASSICAL',   5: 'CLASSICAL',
+  // Advanced = everything derived or computed from price rather than drawn on
+  // it. Volatility (VI) and Sentiment (VII) moved here from CLASSICAL: neither
+  // is classical pattern work — they sit alongside statistics, indicators and
+  // cycles, and grouping them under CLASSICAL skewed the mock's composition.
+  6: 'ADVANCED',   7: 'ADVANCED',    8: 'ADVANCED',   9: 'ADVANCED',
+  10: 'ADVANCED',  11: 'ADVANCED',   12: 'ADVANCED',
+  // Application of TA has no chapters of its own — its weight is redistributed
+  // across the anchored domains in pickFullTestQuestionIds.
   13: 'ETHICS',
 };
 
