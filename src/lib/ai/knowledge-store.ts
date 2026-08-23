@@ -60,17 +60,23 @@ export async function searchSimilarChunks(
   const embeddingLiteral = `[${queryEmbedding.join(',')}]`;
 
   if (level) {
+    // For Level 2 users, also search Level 1 chunks — L1 content (RSI, Dow Theory,
+    // candlesticks, etc.) is foundational and always relevant to L2 questions.
+    const allowedLevels = level === 'LEVEL_2'
+      ? ['LEVEL_1', 'LEVEL_2']
+      : [level];
+    const placeholders = allowedLevels.map((_, i) => `$${i + 2}`).join(', ');
     return prisma.$queryRawUnsafe<KnowledgeChunkResult[]>(
       `SELECT id::text, content, level, source_type, chapter_title, subtopic_title,
               COALESCE(image_urls, '{}') AS image_urls,
               (1 - (embedding <=> $1::vector))::float AS similarity
        FROM knowledge_chunks
-       WHERE (level = $2 OR level IS NULL)
+       WHERE (level IN (${placeholders}) OR level IS NULL)
          AND (1 - (embedding <=> $1::vector)) > 0.45
        ORDER BY embedding <=> $1::vector
-       LIMIT $3`,
+       LIMIT $${allowedLevels.length + 2}`,
       embeddingLiteral,
-      level,
+      ...allowedLevels,
       limit,
     );
   }
