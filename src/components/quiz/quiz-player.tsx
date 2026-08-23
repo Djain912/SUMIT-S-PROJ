@@ -39,15 +39,32 @@ type QuizAttempt = {
   selectionJson?: { timeLimitMinutes?: number; mode?: string } | null;
 };
 
-// Official CMT Level I exam format — shown on the Full Length Test setup screen.
-const FULL_TEST_QUESTIONS = 132;
-const FULL_TEST_MINUTES = 120;
-const CMT_DOMAINS = [
-  { label: 'Theory & History', pct: 38 },
-  { label: 'Classical Techniques', pct: 33 },
-  { label: 'Advanced Techniques', pct: 26 },
-  { label: 'Ethics', pct: 3 },
-];
+// Official CMT exam format per level — shown on the Full Length Test setup screen.
+const FULL_TEST_CONFIG: Record<string, { questions: number; minutes: number; label: string; domains: { label: string; pct: number }[] }> = {
+  LEVEL_1: {
+    questions: 132,
+    minutes: 120,
+    label: 'CMT Level I',
+    domains: [
+      { label: 'Theory & History', pct: 38 },
+      { label: 'Classical Techniques', pct: 33 },
+      { label: 'Advanced Techniques', pct: 26 },
+      { label: 'Ethics', pct: 3 },
+    ],
+  },
+  LEVEL_2: {
+    questions: 170,
+    minutes: 240,
+    label: 'CMT Level II',
+    domains: [
+      { label: 'Classical Techniques', pct: 40 },
+      { label: 'Advanced Techniques', pct: 40 },
+      { label: 'Application of TA', pct: 10 },
+      { label: 'Theory & History', pct: 7 },
+      { label: 'Ethics', pct: 3 },
+    ],
+  },
+};
 
 function formatClock(totalSeconds: number): string {
   const s = Math.max(0, totalSeconds);
@@ -435,29 +452,34 @@ export function QuizPlayer({ levelStates = DEFAULT_LEVEL_STATES }: { levelStates
             </div>
 
             {mode === 'FULL_TEST' && (
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-emerald-700" />
-                  <p className="text-sm font-semibold text-emerald-900">Official CMT Level I exam format</p>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm text-zinc-700">
-                  <span><strong>{FULL_TEST_QUESTIONS}</strong> questions</span>
-                  <span><strong>{Math.round(FULL_TEST_MINUTES / 60)} hours</strong> ({FULL_TEST_MINUTES} min)</span>
-                  <span>Auto-submits when time runs out</span>
-                </div>
-                <p className="mt-3 mb-1.5 text-xs font-semibold uppercase tracking-wide text-zinc-500">Questions weighted by knowledge domain</p>
-                <div className="space-y-1.5">
-                  {CMT_DOMAINS.map(d => (
-                    <div key={d.label} className="flex items-center gap-2">
-                      <span className="w-40 shrink-0 text-xs text-zinc-600">{d.label}</span>
-                      <div className="h-2 flex-1 overflow-hidden rounded-full bg-white">
-                        <div className="h-full rounded-full bg-emerald-500" style={{ width: `${d.pct}%` }} />
-                      </div>
-                      <span className="w-9 shrink-0 text-right text-xs font-semibold tabular-nums text-zinc-700">{d.pct}%</span>
+              {(() => {
+                const cfg = FULL_TEST_CONFIG[level] ?? FULL_TEST_CONFIG['LEVEL_1'];
+                return (
+                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-emerald-700" />
+                      <p className="text-sm font-semibold text-emerald-900">Official {cfg.label} exam format</p>
                     </div>
-                  ))}
-                </div>
-              </div>
+                    <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm text-zinc-700">
+                      <span><strong>{cfg.questions}</strong> questions</span>
+                      <span><strong>{Math.round(cfg.minutes / 60)} hours</strong> ({cfg.minutes} min)</span>
+                      <span>Auto-submits when time runs out</span>
+                    </div>
+                    <p className="mt-3 mb-1.5 text-xs font-semibold uppercase tracking-wide text-zinc-500">Questions weighted by knowledge domain</p>
+                    <div className="space-y-1.5">
+                      {cfg.domains.map(d => (
+                        <div key={d.label} className="flex items-center gap-2">
+                          <span className="w-40 shrink-0 text-xs text-zinc-600">{d.label}</span>
+                          <div className="h-2 flex-1 overflow-hidden rounded-full bg-white">
+                            <div className="h-full rounded-full bg-emerald-500" style={{ width: `${d.pct}%` }} />
+                          </div>
+                          <span className="w-9 shrink-0 text-right text-xs font-semibold tabular-nums text-zinc-700">{d.pct}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             )}
 
             {(mode === 'CHAPTER' || mode === 'SUBTOPIC' || mode === 'CUSTOM') && (
