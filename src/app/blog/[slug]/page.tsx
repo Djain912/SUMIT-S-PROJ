@@ -57,7 +57,7 @@ export default async function BlogPostPage({ params }: Props) {
       '@type': 'Person',
       name: 'Sumit Jain, CMT®',
       url: siteConfig.url,
-      jobTitle: 'CMT Charterholder · Co-founder, Chartix.in',
+      jobTitle: 'Founder, Chartix.in · Equity Research Analyst',
     },
     publisher: {
       '@type': 'Organization',
@@ -148,7 +148,7 @@ export default async function BlogPostPage({ params }: Props) {
             </div>
             <div>
               <p className="text-sm font-semibold text-zinc-900">Sumit Jain, CMT®</p>
-              <p className="text-xs text-zinc-400">CMT Charterholder · Co-founder, Chartix.in</p>
+              <p className="text-xs text-zinc-400">Founder, Chartix.in · Equity Research Analyst</p>
             </div>
           </div>
           {/* Date + read time */}
