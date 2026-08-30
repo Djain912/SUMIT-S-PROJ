@@ -124,17 +124,24 @@ export function normalizeNoteHtml(html: string): string {
     // Reserve the image's box BEFORE it loads. `.prose img` forces
     // `height: auto`, so an image with no known dimensions occupies zero
     // height until it decodes and then snaps to full size, shoving the rest
-    // of the note down. Lazy loading makes that happen as the image scrolls
-    // into view, so a long note visibly jolts at every figure.
-    if (ratio) {
-      // Space is reserved from the first paint, so lazy loading is safe.
-      el.style.aspectRatio = ratio;
-      el.setAttribute('loading', 'lazy');
-    } else {
-      // Unknown size: nothing can reserve the box, so never let it arrive
-      // mid-scroll. Loading eagerly keeps the reflow at initial render.
-      el.removeAttribute('loading');
-    }
+    // of the note down.
+    if (ratio) el.style.aspectRatio = ratio;
+
+    // Never lazy-load note figures. Reserving the box stops the *layout* from
+    // jolting, but it does not stop the *image* from arriving late: with
+    // loading="lazy" the fetch only starts once the figure nears the viewport,
+    // so the reader scrolls into a blank reserved box and the chart pops in a
+    // beat later. That pop-in is what reads as figures blinking while
+    // scrolling, and it repeats whenever a browser evicts a decoded offscreen
+    // image and re-decodes it on the way back.
+    //
+    // Notes average 3.8 figures (max 32) and each is capped at w_1600,q_auto,
+    // f_auto (~50KB), so fetching them up front costs ~190KB on a typical note.
+    // fetchpriority="low" keeps them behind text and the rest of the page, so
+    // they stream in while the reader is still at the top and are decoded long
+    // before they are scrolled to.
+    el.removeAttribute('loading');
+    el.setAttribute('fetchpriority', 'low');
   });
 
   return doc.body.innerHTML;
