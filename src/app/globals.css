@@ -64,6 +64,10 @@ button {
   display: block;
   margin: 1.5rem auto;
   border-radius: 0.5rem;
+  /* Promote each image to its own compositing layer so the browser
+     does not re-rasterise it on every scroll frame (fixes scroll blink). */
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .prose table {
