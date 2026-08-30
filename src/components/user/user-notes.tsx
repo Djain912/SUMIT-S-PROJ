@@ -42,11 +42,12 @@ function createWatermarkTileStyle(text: string, fontSize: number): CSSProperties
     backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(svg)}")`,
     backgroundRepeat: 'repeat',
     backgroundSize: '420px 260px',
-    // The tile covers the full height of a long note. Without its own
-    // compositing layer the browser re-rasterises the whole tiled background
-    // on every scroll frame, which reads as flickering over the text.
-    transform: 'translateZ(0)',
-    willChange: 'transform',
+    // Deliberately NOT promoted to its own compositing layer. This element is
+    // `inset-0` on the note card, so on a long chapter it is ~18000px tall —
+    // past the 16384px max GPU texture size. A forced layer that big cannot be
+    // held as one texture, so the compositor re-rasterises tiles of it while
+    // scrolling, which is what read as images/text blinking. Painted normally,
+    // a repeating background costs nothing on scroll.
   };
 }
 
