@@ -18,6 +18,15 @@ type LevelBadge = {
   daysRemaining: number;
 };
 
+type PaymentInfo = {
+  level: CmtLevel;
+  amount: number;
+  currency: string;
+  couponCode: string | null;
+  discountPaise: number | null;
+  date: string;
+};
+
 type User = {
   id: string;
   email: string;
@@ -33,6 +42,7 @@ type User = {
   joinedAt: string;
   fullAccess: boolean;
   purchasedLevels: CmtLevel[];
+  payments: PaymentInfo[];
   levels: LevelBadge[];
   lastLoginAt: string | null;
   loginCount: number;
@@ -44,6 +54,8 @@ type Meta = { total: number; page: number; limit: number };
 type Segment = 'all' | 'paid' | 'trial' | 'free';
 type LevelFilter = 'any' | CmtLevel;
 type SortKey = 'newest' | 'lastActive' | 'name' | 'quizzes';
+
+const CURRENCY_SYMBOL: Record<string, string> = { INR: '₹', USD: '$', EUR: '€', GBP: '£' };
 
 function getInitials(name: string | null, email: string): string {
   if (name) {
@@ -277,6 +289,38 @@ function UserCard({
             )}
           </div>
 
+          {/* Payments */}
+          {u.payments.length > 0 && (
+            <div className="mt-4">
+              <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-400">Payments</span>
+              <div className="mt-2 space-y-1.5">
+                {u.payments.map((p, i) => {
+                  const sym = CURRENCY_SYMBOL[p.currency] ?? `${p.currency} `;
+                  const paid = `${sym}${(p.amount / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                  const date = new Date(p.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                  return (
+                    <div key={i} className="flex flex-wrap items-center gap-2 rounded-lg bg-zinc-50 px-3 py-2 text-xs ring-1 ring-zinc-100">
+                      <span className="font-semibold text-zinc-800">{paid}</span>
+                      <span className="text-zinc-400">for</span>
+                      <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-100">{LEVEL_LABEL[p.level]}</span>
+                      <span className="text-zinc-400">{date}</span>
+                      {p.couponCode && (
+                        <span className="rounded bg-amber-50 px-1.5 py-0.5 font-mono text-[10px] font-bold text-amber-700 ring-1 ring-amber-200">
+                          {p.couponCode}
+                          {p.discountPaise != null && (
+                            <span className="ml-1 font-sans text-amber-500">
+                              (-{sym}{(p.discountPaise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                            </span>
+                          )}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Actions */}
           {u.role !== 'ADMIN' && (
             <div className="mt-4 flex items-center gap-2 border-t border-zinc-100 pt-4">
@@ -467,13 +511,14 @@ export function UsersTable({ initialUsers, initialMeta, revenueLabel }: { initia
 
   // CSV export
   const exportCSV = () => {
-    const header = ['Email', 'Name', 'Sign-in', 'Access', 'Levels', 'Coupon', 'Expiry', 'Quiz Attempts', 'MCQs', 'Mocks', 'Last Active', 'Logins', 'Joined'];
+    const header = ['Email', 'Name', 'Sign-in', 'Access', 'Levels', 'Coupon', 'Payment Coupons', 'Expiry', 'Quiz Attempts', 'MCQs', 'Mocks', 'Last Active', 'Logins', 'Joined'];
     const rows = filtered.map((u) => {
       const a = accessInfo(u);
       const coupon = u.entitlementCoupon || (u.couponRedeemed && u.couponRedeemed !== 'LIFETIME_ADMIN' ? u.couponRedeemed : '');
+      const paymentCoupons = u.payments.filter((p) => p.couponCode).map((p) => p.couponCode).join('; ');
       const expiry = u.premiumUntil ?? u.entitlementExpiry;
       const levelsStr = u.fullAccess ? 'All' : u.levels.filter((l) => l.status !== 'none').map((l) => `${LEVEL_LABEL[l.level]}:${l.status}`).join('; ');
-      return [u.email, u.fullName ?? '', u.signInMethod, a.label, levelsStr, coupon, expiry ? new Date(expiry).toLocaleDateString('en-GB') : '', u.quizAttempts, u.mcqAttempted, u.mockAttempted, u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleDateString('en-GB') : 'Never', u.loginCount, new Date(u.joinedAt).toLocaleDateString('en-GB')];
+      return [u.email, u.fullName ?? '', u.signInMethod, a.label, levelsStr, coupon, paymentCoupons, expiry ? new Date(expiry).toLocaleDateString('en-GB') : '', u.quizAttempts, u.mcqAttempted, u.mockAttempted, u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleDateString('en-GB') : 'Never', u.loginCount, new Date(u.joinedAt).toLocaleDateString('en-GB')];
     });
     const csv = [header, ...rows].map((r) => r.map((v) => `"${v}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });

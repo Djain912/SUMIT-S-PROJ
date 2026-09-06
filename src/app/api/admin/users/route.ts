@@ -52,7 +52,7 @@ export async function GET(request: Request) {
           },
           payments: {
             where: { status: 'PAID' },
-            select: { level: true, amount: true, createdAt: true },
+            select: { level: true, amount: true, currency: true, couponCode: true, discountPaise: true, createdAt: true },
             orderBy: { createdAt: 'desc' },
           },
           activity: {

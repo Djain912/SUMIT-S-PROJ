@@ -14,6 +14,15 @@ export type LevelBadge = {
   daysRemaining: number;
 };
 
+export type PaymentInfo = {
+  level: CmtLevel;
+  amount: number;
+  currency: string;
+  couponCode: string | null;
+  discountPaise: number | null;
+  date: string;
+};
+
 export type AdminUserRow = {
   id: string;
   email: string;
@@ -29,6 +38,7 @@ export type AdminUserRow = {
   joinedAt: string;
   fullAccess: boolean;
   purchasedLevels: CmtLevel[];
+  payments: PaymentInfo[];
   levels: LevelBadge[];
   lastLoginAt: string | null;
   loginCount: number;
@@ -55,7 +65,7 @@ export type RawUserForAdmin = {
   _count: { quizAttempts: number };
   entitlements: { couponCode: string | null; expiresAt: Date; chapter: { level: CmtLevel } }[];
   levelTrials: { level: CmtLevel; startedAt: Date; expiresAt: Date }[];
-  payments: { level: CmtLevel; amount: number; createdAt: Date }[];
+  payments: { level: CmtLevel; amount: number; currency: string; couponCode: string | null; discountPaise: number | null; createdAt: Date }[];
   activity: { lastLoginAt: Date | null; loginCount: number; mcqAttempted: number; mockAttempted: number } | null;
 };
 
@@ -122,6 +132,14 @@ export function buildUserRow(u: RawUserForAdmin): AdminUserRow {
     joinedAt: u.createdAt.toISOString(),
     fullAccess,
     purchasedLevels,
+    payments: u.payments.map((p) => ({
+      level: p.level,
+      amount: p.amount,
+      currency: p.currency,
+      couponCode: p.couponCode,
+      discountPaise: p.discountPaise,
+      date: p.createdAt.toISOString(),
+    })),
     levels,
     lastLoginAt: u.activity?.lastLoginAt ? u.activity.lastLoginAt.toISOString() : null,
     loginCount: u.activity?.loginCount ?? 0,
