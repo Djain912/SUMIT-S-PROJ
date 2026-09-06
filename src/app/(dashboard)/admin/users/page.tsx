@@ -3,7 +3,7 @@ import { UsersTable } from '@/components/admin/UsersTable';
 import { buildUserRow, formatRevenue, type RawUserForAdmin } from '@/server/services/admin-users.service';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Users | Chartix Admin' };
+export const metadata = { title: 'Users & Leads | Chartix Admin' };
 
 export default async function AdminUsersPage() {
   const now = new Date();
@@ -51,14 +51,10 @@ export default async function AdminUsersPage() {
   const revenueLabel = formatRevenue(revenueAgg.map((r) => ({ currency: r.currency, amountMinor: r._sum.amount ?? 0 })));
 
   return (
-    <main className="min-h-screen bg-zinc-50/50 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-      <div className="mx-auto max-w-6xl">
-        <UsersTable
-          initialUsers={initialUsers}
-          initialMeta={{ total, page: 1, limit: 200 }}
-          revenueLabel={revenueLabel}
-        />
-      </div>
-    </main>
+    <UsersTable
+      initialUsers={initialUsers}
+      initialMeta={{ total, page: 1, limit: 200 }}
+      revenueLabel={revenueLabel}
+    />
   );
 }

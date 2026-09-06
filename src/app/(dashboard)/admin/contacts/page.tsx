@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db/prisma';
 import { ContactsTable } from '@/components/admin/ContactsTable';
 
 export const dynamic = 'force-dynamic';
+export const metadata = { title: 'Contact Messages | Chartix Admin' };
 
 export default async function AdminContactsPage() {
   const submissions = await prisma.contactSubmission.findMany({
@@ -9,7 +10,6 @@ export default async function AdminContactsPage() {
     take: 200,
   });
 
-  // Serialize dates to strings for client component
   const items = submissions.map((s) => ({
     ...s,
     createdAt: s.createdAt.toISOString(),
