@@ -170,7 +170,7 @@ export async function sendTrialWelcomeEmail(
       introLine: levelName
         ? `Thank you for starting your ${levelName} free trial. All the notes, practice questions, and mock tests for ${levelName} are unlocked and ready for you.`
         : "Thank you for starting your free trial. We're excited to have you on board and look forward to helping you prepare with confidence.",
-      showOffer: true,
+      showOffer: false,
     }),
   });
 }
@@ -187,7 +187,7 @@ export async function sendTrialNudgeEmail(email: string, fullName: string | null
       headline: 'Your trial is running. Have you started?',
       subline: `You still have ${daysRemaining} days left — enough time to get a real feel for CMT preparation.`,
       introLine: `You signed up a couple of days ago but haven't opened any notes yet. No pressure — but your trial clock is running, and we don't want you to miss out.<br><br>Here's the quickest way to get started: open the first chapter, read for 10 minutes, then try a few practice questions. That's it.`,
-      showOffer: true,
+      showOffer: false,
     }),
   });
 }
@@ -204,7 +204,7 @@ export async function sendTrialUrgencyEmail(email: string, fullName: string | nu
       headline: '1 day left on your trial.',
       subline: 'Your 7-day free trial ends tomorrow. Here\'s how to make the most of it — or upgrade to keep going.',
       introLine: `Your free trial expires in about 24 hours. If you haven't had a chance to explore yet, today is the day.<br><br>If you've been using Chartix and want to continue, upgrading takes 2 minutes and keeps all your progress intact.`,
-      showOffer: true,
+      showOffer: false,
     }),
   });
 }

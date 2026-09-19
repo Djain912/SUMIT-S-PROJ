@@ -117,13 +117,6 @@ export default async function PricingPage() {
   return (
     <div className="min-h-screen bg-[#f0f7f4]">
 
-      {/* Early Adopter Banner */}
-      <div className="bg-emerald-700 text-white text-center px-4 py-3 text-sm font-medium">
-        🎓 Early Adopter Pricing — First 10 students get 50% off. Use code{' '}
-        <span className="font-bold bg-white/20 rounded px-2 py-0.5 mx-1 tracking-widest">CHARTIX10</span>
-        {' '}at checkout.
-      </div>
-
       {/* Nav */}
       <nav className="sticky top-0 z-50 border-b border-emerald-100 bg-white/90 backdrop-blur shadow-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8">
@@ -260,10 +253,10 @@ export default async function PricingPage() {
                   >
                     or Purchase Full Access — {isUSD ? '$99' : '₹6,999'}
                   </Link>
-                  {/* Guarantee badge */}
-                  <div className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 mt-1">
-                    <Shield className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-                    <span className="text-[11px] font-medium text-emerald-700">7-Day Money-Back Guarantee — Full refund, no questions asked</span>
+                  {/* No-refund notice */}
+                  <div className="flex items-center justify-center gap-1.5 rounded-xl border border-zinc-100 bg-zinc-50 px-3 py-2 mt-1">
+                    <Shield className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
+                    <span className="text-[11px] font-medium text-zinc-500">Try free for 7 days before you buy — all sales are final</span>
                   </div>
                 </div>
               )}
@@ -271,12 +264,12 @@ export default async function PricingPage() {
           ))}
         </div>
 
-        {/* No refund notice — kept for transparency */}
+        {/* No refund notice */}
         <div className="mt-8 flex items-start gap-2.5 rounded-2xl border border-red-100 bg-red-50 px-5 py-4 max-w-2xl mx-auto">
           <AlertCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
           <p className="text-sm text-red-700">
-            <strong>7-day money-back guarantee.</strong> After 7 days, no refund once enrollment is confirmed. Please use the free trial to evaluate the platform before purchasing.{' '}
-            <Link href="/refund-policy" className="underline hover:text-red-900">Read our Refund Policy</Link>
+            <strong>No refund once enrollment is confirmed.</strong> Please use the 7-day free trial to thoroughly evaluate the platform before purchasing.{' '}
+            <Link href="/refund-policy" className="underline hover:text-red-900">Read our Refund &amp; Cancellation Policy</Link>
           </p>
         </div>
       </section>
