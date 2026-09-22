@@ -7,6 +7,7 @@ import { GaGate } from '@/components/analytics/ga-gate';
 import { AppNavbar } from '@/components/shared/app-navbar';
 import { PageProgress } from '@/components/shared/page-progress';
 import { siteConfig } from '@/lib/site';
+import 'katex/dist/katex.min.css';
 import './globals.css';
 
 // Google Analytics 4 measurement ID. Defaults to the live Chartix property; a

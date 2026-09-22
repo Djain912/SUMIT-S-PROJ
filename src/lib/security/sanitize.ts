@@ -12,7 +12,8 @@ import DOMPurify from 'isomorphic-dompurify';
  */
 
 // Tags we allow in rich content (notes, questions, blog). No <script>, <iframe>,
-// <object>, <embed>, <form>, <svg>, <math>, <style>, <link>, <meta>, <base>.
+// <object>, <embed>, <form>, <svg>, <style>, <link>, <meta>, <base>.
+// MathML tags are allowed for KaTeX formula rendering in notes.
 const ALLOWED_TAGS = [
   'p', 'br', 'hr', 'span', 'div',
   'strong', 'b', 'em', 'i', 'u', 's', 'sub', 'sup', 'mark', 'small',
@@ -22,6 +23,11 @@ const ALLOWED_TAGS = [
   'a', 'img',
   'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'col', 'colgroup', 'caption',
   'figure', 'figcaption',
+  // MathML (KaTeX formulas in notes) — purely presentational, no script risk
+  'math', 'semantics', 'annotation',
+  'mrow', 'mi', 'mo', 'mn', 'mtext', 'mspace',
+  'mfrac', 'msup', 'msub', 'msubsup', 'msqrt', 'mroot',
+  'mover', 'munder', 'munderover', 'mtable', 'mtr', 'mtd', 'mpadded',
 ];
 
 const ALLOWED_ATTR = [
@@ -29,6 +35,9 @@ const ALLOWED_ATTR = [
   'src', 'alt', 'width', 'height', 'loading',
   'class', 'style',
   'colspan', 'rowspan', 'scope',
+  // MathML attributes (KaTeX)
+  'xmlns', 'display', 'stretchy', 'mathvariant', 'aria-hidden',
+  'encoding',
 ];
 
 /**
@@ -44,7 +53,7 @@ export function sanitizeHtml(dirty: string | null | undefined): string {
     // Only allow safe URL schemes — blocks javascript:, vbscript:, and data:
     // URIs (except images, handled by the regex below).
     ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|tel):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
-    FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'form', 'svg', 'math', 'style', 'link', 'meta', 'base'],
+    FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'form', 'svg', 'style', 'link', 'meta', 'base'],
     FORBID_ATTR: ['srcset', 'formaction', 'xlink:href'],
     ADD_ATTR: ['target'],
     // Force any anchor that survives to open safely.

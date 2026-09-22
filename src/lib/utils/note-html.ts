@@ -53,13 +53,19 @@ export function normalizeNoteHtml(html: string): string {
 
   // 1. Strip foreign class attributes and ChatGPT/editor data-* markers, but
   //    preserve our whitelisted Chartix note classes so formula & callout
-  //    boxes render. All other visual styling comes from `.prose`.
+  //    boxes render. KaTeX math elements keep ALL their classes (katex, base,
+  //    strut, mord, mfrac, vlist, etc.) — they are CSS-driven rendering, not
+  //    foreign layout pollution. All other visual styling comes from `.prose`.
   doc.body.querySelectorAll('*').forEach((el) => {
-    const kept = (el.getAttribute('class') ?? '')
-      .split(/\s+/)
-      .filter((c) => KEEP_CLASSES.has(c));
-    if (kept.length) el.setAttribute('class', kept.join(' '));
-    else el.removeAttribute('class');
+    if (el.closest('.katex') || (el as Element).classList?.contains('katex')) {
+      // Inside KaTeX — preserve all classes, they're needed for formula rendering
+    } else {
+      const kept = (el.getAttribute('class') ?? '')
+        .split(/\s+/)
+        .filter((c) => KEEP_CLASSES.has(c) || c === 'katex');
+      if (kept.length) el.setAttribute('class', kept.join(' '));
+      else el.removeAttribute('class');
+    }
     // Remove data-start / data-end / data-section-id / data-col-size / etc.
     [...el.attributes].forEach((attr) => {
       if (attr.name.startsWith('data-')) el.removeAttribute(attr.name);
