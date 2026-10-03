@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useState } from 'react';
 import { signIn } from 'next-auth/react';
+import { trackEvent } from '@/lib/analytics/track';
 
 export function SignUpForm() {
   const router = useRouter();
@@ -18,6 +19,7 @@ export function SignUpForm() {
     setIsLoading(true);
     setErrorMessage(null);
     setSuccessMessage(null);
+    trackEvent('sign_up', { method: 'google' });
 
     await signIn('google', { callbackUrl: '/user' });
   };
@@ -42,6 +44,8 @@ export function SignUpForm() {
       setIsLoading(false);
       return;
     }
+
+    trackEvent('sign_up', { method: 'email' });
 
     const result = await signIn('credentials', {
       email,

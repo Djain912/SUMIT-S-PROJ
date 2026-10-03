@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Tag, X, CheckCircle, Loader2, AlertCircle, ShieldCheck, Clock } from 'lucide-react';
+import { trackEvent } from '@/lib/analytics/track';
 
 type RazorpayOptions = {
   key: string; amount: number; currency: string; order_id: string;
@@ -199,6 +200,7 @@ export function BuyButton({
             });
             const vp = await v.json();
             if (!v.ok || !vp.success) throw new Error(vp.error?.message ?? 'Verification failed.');
+            trackEvent('purchase', { currency, value: finalAmount / 100, transaction_id: resp.razorpay_payment_id, items: levelLabel });
             window.location.href = '/user';
           } catch (e) {
             setPayError(e instanceof Error ? e.message : 'Verification failed. Contact support if charged.');
@@ -230,7 +232,7 @@ export function BuyButton({
       {/* Trigger button */}
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => { setOpen(true); trackEvent('begin_checkout', { currency, value: baseAmountUnits / 100, items: levelLabel }); }}
         className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600"
       >
         Get instant access — {fmt(baseAmountUnits, currency)}

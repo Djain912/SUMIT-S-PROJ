@@ -4,6 +4,7 @@ import { CheckCircle2, Lock, Sparkles } from 'lucide-react';
 import { auth } from '@/lib/auth/auth';
 import { getAccessByEmail, getLevelAccessSummary, type Level } from '@/server/policies/access';
 import { prisma } from '@/lib/db/prisma';
+import { TrialTrackButton } from '@/components/analytics/trial-track-button';
 import { startLevelTrial } from './actions';
 
 export const dynamic = 'force-dynamic';
@@ -115,12 +116,7 @@ export default async function StartTrialPage({
                 {available ? (
                   <form action={startLevelTrial} className="mt-5">
                     <input type="hidden" name="level" value={s.level} />
-                    <button
-                      type="submit"
-                      className="w-full rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800"
-                    >
-                      Start my free trial
-                    </button>
+                    <TrialTrackButton level={s.level} />
                   </form>
                 ) : (
                   <div className="mt-5 flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-zinc-300 px-4 py-2.5 text-xs font-semibold text-zinc-400">
