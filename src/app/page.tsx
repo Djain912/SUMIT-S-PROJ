@@ -13,13 +13,13 @@ import { StickyCTABar } from '@/components/marketing/StickyCTABar';
 import { getDailyQuestion } from '@/lib/qod/daily-question';
 
 export const metadata: Metadata = {
-  title: 'Chartix CMT Exam Prep | Technical Analysis Notes, Quizzes & Analytics',
+  title: 'Chartix — CMT Exam Prep & Coaching | Notes, Practice Questions & Mock Tests',
   description:
-    'Prepare for the CMT exam with Chartix: technical analysis study notes, CMT Level I, II and III practice quizzes, chapter-wise revision, and performance analytics.',
+    'Chartix is a CMT Association Participating Prep Provider offering structured study notes, 3,500+ practice questions, mock tests, AI analytics, and an AI tutor for CMT Level I, II & III exam preparation.',
   alternates: { canonical: '/' },
   openGraph: {
-    title: 'Chartix CMT Exam Prep',
-    description: 'Technical analysis notes, CMT practice quizzes, and exam analytics for serious market analysis candidates.',
+    title: 'Chartix — CMT Exam Prep & Coaching',
+    description: 'CMT Association Participating Prep Provider. Study notes, 3,500+ questions, mock tests & AI tutor for CMT Level I, II & III.',
     url: '/',
   },
 };
@@ -96,11 +96,28 @@ const homeStructuredData = {
   '@context': 'https://schema.org',
   '@graph': [
     {
-      '@type': 'Organization',
+      '@type': 'EducationalOrganization',
       '@id': `${siteConfig.url}/#organization`,
       name: siteConfig.name,
       url: siteConfig.url,
+      logo: `${siteConfig.url}/chartix-logo.png`,
       description: siteConfig.description,
+      foundingDate: '2025',
+      founder: {
+        '@type': 'Person',
+        name: 'Sumit Jain',
+        jobTitle: 'CMT Charterholder, Equity Research Analyst',
+        url: siteConfig.url,
+      },
+      sameAs: [
+        'https://www.instagram.com/chartix.in',
+        'https://www.linkedin.com/company/chartix',
+      ],
+      areaServed: 'Worldwide',
+      hasCredential: {
+        '@type': 'EducationalOccupationalCredential',
+        credentialCategory: 'CMT Association Participating Prep Provider',
+      },
     },
     {
       '@type': 'WebSite',
@@ -110,6 +127,81 @@ const homeStructuredData = {
       description: siteConfig.description,
       inLanguage: 'en',
       publisher: { '@id': `${siteConfig.url}/#organization` },
+    },
+    {
+      '@type': 'Course',
+      name: 'CMT Level 1 Exam Preparation',
+      description: 'Complete CMT Level 1 preparation with structured study notes, 3,500+ practice questions, mock tests, AI-powered analytics, and an AI tutor.',
+      provider: { '@id': `${siteConfig.url}/#organization` },
+      educationalLevel: 'Professional Certification',
+      about: {
+        '@type': 'Thing',
+        name: 'Chartered Market Technician (CMT) Certification',
+      },
+      hasCourseInstance: {
+        '@type': 'CourseInstance',
+        courseMode: 'online',
+        courseWorkload: 'Self-paced',
+      },
+      offers: {
+        '@type': 'Offer',
+        category: 'Free trial available',
+        url: `${siteConfig.url}/pricing`,
+      },
+    },
+    {
+      '@type': 'Course',
+      name: 'CMT Level 2 Exam Preparation',
+      description: 'Complete CMT Level 2 preparation with advanced technical analysis notes, practice questions, mock tests, and performance analytics.',
+      provider: { '@id': `${siteConfig.url}/#organization` },
+      educationalLevel: 'Professional Certification',
+      hasCourseInstance: {
+        '@type': 'CourseInstance',
+        courseMode: 'online',
+        courseWorkload: 'Self-paced',
+      },
+      offers: {
+        '@type': 'Offer',
+        category: 'Free trial available',
+        url: `${siteConfig.url}/pricing`,
+      },
+    },
+    {
+      '@type': 'FAQPage',
+      mainEntity: [
+        {
+          '@type': 'Question',
+          name: 'What is Chartix?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'Chartix is a CMT exam preparation platform and Participating Prep Provider of the CMT Association. It offers structured study notes, 3,500+ practice questions per level, full-length mock tests, AI-powered performance analytics, and an AI tutor for CMT Level I, II, and III.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'Is Chartix a recognized CMT prep provider?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'Yes, Chartix is an officially recognized Participating Prep Provider of the CMT Association.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'Does Chartix offer free CMT study material?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'Yes. Chartix offers a 7-day free trial with full access to all notes, quizzes, and mock tests. The blog also features free resources including practice questions, formula guides, and candlestick pattern guides for CMT Level 1 and Level 2.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'What CMT levels does Chartix cover?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'Chartix covers all three levels of the CMT program: Level I, Level II, and Level III, with dedicated study notes, practice questions, and mock tests for each level.',
+          },
+        },
+      ],
     },
   ],
 };

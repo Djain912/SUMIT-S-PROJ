@@ -77,9 +77,25 @@ const aboutStructuredData = {
     url: siteConfig.url,
   },
   about: {
-    '@type': 'Organization',
+    '@type': 'EducationalOrganization',
     name: siteConfig.name,
     url: siteConfig.url,
+    logo: `${siteConfig.url}/chartix-logo.png`,
+    description: siteConfig.description,
+    founder: {
+      '@type': 'Person',
+      name: 'Sumit Jain',
+      jobTitle: 'CMT Charterholder, Equity Research Analyst',
+      sameAs: ['https://www.linkedin.com/in/sumit-jain-cmt/'],
+    },
+    hasCredential: {
+      '@type': 'EducationalOccupationalCredential',
+      credentialCategory: 'CMT Association Participating Prep Provider',
+    },
+    sameAs: [
+      'https://www.instagram.com/chartix.in',
+      'https://www.linkedin.com/company/chartix',
+    ],
   },
 };
 
