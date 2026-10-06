@@ -18,14 +18,27 @@ const NAMES: Record<IndicatorKey, string> = {
   bb: 'Bollinger Bands®',
 };
 
+// Short descriptions for the intro paragraph shown below H1
+const INTROS: Partial<Record<IndicatorKey, string>> = {
+  rsi:        'Enter any price series and the tool calculates RSI step-by-step — average gain, average loss, RS ratio, and the final oscillator value — with a live chart overlay.',
+  macd:       'See exactly how MACD is built: the 12-period EMA, 26-period EMA, the signal line, and the histogram — calculated live from the price data you enter.',
+  bb:         'Calculates the middle band (SMA), upper band (+2σ), and lower band (−2σ) in real time. Adjust the period and standard-deviation multiplier to see how the bands react.',
+  sma:        'Enter price data and period — the tool shows each SMA value with its component prices highlighted, making the rolling-average mechanic immediately visible.',
+  ema:        'See how EMA weights recent prices more heavily than SMA: the tool shows the smoothing factor, each period\'s calculation, and the EMA plotted against price.',
+  dmi:        'Calculates +DI, −DI, and the ADX trend-strength line together. A great way to understand how directional movement converts into a single trend reading.',
+  stochastics:'Shows the %K and %D lines with the 80/20 overbought-oversold zones marked — calculated from the highest high and lowest low over your chosen look-back.',
+  obv:        'Running total of volume with sign: adds volume on up days, subtracts on down days. A pure cumulative measure of buying and selling pressure.',
+};
+
 export async function generateMetadata({ params }: { params: Promise<{ indicator: string }> }) {
   const { indicator } = await params;
   const name = NAMES[indicator as IndicatorKey] ?? 'Indicator';
-  const title = `${name} Calculator — Free Interactive Tool | Chartix`;
-  const description = `Free interactive ${name} calculator with a live price chart, step-by-step calculation table, and a clear explanation. Learn exactly how ${name} is built — no login required.`;
+  const title = `${name} Calculator — Free Online Tool | Chartix`;
+  const description = `Free online ${name} calculator with a live price chart, step-by-step calculation table, and a plain-English explanation. Understand exactly how ${name} works — no login required.`;
   return {
     title,
     description,
+    keywords: [`${name} calculator`, `${name} online`, `${name} formula`, `CMT ${name}`, 'technical analysis calculator'],
     alternates: { canonical: `/tools/${indicator}` },
     openGraph: {
       title,
@@ -72,6 +85,32 @@ export default async function PublicIndicatorPage({ params }: { params: Promise<
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        {/* Visible H1 for SEO — Google needs a heading it can read on the page, not just in <title> */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-zinc-900 sm:text-3xl">
+            {NAMES[key]} Calculator
+          </h1>
+          <p className="mt-1.5 text-sm text-zinc-500">
+            {INTROS[key] ?? `Free online ${NAMES[key]} calculator with a live chart, step-by-step calculation table, and a plain-English explanation.`}
+          </p>
+        </div>
+
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'WebApplication',
+              name: `${NAMES[key]} Calculator`,
+              url: `https://chartix.in/tools/${key}`,
+              applicationCategory: 'FinanceApplication',
+              operatingSystem: 'Any',
+              description: `Free online ${NAMES[key]} calculator with a live price chart, step-by-step calculation table, and plain-English explanation. No login required.`,
+              offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+            }),
+          }}
+        />
+
         <IndicatorLab indicator={key} />
 
         {/* Sign-up nudge */}
