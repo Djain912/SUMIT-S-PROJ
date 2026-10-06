@@ -1,5 +1,7 @@
 import { UserNotesClient } from '@/components/user/user-notes';
 import { Sparkles } from 'lucide-react';
+import { Suspense } from 'react';
+import { GoogleAdsConversion } from '@/components/marketing/GoogleAdsConversion';
 
 export const metadata = { title: 'Notes' };
 
@@ -12,6 +14,7 @@ export default async function UserNotesPage({
   return (
     <main className="min-h-screen bg-zinc-50/50 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
       <div className="mx-auto max-w-6xl space-y-6">
+        {welcome === '1' && <Suspense><GoogleAdsConversion /></Suspense>}
         {welcome === '1' && (
           <div className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4">
             <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
