@@ -375,6 +375,19 @@ export async function completeQuizAttempt(userId: string, attemptId: string) {
     },
   });
 
+  // Fetch correct option IDs so the review screen can highlight the right answer.
+  const questionIds = attempt.items.map(i => i.questionId);
+  const correctOptions = await prisma.questionOption.findMany({
+    where: { questionId: { in: questionIds }, isCorrect: true, isDeleted: false },
+    select: { id: true, questionId: true },
+  });
+  const correctByQuestion = new Map(correctOptions.map(o => [o.questionId, o.id]));
+
+  const enrichedItems = attempt.items.map(item => ({
+    ...item,
+    correctOptionId: correctByQuestion.get(item.questionId) ?? null,
+  }));
+
   // Engagement counters for the onboarding checklist / trial-drip emails.
   // Fire-and-forget, fail-soft — must never block the quiz result.
   const timeSpentSeconds = attempt.items.reduce((sum, item) => sum + (item.timeSpentSeconds ?? 0), 0);
@@ -395,7 +408,7 @@ export async function completeQuizAttempt(userId: string, attemptId: string) {
     })
     .catch((err) => console.error('[quiz] UserActivity update failed:', err));
 
-  return attempt;
+  return { ...attempt, items: enrichedItems };
 }
 
 export async function getQuizAttemptReview(userId: string, attemptId: string) {

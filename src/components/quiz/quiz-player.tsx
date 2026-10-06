@@ -26,6 +26,7 @@ type AttemptItem = {
   selectedOptionId: string | null;
   selectedOptionSnapshotJson: { id: string; isCorrect: boolean } | null;
   isCorrect: boolean;
+  correctOptionId?: string | null;
   flagColor?: 'YELLOW' | 'RED' | null;
   flaggedAt?: string | null;
 };
@@ -407,6 +408,7 @@ export function QuizPlayer({ levelStates = DEFAULT_LEVEL_STATES }: { levelStates
   const score = attempt ? Math.round(attempt.scorePercentage ?? 0) : 0;
   const isLastQuestion = attempt ? currentIndex >= attempt.items.length - 1 : false;
   const isTimedOut = timeLeft !== null && timeLeft <= 0;
+  const letters = ['A', 'B', 'C', 'D', 'E'];
 
   /* ── SETUP ── */
   if (!attempt) {
@@ -564,7 +566,33 @@ export function QuizPlayer({ levelStates = DEFAULT_LEVEL_STATES }: { levelStates
               </div>
               <div className="mt-2 prose prose-sm w-full max-w-none break-words text-sm leading-6 text-zinc-900" dangerouslySetInnerHTML={{ __html: richJsonToHtml(item.questionSnapshotJson.promptJson) || 'Question unavailable' }} />
               <div className="mt-3 space-y-2 text-sm">
-                <p className="text-zinc-600"><span className="font-medium text-zinc-800">Your answer:</span> {getOptionText(item, item.selectedOptionId)}</p>
+                <div className="space-y-1.5">
+                  {item.questionSnapshotJson.options.map((opt, optIdx) => {
+                    const isSelected = item.selectedOptionId === opt.id;
+                    const isCorrectOption = opt.id === item.correctOptionId;
+                    return (
+                      <div key={opt.id} className={`flex items-start gap-2.5 rounded-lg border px-3 py-2.5 ${
+                        isCorrectOption ? 'border-emerald-300 bg-emerald-50' :
+                        isSelected && !item.isCorrect ? 'border-rose-300 bg-rose-50' :
+                        'border-zinc-100 bg-white'
+                      }`}>
+                        <div className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                          isCorrectOption ? 'bg-emerald-600 text-white' :
+                          isSelected && !item.isCorrect ? 'bg-rose-500 text-white' :
+                          'bg-zinc-100 text-zinc-500'
+                        }`}>
+                          {letters[optIdx] ?? optIdx + 1}
+                        </div>
+                        <div className="flex-1 prose prose-sm w-full max-w-none break-words text-sm leading-6 text-zinc-800" dangerouslySetInnerHTML={{ __html: richJsonToHtml(opt.contentJson) || 'Option' }} />
+                        {isCorrectOption && <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 mt-0.5" />}
+                        {isSelected && !item.isCorrect && <XCircle className="h-4 w-4 shrink-0 text-rose-500 mt-0.5" />}
+                      </div>
+                    );
+                  })}
+                </div>
+                {!item.selectedOptionId && (
+                  <p className="text-xs text-zinc-400 italic">Not answered</p>
+                )}
                 {item.questionSnapshotJson.explanationJson && (
                   <div className="rounded-xl bg-zinc-50 p-3">
                     <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400 mb-1">Explanation</p>
@@ -582,7 +610,6 @@ export function QuizPlayer({ levelStates = DEFAULT_LEVEL_STATES }: { levelStates
   /* ── ACTIVE QUIZ ── */
   const answered = attempt.items.filter(i => i.selectedOptionId).length;
   const flaggedCount = attempt.items.filter(i => i.flagColor).length;
-  const letters = ['A', 'B', 'C', 'D', 'E'];
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
