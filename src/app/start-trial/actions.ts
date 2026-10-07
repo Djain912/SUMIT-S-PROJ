@@ -51,5 +51,5 @@ export async function startLevelTrial(formData: FormData): Promise<void> {
   );
 
   revalidatePath('/user');
-  redirect(`/user/notes?welcome=1&level=${level}`);
+  redirect(`/user?welcome=1&level=${level}`);
 }

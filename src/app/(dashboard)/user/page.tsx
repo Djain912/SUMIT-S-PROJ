@@ -1,37 +1,21 @@
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
-import { MessageSquareHeart } from 'lucide-react';
+import { MessageSquareHeart, Sparkles } from 'lucide-react';
+import { Suspense } from 'react';
 import { requireAuthenticatedUser } from '@/server/policies/auth';
 import { getUserDashboardData } from '@/server/services/dashboard.service';
 import { UserDashboardClient, type LevelStateMap } from '@/components/user/user-dashboard';
 import { TrialBanner } from '@/components/user/TrialBanner';
 import { OnboardingChecklist } from '@/components/user/OnboardingChecklist';
 import { getLevelAccessSummary } from '@/server/policies/access';
-import { prisma } from '@/lib/db/prisma';
+import { GoogleAdsConversion } from '@/components/marketing/GoogleAdsConversion';
 
-export default async function UserDashboardPage() {
+export default async function UserDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ welcome?: string }>;
+}) {
   const user = await requireAuthenticatedUser();
-
-  // First-ever visit activation: brand-new trial users who haven't opened a
-  // single note get dropped straight into Chapter 1 instead of an empty
-  // dashboard — reading real content beats choosing from a menu. Applies only
-  // on the very first login with zero engagement, so returning users are
-  // never bounced.
-  const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: {
-      role: true,
-      isPremium: true,
-      activity: { select: { loginCount: true, chaptersViewed: true, mcqAttempted: true } },
-    },
-  });
-  if (dbUser && dbUser.role !== 'ADMIN' && !dbUser.isPremium) {
-    const a = dbUser.activity;
-    const chapters = (a?.chaptersViewed as string[] | null) ?? [];
-    if ((a?.loginCount ?? 0) <= 1 && chapters.length === 0 && (a?.mcqAttempted ?? 0) === 0) {
-      redirect('/user/notes?welcome=1');
-    }
-  }
+  const { welcome } = await searchParams;
 
   const summary = await getLevelAccessSummary(user.email);
   const levelStates = Object.fromEntries(
@@ -59,6 +43,18 @@ export default async function UserDashboardPage() {
             <MessageSquareHeart className="h-3.5 w-3.5" /> Give course feedback
           </Link>
         </div>
+        {welcome === '1' && <Suspense><GoogleAdsConversion /></Suspense>}
+        {welcome === '1' && (
+          <div className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4">
+            <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+            <div>
+              <p className="text-sm font-bold text-emerald-900">Welcome to Chartix!</p>
+              <p className="mt-0.5 text-sm leading-6 text-emerald-800">
+                Your 7-day free trial is active. Follow the steps below to get started — read your first note, take a quiz, and ask Scholar anything.
+              </p>
+            </div>
+          </div>
+        )}
         <TrialBanner email={user.email} />
         <OnboardingChecklist userId={user.id} email={user.email} />
         <UserDashboardClient initialData={initialData} levelStates={levelStates} />
