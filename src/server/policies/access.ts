@@ -175,7 +175,11 @@ export async function hasUnusedTrialLevel(email: string): Promise<boolean> {
 // `level` is optional. Without it: the active trial with the furthest expiry
 // wins; if none are active, the most-recently-expired one is used; if the
 // user has never started any trial, `level` comes back null.
-export type UserTrialState = TrialState & { hasFullAccess: boolean; level: Level | null };
+// `hasPaidEntitlement`: the user holds a live per-level purchase / coupon
+// entitlement. Paid level buyers have isPremium=false, so hasFullAccess alone
+// misses them — features that gate on "has this user paid?" (e.g. Scholar)
+// must check both.
+export type UserTrialState = TrialState & { hasFullAccess: boolean; hasPaidEntitlement: boolean; level: Level | null };
 
 export async function getTrialState(email: string, level?: Level): Promise<UserTrialState | null> {
   const user = await prisma.user.findUnique({
@@ -188,6 +192,8 @@ export async function getTrialState(email: string, level?: Level): Promise<UserT
   const hasFullAccess = user.role === 'ADMIN' || (user.isPremium && (!user.premiumUntil || user.premiumUntil > now));
 
   const trials = await loadTrials(user.id, now);
+  const hasPaidEntitlement =
+    (await prisma.entitlement.count({ where: { userId: user.id, expiresAt: { gt: now } }, take: 1 })) > 0;
 
   let chosen: LoadedTrial | undefined;
   if (level) {
@@ -200,9 +206,9 @@ export async function getTrialState(email: string, level?: Level): Promise<UserT
   }
 
   if (!chosen) {
-    return { ...computeTrialState(null, null, now), hasFullAccess, level: null };
+    return { ...computeTrialState(null, null, now), hasFullAccess, hasPaidEntitlement, level: null };
   }
-  return { ...chosen.state, hasFullAccess, level: chosen.level };
+  return { ...chosen.state, hasFullAccess, hasPaidEntitlement, level: chosen.level };
 }
 
 // Per-level access summary — drives the dashboard/quiz level tabs.

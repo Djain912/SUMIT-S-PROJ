@@ -326,14 +326,15 @@ export async function POST(request: Request) {
     const trial = await getTrialState(user.email);
 
     // Block users whose trial has ended and who have not paid.
-    if (trial && !trial.hasFullAccess && !trial.inTrial) {
+    const isPaid = !!trial && (trial.hasFullAccess || trial.hasPaidEntitlement);
+    if (trial && !isPaid && !trial.inTrial) {
       return NextResponse.json(
         { success: false, error: { message: 'Your free trial has ended. Upgrade to continue using Chartix Scholar.' } },
         { status: 403 },
       );
     }
 
-    if (trial && !trial.hasFullAccess && trial.inTrial) {
+    if (trial && !isPaid && trial.inTrial) {
       const limit = await enforceRateLimit({
         request,
         key: 'scholar-trial-daily',
