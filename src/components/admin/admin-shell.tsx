@@ -43,7 +43,7 @@ function formatLevel(level: Level): string {
   return level.replace('_', ' ');
 }
 
-export function AdminShell({ children }: { children: ReactNode }) {
+export function AdminShell({ children, badges = {} }: { children: ReactNode; badges?: Record<string, number> }) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -111,10 +111,20 @@ export function AdminShell({ children }: { children: ReactNode }) {
                 );
               }
 
+              const count = badges[item.href] ?? 0;
+
               return (
                 <Link key={item.href} href={getHref(item.href)} onClick={handleNavClick} className={cls}>
                   <Icon className="h-4 w-4" />
                   {item.label}
+                  {count > 0 && (
+                    <span
+                      aria-label={`${count} pending`}
+                      className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-semibold leading-none text-white"
+                    >
+                      {count > 99 ? '99+' : count}
+                    </span>
+                  )}
                 </Link>
               );
             })}
