@@ -1,5 +1,12 @@
 import { resend, FROM_EMAIL, BCC_EMAIL } from './resend';
 
+// The Resend SDK returns { error } instead of throwing, so a rejected send
+// would otherwise pass silently. Throw so callers can log / retry.
+async function sendOrThrow(params: Parameters<typeof resend.emails.send>[0]) {
+  const { error } = await resend.emails.send(params);
+  if (error) throw new Error(`Resend error (${error.name}): ${error.message}`);
+}
+
 const GREEN = '#0f5c35';
 const GRAY = '#6b7280';
 const DARK = '#111827';
@@ -156,7 +163,7 @@ export async function sendTrialWelcomeEmail(
 ) {
   const firstName = extractFirstName(fullName);
   const levelName = level ? LEVEL_DISPLAY_NAME[level] : null;
-  await resend.emails.send({
+  await sendOrThrow({
     from: FROM_EMAIL,
     to: email,
     bcc: [BCC_EMAIL],
@@ -177,7 +184,7 @@ export async function sendTrialWelcomeEmail(
 
 export async function sendTrialNudgeEmail(email: string, fullName: string | null | undefined, daysRemaining: number) {
   const firstName = extractFirstName(fullName);
-  await resend.emails.send({
+  await sendOrThrow({
     from: FROM_EMAIL,
     to: email,
     bcc: [BCC_EMAIL],
@@ -194,7 +201,7 @@ export async function sendTrialNudgeEmail(email: string, fullName: string | null
 
 export async function sendTrialUrgencyEmail(email: string, fullName: string | null | undefined) {
   const firstName = extractFirstName(fullName);
-  await resend.emails.send({
+  await sendOrThrow({
     from: FROM_EMAIL,
     to: email,
     bcc: [BCC_EMAIL],
@@ -211,7 +218,7 @@ export async function sendTrialUrgencyEmail(email: string, fullName: string | nu
 
 export async function sendPremiumWelcomeEmail(email: string, fullName: string | null | undefined) {
   const firstName = extractFirstName(fullName);
-  await resend.emails.send({
+  await sendOrThrow({
     from: FROM_EMAIL,
     to: email,
     bcc: [BCC_EMAIL],

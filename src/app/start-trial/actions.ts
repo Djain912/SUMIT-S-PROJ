@@ -46,7 +46,8 @@ export async function startLevelTrial(formData: FormData): Promise<void> {
     throw err;
   }
 
-  sendTrialWelcomeEmail(user.email, user.fullName, level).catch((e) =>
+  // Must be awaited — Vercel can kill the function once the redirect response is sent.
+  await sendTrialWelcomeEmail(user.email, user.fullName, level).catch((e) =>
     console.error('[start-trial] welcome email failed:', e),
   );
 

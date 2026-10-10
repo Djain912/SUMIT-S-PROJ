@@ -2,12 +2,7 @@
 
 import { useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-
-declare global {
-  interface Window {
-    gtag?: (...args: unknown[]) => void;
-  }
-}
+// window.gtag is typed globally in src/lib/analytics/track.ts
 
 // Fires the Google Ads sign-up conversion once when a new user lands with ?welcome=1
 export function GoogleAdsConversion() {
