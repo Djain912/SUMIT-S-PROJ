@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
+import { auth } from '@/lib/auth/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,6 +29,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: { message: 'Invalid payload' } }, { status: 400 });
     }
 
+    // Attach the signed-in user (if any) so complaints are traceable.
+    // Logged-out homepage-bot visitors stay anonymous. Fail-soft.
+    let userId: string | null = null;
+    try {
+      const session = await auth();
+      userId = (session?.user as { id?: string } | undefined)?.id ?? null;
+    } catch {
+      userId = null;
+    }
+
     await prisma.botFeedback.create({
       data: {
         botType,
@@ -35,6 +46,7 @@ export async function POST(request: Request) {
         answer: answer.slice(0, 5000),
         rating: rating!,
         userNote: userNote ? userNote.slice(0, 1000) : null,
+        userId,
       },
     });
 

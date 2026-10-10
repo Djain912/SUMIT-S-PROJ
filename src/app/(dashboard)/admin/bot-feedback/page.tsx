@@ -14,7 +14,15 @@ async function getData() {
         orderBy: { createdAt: 'desc' },
       }),
     ]);
-    return { feedback, qaPairs };
+    const userIds = [...new Set(feedback.map((f) => f.userId).filter((id): id is string => !!id))];
+    const users = userIds.length
+      ? await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, email: true } })
+      : [];
+    const emailById = new Map(users.map((u) => [u.id, u.email]));
+    return {
+      feedback: feedback.map((f) => ({ ...f, userEmail: f.userId ? emailById.get(f.userId) ?? null : null })),
+      qaPairs,
+    };
   } catch {
     return { feedback: [], qaPairs: [] };
   }

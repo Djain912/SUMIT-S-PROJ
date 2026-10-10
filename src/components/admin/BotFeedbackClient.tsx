@@ -10,6 +10,7 @@ type Feedback = {
   answer: string;
   rating: string;
   userNote: string | null;
+  userEmail?: string | null;
   createdAt: string;
 };
 
@@ -229,6 +230,9 @@ export function BotFeedbackClient({
                           <span className="text-[10px] text-zinc-400">
                             {new Date(f.createdAt).toLocaleDateString('en-GB')}
                           </span>
+                          {f.userEmail && (
+                            <span className="text-[10px] font-medium text-zinc-500">· {f.userEmail}</span>
+                          )}
                         </div>
                         <p className="text-xs font-medium text-zinc-700">
                           Q: {truncate(f.question, 100)}

@@ -540,8 +540,10 @@ model BotFeedback {
   answer    String   @db.Text
   rating    String   // 'like' | 'dislike'
   userNote  String?  @db.Text // optional correction note from user
+  userId    String?  // who submitted it (null for logged-out homepage-bot users / older rows)
   createdAt DateTime @default(now())
 
+  @@index([userId])
   @@index([botType, rating])
   @@index([createdAt])
 }
