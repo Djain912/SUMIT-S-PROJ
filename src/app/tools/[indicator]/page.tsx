@@ -37,12 +37,27 @@ const INTROS: Record<IndicatorKey, string> = {
   distma:     'Calculates how far price sits above or below a chosen moving average, expressed as a percentage. A classic mean-reversion and trend-extension signal.',
 };
 
+// Titles tuned to what people actually search (Search Console, Oct 2026)
+const TITLES: Partial<Record<IndicatorKey, string>> = {
+  bb:       'Bollinger Bands Calculator — Formula & Standard Deviation Explained',
+  rsi:      'RSI Calculator Online — Free, Step-by-Step Formula',
+  ema:      'EMA Calculator Online — Free Exponential Moving Average Tool',
+  sma:      'SMA Calculator — Simple Moving Average Calculation Explained',
+  macd:     'MACD Calculator Online — Free, with Signal Line & Histogram',
+  obv:      'What is OBV? On Balance Volume Explained + Free Calculator',
+  lwma:     'What is LWMA? Linear Weighted Moving Average + Calculator',
+  distma:   'Distance from Moving Average (%) — Formula & Calculator',
+  dmi:      'ADX / DMI Indicator Explained — +DI, −DI & ADX Calculator',
+  cmf:      'Chaikin Money Flow (CMF) Calculation Explained + Calculator',
+  mfi:      'MFI Calculator — Money Flow Index Formula Step by Step',
+};
+
 export async function generateMetadata({ params }: { params: Promise<{ indicator: string }> }) {
   const { indicator } = await params;
   const key = indicator as IndicatorKey;
   const name = NAMES[key] ?? 'Indicator';
   const intro = INTROS[key];
-  const title = `${name} Calculator — Free Online Tool | Chartix`;
+  const title = TITLES[key] ?? `${name} Calculator — Free Online Tool`;
   const description = intro
     ? `${intro} Free, no login required.`
     : `Free online ${name} calculator with a live price chart, step-by-step calculation table, and a plain-English explanation. No login required.`;
