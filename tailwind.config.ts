@@ -14,6 +14,7 @@ const config: Config = {
         sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
         heading: ['var(--font-outfit)', 'system-ui', 'sans-serif'],
         mono: ['var(--font-mono)', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+        serif: ['var(--font-serif)', 'Georgia', 'serif'],
       },
       colors: {
         border: 'hsl(var(--border))',

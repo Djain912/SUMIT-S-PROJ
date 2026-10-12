@@ -60,14 +60,14 @@ export function PanelChart({ categories, price, indicators, priceLabel = 'Price'
     <div>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img">
         {/* panel titles */}
-        <text x={padL} y={16} fontSize={12} fontWeight={600} fill="#18181b">{priceLabel}</text>
-        <text x={padL} y={indTop - 8} fontSize={12} fontWeight={600} fill="#047857">{indicatorLabel}</text>
+        <text x={padL} y={16} fontSize={12} fontWeight={500} fill="#44403C">{priceLabel}</text>
+        <text x={padL} y={indTop - 8} fontSize={12} fontWeight={500} fill="#065F46">{indicatorLabel}</text>
 
         {/* price gridlines + labels */}
         {[pr.mx, (pr.mx + pr.mn) / 2, pr.mn].map((t, i) => (
           <g key={`p${i}`}>
-            <line x1={padL} x2={W - padR} y1={yP(t)} y2={yP(t)} stroke="#e4e4e7" strokeWidth={1} />
-            <text x={padL - 6} y={yP(t) + 3} textAnchor="end" fontSize={10} fill="#71717a">{fmt(t)}</text>
+            <line x1={padL} x2={W - padR} y1={yP(t)} y2={yP(t)} stroke="#EEECE7" strokeWidth={1} />
+            <text x={padL - 6} y={yP(t) + 3} textAnchor="end" fontSize={10} fill="#A8A29E">{fmt(t)}</text>
           </g>
         ))}
         {/* price line */}
@@ -76,15 +76,15 @@ export function PanelChart({ categories, price, indicators, priceLabel = 'Price'
         {/* indicator gridlines + labels */}
         {[ir.mx, (ir.mx + ir.mn) / 2, ir.mn].map((t, i) => (
           <g key={`i${i}`}>
-            <line x1={padL} x2={W - padR} y1={yI(t)} y2={yI(t)} stroke="#e4e4e7" strokeWidth={1} />
-            <text x={padL - 6} y={yI(t) + 3} textAnchor="end" fontSize={10} fill="#71717a">{fmt(t)}{indSuffix}</text>
+            <line x1={padL} x2={W - padR} y1={yI(t)} y2={yI(t)} stroke="#EEECE7" strokeWidth={1} />
+            <text x={padL - 6} y={yI(t) + 3} textAnchor="end" fontSize={10} fill="#A8A29E">{fmt(t)}{indSuffix}</text>
           </g>
         ))}
         {/* indicator reference lines */}
         {refLines.map((r, i) => (
           <g key={`r${i}`}>
-            <line x1={padL} x2={W - padR} y1={yI(r.value)} y2={yI(r.value)} stroke={r.color ?? '#f59e0b'} strokeWidth={1} strokeDasharray="4 3" />
-            <text x={W - padR} y={yI(r.value) - 3} textAnchor="end" fontSize={9} fill={r.color ?? '#f59e0b'}>{r.label}</text>
+            <line x1={padL} x2={W - padR} y1={yI(r.value)} y2={yI(r.value)} stroke={r.color ?? '#B45309'} strokeWidth={1} strokeDasharray="4 3" />
+            <text x={W - padR} y={yI(r.value) - 3} textAnchor="end" fontSize={9} fill={r.color ?? '#B45309'}>{r.label}</text>
           </g>
         ))}
         {/* indicator lines */}
@@ -94,7 +94,7 @@ export function PanelChart({ categories, price, indicators, priceLabel = 'Price'
 
         {/* shared x labels */}
         {xidx.map((i) => (
-          <text key={`x${i}`} x={x(i)} y={H - 8} textAnchor={i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle'} fontSize={10} fill="#71717a">
+          <text key={`x${i}`} x={x(i)} y={H - 8} textAnchor={i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle'} fontSize={10} fill="#A8A29E">
             {categories[i]}
           </text>
         ))}

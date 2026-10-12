@@ -2,11 +2,7 @@
 
 import { useMemo, useState, useRef, useEffect, type ReactNode } from 'react';
 import Link from 'next/link';
-import {
-  Info, HelpCircle, Calculator, Brain, CloudSun, Gauge, Radio, Network,
-  GitCompare, AlertTriangle, GraduationCap, Dumbbell, Sparkles, ChevronDown,
-  ChevronRight, CheckCircle2, XCircle, Send, Loader2, TrendingUp, TrendingDown, Minus,
-} from 'lucide-react';
+import { ArrowUpRight, Check, X, Send, Loader2, ChevronLeft } from 'lucide-react';
 import { AAPL_SAMPLE } from '@/lib/tools/sample-data';
 import {
   computeRsi, computeRoc, computeMacd, computeStochastics, computeMfi, computePpo,
@@ -59,77 +55,78 @@ function getPrimary(key: IndicatorKey, period: number): Primary {
   }
 }
 
-// ── small UI helpers ──
-const toneStyles: Record<Tone, string> = {
-  bull: 'border-emerald-200 bg-emerald-50 text-emerald-800',
-  bear: 'border-rose-200 bg-rose-50 text-rose-800',
-  neutral: 'border-zinc-200 bg-zinc-50 text-zinc-700',
-  caution: 'border-amber-200 bg-amber-50 text-amber-800',
+// ── design primitives ──
+const toneText: Record<Tone, string> = {
+  bull: 'text-emerald-800', bear: 'text-rose-700', neutral: 'text-stone-700', caution: 'text-amber-700',
 };
-const toneIcon: Record<Tone, ReactNode> = {
-  bull: <TrendingUp className="h-4 w-4" />,
-  bear: <TrendingDown className="h-4 w-4" />,
-  neutral: <Minus className="h-4 w-4" />,
-  caution: <AlertTriangle className="h-4 w-4" />,
+const toneDot: Record<Tone, string> = {
+  bull: 'bg-emerald-600', bear: 'bg-rose-500', neutral: 'bg-stone-400', caution: 'bg-amber-500',
 };
 
-function Module({ id, icon, n, title, subtitle, children, defaultOpen = true }: {
-  id: string; icon: ReactNode; n: number; title: string; subtitle?: string; children: ReactNode; defaultOpen?: boolean;
+const PROSE = 'text-[15px] leading-[1.75] text-stone-600';
+
+function Section({ id, n, title, lead, children }: {
+  id: string; n: number; title: string; lead?: string; children: ReactNode;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
   return (
-    <section id={id} className="scroll-mt-20 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
-      <button type="button" onClick={() => setOpen(v => !v)} className="flex w-full items-center gap-3.5 px-5 py-4 text-left transition hover:bg-zinc-50">
-        <span className="flex h-10 w-10 flex-none items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm shadow-emerald-600/30">{icon}</span>
-        <span className="min-w-0 flex-1">
-          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-500">Module {n}</span>
-          <span className="block font-heading text-[17px] font-bold leading-tight tracking-tight text-zinc-900">{title}</span>
-          {subtitle && <span className="block truncate text-xs text-zinc-500">{subtitle}</span>}
-        </span>
-        <span className="flex-none text-zinc-400">{open ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}</span>
-      </button>
-      {open && <div className="border-t border-zinc-100 px-5 py-5">{children}</div>}
+    <section id={id} data-lab-section className="scroll-mt-32 border-t border-stone-200 pt-10 lg:scroll-mt-24">
+      <p className="font-mono text-[11px] tracking-[0.14em] text-stone-400">{String(n).padStart(2, '0')}</p>
+      <h2 className="mt-2 font-serif text-[30px] font-normal leading-tight tracking-[-0.005em] text-stone-900">{title}</h2>
+      {lead && <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-stone-500">{lead}</p>}
+      <div className="mt-8">{children}</div>
     </section>
   );
 }
 
-function Bullets({ items, tone = 'zinc' }: { items: string[]; tone?: 'emerald' | 'rose' | 'amber' | 'zinc' }) {
-  const dot = { emerald: 'text-emerald-500', rose: 'text-rose-500', amber: 'text-amber-500', zinc: 'text-zinc-400' }[tone];
+function Label({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return <p className={`text-[11px] font-medium uppercase tracking-[0.14em] text-stone-400 ${className}`}>{children}</p>;
+}
+
+function Bullets({ items, tone = 'neutral' }: { items: string[]; tone?: 'emerald' | 'rose' | 'amber' | 'neutral' }) {
+  const dot = { emerald: 'bg-emerald-600', rose: 'bg-rose-400', amber: 'bg-amber-500', neutral: 'bg-stone-300' }[tone];
   return (
-    <ul className="space-y-2.5">
+    <ul className="space-y-3">
       {items.map((t, i) => (
-        <li key={i} className="flex items-start gap-2.5 text-[13.5px] leading-relaxed text-zinc-700">
-          <span className={`mt-1 flex-none text-base font-bold ${dot}`}>▸</span><span>{t}</span>
+        <li key={i} className="flex items-start gap-3 text-[15px] leading-[1.7] text-stone-600">
+          <span className={`mt-[11px] h-1 w-1 flex-none rounded-full ${dot}`} /><span>{t}</span>
         </li>
       ))}
     </ul>
   );
 }
 
-// Prominent formula display — dark slate card, mono font, emerald accent.
-function FormulaBlock({ children, size = 'md' }: { children: ReactNode; size?: 'sm' | 'md' }) {
+// Column with a coloured rule under its heading — used for paired lists.
+function Column({ title, rule, children }: { title: string; rule: string; children: ReactNode }) {
   return (
-    <div className={`overflow-x-auto rounded-xl border-l-4 border-emerald-400 bg-zinc-900 px-4 ${size === 'md' ? 'py-3.5' : 'py-2.5'} shadow-sm`}>
-      <code className={`font-mono font-semibold tracking-tight text-emerald-50 ${size === 'md' ? 'text-[15px]' : 'text-[13px]'} whitespace-nowrap`}>{children}</code>
+    <div>
+      <h3 className={`mb-5 border-b pb-3 text-[13px] font-semibold text-stone-900 ${rule}`}>{title}</h3>
+      {children}
     </div>
   );
 }
 
-// Emphasis callouts. Each variant teaches a specific kind of insight.
+function FormulaBlock({ children, size = 'md' }: { children: ReactNode; size?: 'sm' | 'md' }) {
+  return (
+    <div className={`overflow-x-auto rounded-lg border border-stone-200 bg-[#F4F3EE] ${size === 'md' ? 'px-5 py-4' : 'px-4 py-3'}`}>
+      <code className={`whitespace-nowrap font-mono text-stone-800 ${size === 'md' ? 'text-[14.5px]' : 'text-[13px]'}`}>{children}</code>
+    </div>
+  );
+}
+
 type CalloutKind = 'why' | 'pro' | 'trap' | 'exam';
-const calloutCfg: Record<CalloutKind, { ring: string; chip: string; label: string; icon: ReactNode }> = {
-  why: { ring: 'border-emerald-200 bg-emerald-50/70', chip: 'bg-emerald-600', label: 'Why this matters', icon: <Info className="h-3 w-3" /> },
-  pro: { ring: 'border-indigo-200 bg-indigo-50/70', chip: 'bg-indigo-600', label: 'Professional insight', icon: <Brain className="h-3 w-3" /> },
-  trap: { ring: 'border-rose-200 bg-rose-50/70', chip: 'bg-rose-500', label: 'Common trap', icon: <AlertTriangle className="h-3 w-3" /> },
-  exam: { ring: 'border-amber-200 bg-amber-50/70', chip: 'bg-amber-500', label: 'Exam focus', icon: <GraduationCap className="h-3 w-3" /> },
+const calloutCfg: Record<CalloutKind, { rule: string; label: string; text: string }> = {
+  why: { rule: 'border-emerald-600', text: 'text-emerald-800', label: 'Why this matters' },
+  pro: { rule: 'border-stone-400', text: 'text-stone-500', label: 'Professional insight' },
+  trap: { rule: 'border-rose-400', text: 'text-rose-700', label: 'Common trap' },
+  exam: { rule: 'border-amber-500', text: 'text-amber-700', label: 'Exam focus' },
 };
 function Callout({ kind, title, children }: { kind: CalloutKind; title?: string; children: ReactNode }) {
   const c = calloutCfg[kind];
   return (
-    <div className={`rounded-xl border ${c.ring} px-4 py-3`}>
-      <span className={`inline-flex items-center gap-1 rounded-full ${c.chip} px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wider text-white`}>{c.icon} {c.label}</span>
-      {title && <p className="mt-2 text-[13.5px] font-bold text-zinc-900">{title}</p>}
-      <p className="mt-1.5 text-[13.5px] leading-relaxed text-zinc-700">{children}</p>
+    <div className={`border-l-2 ${c.rule} py-0.5 pl-4`}>
+      <p className={`text-[10.5px] font-semibold uppercase tracking-[0.14em] ${c.text}`}>{c.label}</p>
+      {title && <p className="mt-1.5 text-[15px] font-medium text-stone-900">{title}</p>}
+      <p className="mt-1 text-[14.5px] leading-[1.7] text-stone-600">{children}</p>
     </div>
   );
 }
@@ -192,16 +189,40 @@ function runDetector(sig: SignalDef, line: (number | null)[]): Detected {
   }
 }
 
-export function IndicatorLab({ indicator }: { indicator: IndicatorKey }) {
+export function IndicatorLab({ indicator, intro }: { indicator: IndicatorKey; intro?: string }) {
   const edu = getEducation(indicator);
 
   // Indicators without published education content fall back to the classic tool.
   if (!edu) return <IndicatorTool indicator={indicator} />;
-  return <Lab edu={edu} indicator={indicator} />;
+  return <Lab edu={edu} indicator={indicator} intro={intro} />;
 }
 
-function Lab({ edu, indicator }: { edu: IndicatorEducation; indicator: IndicatorKey }) {
+const TOC: [string, string][] = [
+  ['overview', 'Overview'], ['chart', 'Live chart'], ['calc', 'How it’s calculated'], ['reading', 'Reading it today'],
+  ['signals', 'Signals'], ['thinks', 'How it thinks'], ['env', 'When it works'], ['mistakes', 'Common mistakes'],
+  ['related', 'Related indicators'], ['cmt', 'CMT exam corner'], ['practice', 'Practice'], ['tutor', 'Ask Chartix Scholar'],
+];
+
+function useActiveSection(ids: string[]) {
+  const [active, setActive] = useState(ids[0]);
+  useEffect(() => {
+    const els = ids.map(id => document.getElementById(id)).filter((e): e is HTMLElement => !!e);
+    const obs = new IntersectionObserver(entries => {
+      const visible = entries.filter(e => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+      if (visible[0]) setActive(visible[0].target.id);
+    }, { rootMargin: '-15% 0px -70% 0px' });
+    els.forEach(e => obs.observe(e));
+    return () => obs.disconnect();
+  }, [ids]);
+  return active;
+}
+
+const TOC_IDS = TOC.map(([id]) => id);
+
+function Lab({ edu, indicator, intro }: { edu: IndicatorEducation; indicator: IndicatorKey; intro?: string }) {
   const [period, setPeriod] = useState(14);
+  const active = useActiveSection(TOC_IDS);
+  const mobileNavRef = useRef<HTMLElement | null>(null);
 
   const usesPeriod = !FIXED_PARAM.includes(indicator);
 
@@ -211,323 +232,368 @@ function Lab({ edu, indicator }: { edu: IndicatorEducation; indicator: Indicator
     return { ...p, latest: li >= 0 ? (p.line[li] as number) : null, latestDate: li >= 0 ? AAPL_SAMPLE[li].date : '' };
   }, [indicator, period]);
 
-  // 6 — interpretation band for the live value
   const band = useMemo(() => {
     if (latest == null) return null;
     return edu.interpretation.bands.find(b =>
       (b.min == null || latest >= b.min) && (b.max == null || latest <= b.max)) ?? null;
   }, [latest, edu]);
 
-  // 7 — run each signal's detector against the primary value series
   const detections = useMemo(() => edu.signals.map(sig => runDetector(sig, line)), [line, edu]);
 
-  const toc = [
-    ['snapshot', 'Snapshot'], ['why', 'Why It Exists'], ['calc', 'Calculation'], ['thinks', 'How It Thinks'],
-    ['env', 'Market Environment'], ['interp', 'Live Interpretation'], ['signals', 'Signals'], ['related', 'Related'],
-    ['compare', 'Compare'], ['mistakes', 'Mistakes'], ['cmt', 'CMT Corner'], ['practice', 'Practice'], ['tutor', 'AI Tutor'],
-  ];
+  // keep the active pill visible in the mobile nav
+  useEffect(() => {
+    const el = mobileNavRef.current?.querySelector<HTMLElement>(`[data-toc="${active}"]`);
+    el?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+  }, [active]);
 
   return (
-    <div className="space-y-4">
+    <div>
       {/* Hero */}
-      <div className="rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white px-6 py-6">
-        <div className="flex items-center gap-2">
-          <span className="rounded-full bg-emerald-600 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-white">Indicator Lab</span>
-          <span className="rounded-full border border-emerald-200 bg-white px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-emerald-600">{edu.snapshot.difficulty}</span>
-        </div>
-        <h1 className="mt-3 font-heading text-3xl font-extrabold tracking-tight text-emerald-950 sm:text-4xl">{edu.name}</h1>
-        <p className="mt-2.5 max-w-2xl text-[15px] leading-relaxed text-zinc-600">{edu.tagline}</p>
-      </div>
+      <header className="pb-12">
+        <Link href="/tools" className="inline-flex items-center gap-1 text-[13px] text-stone-500 transition hover:text-stone-900 sm:hidden">
+          <ChevronLeft className="h-3.5 w-3.5" /> Indicator Lab
+        </Link>
+        <p className="mt-4 text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-800 sm:mt-0">
+          Free calculator &amp; study guide · {edu.snapshot.difficulty}
+        </p>
+        <h1 className="mt-4 max-w-4xl font-serif text-[40px] font-normal leading-[1.08] tracking-[-0.01em] text-stone-900 sm:text-[56px]">
+          {edu.name}
+        </h1>
+        <p className="mt-5 max-w-2xl text-[17px] leading-relaxed text-stone-500">{edu.tagline}</p>
 
-      {/* Sticky module nav */}
-      <nav className="sticky top-16 z-30 -mx-1 flex gap-1.5 overflow-x-auto rounded-xl border border-zinc-200 bg-white/95 px-2 py-2 shadow-sm backdrop-blur [scrollbar-width:none]">
-        {toc.map(([id, label]) => (
-          <a key={id} href={`#${id}`} className="flex-none rounded-lg px-2.5 py-1 text-xs font-semibold text-zinc-500 transition hover:bg-emerald-50 hover:text-emerald-700">{label}</a>
+        <dl className="mt-10 grid grid-cols-2 gap-x-8 gap-y-6 border-y border-stone-200 py-6 lg:grid-cols-4">
+          {([
+            ['Category', edu.snapshot.category],
+            ['Created by', edu.snapshot.creator],
+            ['Level', edu.snapshot.difficulty],
+            ['Works best in', edu.snapshot.marketType],
+          ] as const).map(([k, v]) => (
+            <div key={k}>
+              <dt className="text-[11px] uppercase tracking-[0.14em] text-stone-400">{k}</dt>
+              <dd className="mt-1.5 text-[14px] leading-snug text-stone-800">{v}</dd>
+            </div>
+          ))}
+        </dl>
+      </header>
+
+      {/* Mobile section nav */}
+      <nav ref={mobileNavRef} className="sticky top-14 z-30 -mx-4 mb-8 flex gap-1 overflow-x-auto border-b border-stone-200 bg-[#FAFAF8]/95 px-4 py-2.5 backdrop-blur [scrollbar-width:none] lg:hidden">
+        {TOC.map(([id, l]) => (
+          <a key={id} href={`#${id}`} data-toc={id}
+            className={`flex-none rounded-full px-3 py-1 text-[13px] transition ${active === id ? 'bg-stone-900/[0.06] text-stone-900' : 'text-stone-500'}`}>{l}</a>
         ))}
       </nav>
 
-      {/* 1 — Snapshot */}
-      <Module id="snapshot" n={1} icon={<Info className="h-4 w-4" />} title="Indicator Snapshot" subtitle="The essentials at a glance">
-        <dl className="grid gap-3 sm:grid-cols-2">
-          {([
-            ['Category', edu.snapshot.category], ['Creator', edu.snapshot.creator],
-            ['Difficulty', edu.snapshot.difficulty], ['Market type', edu.snapshot.marketType],
-            ['Primary purpose', edu.snapshot.primaryPurpose],
-          ] as const).map(([k, v]) => (
-            <div key={k} className="rounded-xl border border-zinc-100 bg-zinc-50/60 px-4 py-3">
-              <dt className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">{k}</dt>
-              <dd className="mt-1 text-sm font-medium text-zinc-800">{v}</dd>
-            </div>
-          ))}
-          <div className="sm:col-span-2">
-            <dt className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-emerald-600">Formula</dt>
-            <dd><FormulaBlock>{edu.snapshot.formula}</FormulaBlock></dd>
-          </div>
-        </dl>
-      </Module>
+      <div className="lg:grid lg:grid-cols-[210px_minmax(0,1fr)] lg:gap-16">
+        {/* Desktop contents */}
+        <aside className="hidden lg:block">
+          <nav className="sticky top-24">
+            <Label className="mb-4">On this page</Label>
+            <ol className="space-y-0.5 border-l border-stone-200">
+              {TOC.map(([id, l]) => (
+                <li key={id}>
+                  <a href={`#${id}`}
+                    className={`-ml-px block border-l py-1.5 pl-4 text-[13.5px] transition ${active === id ? 'border-emerald-800 font-medium text-stone-900' : 'border-transparent text-stone-500 hover:text-stone-900'}`}>
+                    {l}
+                  </a>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        </aside>
 
-      {/* 2 — Why it exists */}
-      <Module id="why" n={2} icon={<HelpCircle className="h-4 w-4" />} title="Why This Indicator Exists" subtitle="The problem it solves">
-        <div className="space-y-4">
-          {([['The problem it solves', edu.whyExists.problem], ['Historical context', edu.whyExists.history], ['Practical use case', edu.whyExists.useCase]] as const).map(([h, b]) => (
-            <div key={h}>
-              <p className="text-xs font-bold uppercase tracking-widest text-emerald-600">{h}</p>
-              <p className="mt-1 text-sm leading-relaxed text-zinc-700">{b}</p>
+        <div className="min-w-0 space-y-20">
+          {/* 01 Overview */}
+          <Section id="overview" n={1} title="Overview">
+            <p className="max-w-2xl font-serif text-[21px] leading-[1.55] text-stone-800">{edu.snapshot.primaryPurpose}</p>
+            <div className="mt-8">
+              <Label className="mb-2.5">Formula</Label>
+              <FormulaBlock>{edu.snapshot.formula}</FormulaBlock>
             </div>
-          ))}
-        </div>
-      </Module>
-
-      {/* 3 — Interactive calculation (narrative + live tool) */}
-      <Module id="calc" n={3} icon={<Calculator className="h-4 w-4" />} title="Interactive Calculation Breakdown" subtitle="Every step, on real price data">
-        <ol className="mb-5 space-y-3">
-          {edu.calcSteps.map((s, i) => (
-            <li key={i} className="rounded-xl border border-zinc-200 bg-white px-4 py-3.5 shadow-sm">
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 flex h-6 w-6 flex-none items-center justify-center rounded-lg bg-emerald-600 text-xs font-bold text-white">{i + 1}</span>
-                <div className="min-w-0 flex-1">
-                  <p className="font-heading text-[15px] font-bold text-zinc-900">{s.title}</p>
-                  <p className="mt-1 text-[13.5px] leading-relaxed text-zinc-600">{s.detail}</p>
-                  {s.formula && <div className="mt-2.5"><FormulaBlock size="sm">{s.formula}</FormulaBlock></div>}
-                  {s.whyMatters && <div className="mt-2.5"><Callout kind="why">{s.whyMatters}</Callout></div>}
+            <div className="mt-12 grid gap-10 md:grid-cols-3">
+              {([['The problem it solves', edu.whyExists.problem], ['Historical context', edu.whyExists.history], ['Practical use case', edu.whyExists.useCase]] as const).map(([h, b]) => (
+                <div key={h}>
+                  <h3 className="text-[13px] font-semibold text-stone-900">{h}</h3>
+                  <p className={`mt-2 ${PROSE}`}>{b}</p>
                 </div>
-              </div>
-            </li>
-          ))}
-        </ol>
-        <div className="rounded-xl border border-zinc-200 bg-white p-1">
-          <IndicatorTool indicator={indicator} />
-        </div>
-      </Module>
-
-      {/* 4 — How it thinks */}
-      <Module id="thinks" n={4} icon={<Brain className="h-4 w-4" />} title="How This Indicator Thinks" subtitle="What it sees — and what it can't">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-4">
-            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-emerald-600">✓ What it measures</p>
-            <Bullets items={edu.howItThinks.measures} tone="emerald" />
-          </div>
-          <div className="rounded-xl border border-rose-100 bg-rose-50/40 p-4">
-            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-rose-500">✕ What it ignores</p>
-            <Bullets items={edu.howItThinks.ignores} tone="rose" />
-          </div>
-        </div>
-        {edu.proInsights.length > 0 && (
-          <div className="mt-5 space-y-3">
-            <p className="text-xs font-bold uppercase tracking-widest text-indigo-600">How professionals actually use it</p>
-            <div className="grid gap-3 sm:grid-cols-3">
-              {edu.proInsights.map((p, i) => <Callout key={i} kind="pro" title={p.title}>{p.body}</Callout>)}
+              ))}
             </div>
-          </div>
-        )}
-      </Module>
+          </Section>
 
-      {/* 5 — Market environment */}
-      <Module id="env" n={5} icon={<CloudSun className="h-4 w-4" />} title="Market Environment Analysis" subtitle="Where it shines and where it breaks">
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-4">
-            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-emerald-600">Best conditions</p>
-            <Bullets items={edu.marketEnvironment.best} tone="emerald" />
-          </div>
-          <div className="rounded-xl border border-amber-100 bg-amber-50/40 p-4">
-            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-amber-600">Worst conditions</p>
-            <Bullets items={edu.marketEnvironment.worst} tone="amber" />
-          </div>
-          <div className="rounded-xl border border-rose-100 bg-rose-50/40 p-4">
-            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-rose-500">Common failures</p>
-            <Bullets items={edu.marketEnvironment.failures} tone="rose" />
-          </div>
-        </div>
-      </Module>
+          {/* 02 Live chart */}
+          <Section id="chart" n={2} title="Live chart"
+            lead={intro ?? 'Adjust the settings and watch the indicator recalculate on five years of real daily price data.'}>
+            <IndicatorTool indicator={indicator} embedded />
+          </Section>
 
-      {/* 6 — Dynamic interpretation engine */}
-      <Module id="interp" n={6} icon={<Gauge className="h-4 w-4" />} title="Dynamic Interpretation Engine" subtitle="Plain-English read of the live value">
-        <div className="mb-4 flex flex-wrap items-center gap-3">
-          {usesPeriod && <>
-            <label className="text-xs font-semibold text-zinc-500">Lookback period</label>
-            <input type="range" min={7} max={26} value={period} onChange={e => setPeriod(parseInt(e.target.value, 10))} className="h-1.5 w-44 accent-emerald-600" />
-            <span className="rounded-lg bg-zinc-100 px-2 py-0.5 font-mono text-xs font-semibold text-zinc-700">{period}</span>
-          </>}
-          {latest != null && (
-            <span className="ml-auto font-mono text-sm">
-              <span className="text-zinc-400">{label} =</span> <span className="font-bold text-zinc-900">{fmt(latest)}</span>
-              <span className="ml-2 text-xs text-zinc-400">as of {latestDate}</span>
-            </span>
-          )}
-        </div>
-        {band && (
-          <div className={`rounded-xl border px-4 py-4 ${toneStyles[band.tone]}`}>
-            <p className="flex items-center gap-2 text-sm font-bold">{toneIcon[band.tone]} {band.label}</p>
-            <p className="mt-1.5 text-sm leading-relaxed">{band.message}</p>
-          </div>
-        )}
-        <div className="mt-4"><Callout kind="pro">{edu.interpretation.note}</Callout></div>
-      </Module>
+          {/* 03 Calculation */}
+          <Section id="calc" n={3} title="How it’s calculated" lead="Every step, in the order the indicator is built.">
+            <ol className="space-y-10">
+              {edu.calcSteps.map((s, i) => (
+                <li key={i} className="grid grid-cols-[36px_minmax(0,1fr)] gap-4 sm:grid-cols-[48px_minmax(0,1fr)]">
+                  <span className="font-serif text-[32px] leading-none text-emerald-800/80">{i + 1}</span>
+                  <div className="min-w-0">
+                    <h3 className="text-[16px] font-semibold text-stone-900">{s.title}</h3>
+                    <p className={`mt-1.5 ${PROSE}`}>{s.detail}</p>
+                    {s.formula && <div className="mt-4"><FormulaBlock size="sm">{s.formula}</FormulaBlock></div>}
+                    {s.whyMatters && <div className="mt-5"><Callout kind="why">{s.whyMatters}</Callout></div>}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </Section>
 
-      {/* 7 — Signal explanation layer */}
-      <Module id="signals" n={7} icon={<Radio className="h-4 w-4" />} title="Signal Explanation Layer" subtitle="What fired, why, and how much to trust it">
-        <div className="space-y-3">
-          {edu.signals.map((sig, si) => {
-            const d = detections[si];
-            return (
-              <div key={si} className="rounded-xl border border-zinc-100 bg-zinc-50/60 px-4 py-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-sm font-bold text-zinc-800">{sig.name}</p>
-                  {d?.present
-                    ? <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700"><CheckCircle2 className="h-3 w-3" /> Detected{d.date ? ` · ${d.date}` : ''}</span>
-                    : <span className="inline-flex items-center gap-1 rounded-full bg-zinc-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-zinc-500"><Minus className="h-3 w-3" /> Not present</span>}
+          {/* 04 Reading it today */}
+          <Section id="reading" n={4} title="Reading it today" lead="A plain-English read of the latest value on the sample chart.">
+            <div className="rounded-2xl border border-stone-200 bg-white">
+              <div className="flex flex-wrap items-end justify-between gap-6 px-6 pb-6 pt-6">
+                <div>
+                  <Label>{label}</Label>
+                  <p className="mt-2 font-serif text-[52px] leading-none text-stone-900">{latest != null ? fmt(latest) : '—'}</p>
+                  {latestDate && <p className="mt-2 text-xs text-stone-400">As of {latestDate} · AAPL daily</p>}
                 </div>
-                <p className="mt-1.5 text-sm leading-relaxed text-zinc-700"><span className="font-semibold text-zinc-600">Why:</span> {sig.why}</p>
-                <p className="mt-1 text-xs leading-relaxed text-amber-700"><span className="font-semibold">Reliability:</span> {sig.reliability}</p>
+                {usesPeriod && (
+                  <div className="w-full max-w-[260px]">
+                    <div className="flex items-center justify-between text-xs text-stone-500">
+                      <span>Lookback period</span><span className="font-mono text-stone-900">{period}</span>
+                    </div>
+                    <input type="range" min={7} max={26} value={period} onChange={e => setPeriod(parseInt(e.target.value, 10))}
+                      className="mt-2 w-full accent-emerald-800" aria-label="Lookback period" />
+                  </div>
+                )}
               </div>
-            );
-          })}
-        </div>
-      </Module>
-
-      {/* 8 — Related framework */}
-      <Module id="related" n={8} icon={<Network className="h-4 w-4" />} title="Related Indicator Framework" subtitle="Siblings and partners">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-zinc-500">Same category</p>
-            <div className="flex flex-wrap gap-2">
-              {edu.related.sameCategory.map(r => (
-                <Link key={r.key} href={`/tools/${r.key}`} className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 transition hover:border-emerald-300 hover:text-emerald-700">{r.name}</Link>
-              ))}
+              {band && (
+                <div className="border-t border-stone-200 px-6 py-5">
+                  <p className={`flex items-center gap-2 text-[15px] font-semibold ${toneText[band.tone]}`}>
+                    <span className={`h-2 w-2 rounded-full ${toneDot[band.tone]}`} /> {band.label}
+                  </p>
+                  <p className={`mt-1.5 ${PROSE}`}>{band.message}</p>
+                </div>
+              )}
             </div>
-          </div>
-          <div>
-            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-zinc-500">Complementary (different angle)</p>
-            <div className="space-y-2">
-              {edu.related.complementary.map(r => (
-                <Link key={r.key} href={`/tools/${r.key}`} className="block rounded-xl border border-zinc-100 bg-zinc-50/60 px-3 py-2 transition hover:border-emerald-300 hover:bg-emerald-50/40">
-                  <span className="text-sm font-semibold text-emerald-700">{r.name}</span>
-                  <span className="block text-xs text-zinc-500">{r.reason}</span>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-      </Module>
+            <div className="mt-8"><Callout kind="pro">{edu.interpretation.note}</Callout></div>
+          </Section>
 
-      {/* 9 — Compare */}
-      <Module id="compare" n={9} icon={<GitCompare className="h-4 w-4" />} title="Compare Indicators" subtitle="Side-by-side with close cousins" defaultOpen={false}>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[560px] border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-zinc-200 text-left text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                <th className="px-3 py-2">Vs</th><th className="px-3 py-2">Formula difference</th><th className="px-3 py-2">Use-case difference</th>
-              </tr>
-            </thead>
-            <tbody>
-              {edu.comparisons.map(c => (
-                <tr key={c.otherKey} className="border-b border-zinc-100 align-top">
-                  <td className="px-3 py-3"><Link href={`/tools/${c.otherKey}`} className="font-semibold text-emerald-700 hover:underline">{c.otherName}</Link></td>
-                  <td className="px-3 py-3 text-zinc-600">{c.formulaDiff}</td>
-                  <td className="px-3 py-3 text-zinc-600">{c.useCaseDiff}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Module>
-
-      {/* 10 — Common mistakes */}
-      <Module id="mistakes" n={10} icon={<AlertTriangle className="h-4 w-4" />} title="Common Mistakes" subtitle="Beginner traps vs pro interpretation">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl border border-rose-100 bg-rose-50/40 p-4">
-            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-rose-500">Beginner mistakes</p>
-            <Bullets items={edu.mistakes.beginner} tone="rose" />
-          </div>
-          <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-4">
-            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-emerald-600">How professionals read it</p>
-            <Bullets items={edu.mistakes.professional} tone="emerald" />
-          </div>
-        </div>
-      </Module>
-
-      {/* 11 — CMT corner */}
-      <Module id="cmt" n={11} icon={<GraduationCap className="h-4 w-4" />} title="CMT Exam Corner" subtitle="What gets tested">
-        <div className="space-y-4">
-          <div>
-            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-emerald-600">Key formulas</p>
-            <div className="space-y-2">
-              {edu.cmtCorner.keyFormulas.map((f, i) => <FormulaBlock key={i} size="sm">{f}</FormulaBlock>)}
-            </div>
-          </div>
-          <div>
-            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-emerald-600">Frequently tested concepts</p>
-            <Bullets items={edu.cmtCorner.testedConcepts} tone="emerald" />
-          </div>
-          <div>
-            <p className="mb-2.5 text-xs font-bold uppercase tracking-widest text-rose-500">Exam traps</p>
-            <div className="space-y-2.5">
-              {edu.cmtCorner.traps.map((t, i) => <Callout key={i} kind="trap">{t}</Callout>)}
-            </div>
-          </div>
-        </div>
-      </Module>
-
-      {/* 12 — Practice */}
-      <Module id="practice" n={12} icon={<Dumbbell className="h-4 w-4" />} title="Interactive Practice Mode" subtitle="Test yourself">
-        <Quiz edu={edu} />
-        <div className="mt-5">
-          <p className="mb-2 text-xs font-bold uppercase tracking-widest text-zinc-500">Chart exercises</p>
-          <Bullets items={edu.practice.exercises} tone="zinc" />
-        </div>
-      </Module>
-
-      {/* 13 — AI tutor */}
-      <Module id="tutor" n={13} icon={<Sparkles className="h-4 w-4" />} title="AI Tutor — Chartix Scholar" subtitle="Ask anything about this indicator">
-        <Tutor edu={edu} />
-      </Module>
-    </div>
-  );
-}
-
-// ── Module 12 quiz ──
-function Quiz({ edu }: { edu: IndicatorEducation }) {
-  const [picked, setPicked] = useState<Record<number, number>>({});
-  return (
-    <div className="space-y-4">
-      {edu.practice.quiz.map((q, qi) => {
-        const sel = picked[qi];
-        const answered = sel != null;
-        return (
-          <div key={qi} className="rounded-xl border border-zinc-200 bg-white p-4">
-            <p className="text-sm font-semibold text-zinc-800">{qi + 1}. {q.q}</p>
-            <div className="mt-3 grid gap-2">
-              {q.options.map((opt, oi) => {
-                const isCorrect = oi === q.answer;
-                const isSel = sel === oi;
-                let cls = 'border-zinc-200 bg-white text-zinc-700 hover:border-emerald-300';
-                if (answered && isCorrect) cls = 'border-emerald-300 bg-emerald-50 text-emerald-800';
-                else if (answered && isSel) cls = 'border-rose-300 bg-rose-50 text-rose-800';
+          {/* 05 Signals */}
+          <Section id="signals" n={5} title="Signals" lead="What has fired on the sample chart, why it matters, and how much to trust it.">
+            <ul className="divide-y divide-stone-200 border-y border-stone-200">
+              {edu.signals.map((sig, si) => {
+                const d = detections[si];
                 return (
-                  <button key={oi} type="button" disabled={answered} onClick={() => setPicked(p => ({ ...p, [qi]: oi }))}
-                    className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition disabled:cursor-default ${cls}`}>
-                    {answered && isCorrect && <CheckCircle2 className="h-4 w-4 flex-none text-emerald-600" />}
-                    {answered && isSel && !isCorrect && <XCircle className="h-4 w-4 flex-none text-rose-500" />}
-                    <span>{opt}</span>
-                  </button>
+                  <li key={si} className="grid gap-3 py-6 sm:grid-cols-[minmax(0,1fr)_170px] sm:gap-8">
+                    <div className="min-w-0">
+                      <h3 className="text-[16px] font-semibold text-stone-900">{sig.name}</h3>
+                      <p className={`mt-1.5 ${PROSE}`}>{sig.why}</p>
+                      <p className="mt-2 text-[13.5px] leading-relaxed text-stone-500"><span className="font-medium text-stone-700">Reliability — </span>{sig.reliability}</p>
+                    </div>
+                    <div className="sm:text-right">
+                      {d?.present
+                        ? <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-emerald-800"><span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />Detected{d.date ? <span className="font-normal text-stone-500">· {d.date}</span> : null}</span>
+                        : <span className="inline-flex items-center gap-1.5 text-[13px] text-stone-400"><span className="h-1.5 w-1.5 rounded-full bg-stone-300" />Not present</span>}
+                    </div>
+                  </li>
                 );
               })}
+            </ul>
+          </Section>
+
+          {/* 06 How it thinks */}
+          <Section id="thinks" n={6} title="How it thinks" lead="What it sees — and what it can’t.">
+            <div className="grid gap-10 md:grid-cols-2">
+              <Column title="What it measures" rule="border-emerald-700/60"><Bullets items={edu.howItThinks.measures} tone="emerald" /></Column>
+              <Column title="What it ignores" rule="border-rose-400/70"><Bullets items={edu.howItThinks.ignores} tone="rose" /></Column>
             </div>
-            {answered && <p className="mt-2.5 rounded-lg bg-zinc-50 px-3 py-2 text-xs leading-relaxed text-zinc-600"><span className="font-semibold text-zinc-700">Explanation:</span> {q.explanation}</p>}
-          </div>
-        );
-      })}
+            {edu.proInsights.length > 0 && (
+              <div className="mt-14">
+                <h3 className="font-serif text-[22px] text-stone-900">How professionals actually use it</h3>
+                <div className="mt-6 grid gap-8 md:grid-cols-3">
+                  {edu.proInsights.map((p, i) => (
+                    <div key={i} className="border-t border-stone-200 pt-5">
+                      <p className="font-mono text-[11px] text-stone-400">{String(i + 1).padStart(2, '0')}</p>
+                      <p className="mt-2 text-[15px] font-semibold text-stone-900">{p.title}</p>
+                      <p className="mt-2 text-[14.5px] leading-[1.7] text-stone-600">{p.body}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Section>
+
+          {/* 07 Market environment */}
+          <Section id="env" n={7} title="When it works" lead="Where it shines and where it breaks.">
+            <div className="grid gap-10 md:grid-cols-3">
+              <Column title="Best conditions" rule="border-emerald-700/60"><Bullets items={edu.marketEnvironment.best} tone="emerald" /></Column>
+              <Column title="Worst conditions" rule="border-amber-500/70"><Bullets items={edu.marketEnvironment.worst} tone="amber" /></Column>
+              <Column title="Common failures" rule="border-rose-400/70"><Bullets items={edu.marketEnvironment.failures} tone="rose" /></Column>
+            </div>
+          </Section>
+
+          {/* 08 Mistakes */}
+          <Section id="mistakes" n={8} title="Common mistakes" lead="Beginner traps, and how professionals read the same thing.">
+            <div className="grid gap-10 md:grid-cols-2">
+              <Column title="Beginner mistakes" rule="border-rose-400/70"><Bullets items={edu.mistakes.beginner} tone="rose" /></Column>
+              <Column title="How professionals read it" rule="border-emerald-700/60"><Bullets items={edu.mistakes.professional} tone="emerald" /></Column>
+            </div>
+          </Section>
+
+          {/* 09 Related + compare */}
+          <Section id="related" n={9} title="Related indicators" lead="Siblings, partners, and how they differ.">
+            <div className="grid gap-10 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+              <div>
+                <Label className="mb-4">Same family</Label>
+                <ul className="divide-y divide-stone-200 border-y border-stone-200">
+                  {edu.related.sameCategory.map(r => (
+                    <li key={r.key}>
+                      <Link href={`/tools/${r.key}`} className="group flex items-center justify-between py-3 text-[15px] text-stone-800 transition hover:text-emerald-800">
+                        {r.name}<ArrowUpRight className="h-4 w-4 text-stone-300 transition group-hover:text-emerald-800" />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <Label className="mb-4">Pairs well with</Label>
+                <ul className="divide-y divide-stone-200 border-y border-stone-200">
+                  {edu.related.complementary.map(r => (
+                    <li key={r.key}>
+                      <Link href={`/tools/${r.key}`} className="group block py-3.5">
+                        <span className="flex items-center justify-between text-[15px] font-medium text-stone-900 transition group-hover:text-emerald-800">
+                          {r.name}<ArrowUpRight className="h-4 w-4 text-stone-300 transition group-hover:text-emerald-800" />
+                        </span>
+                        <span className="mt-0.5 block text-[13.5px] leading-relaxed text-stone-500">{r.reason}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            {edu.comparisons.length > 0 && (
+              <div className="mt-14">
+                <h3 className="font-serif text-[22px] text-stone-900">Side by side</h3>
+                <div className="mt-5 overflow-x-auto">
+                  <table className="w-full min-w-[600px] border-collapse text-left">
+                    <thead>
+                      <tr className="border-b border-stone-300 text-[11px] uppercase tracking-[0.14em] text-stone-400">
+                        <th className="py-3 pr-6 font-medium">Compared with</th><th className="py-3 pr-6 font-medium">Formula difference</th><th className="py-3 font-medium">Use-case difference</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {edu.comparisons.map(c => (
+                        <tr key={c.otherKey} className="border-b border-stone-200 align-top">
+                          <td className="py-4 pr-6"><Link href={`/tools/${c.otherKey}`} className="text-[15px] font-medium text-stone-900 underline decoration-stone-300 underline-offset-4 hover:text-emerald-800 hover:decoration-emerald-800">{c.otherName}</Link></td>
+                          <td className="py-4 pr-6 text-[14px] leading-relaxed text-stone-600">{c.formulaDiff}</td>
+                          <td className="py-4 text-[14px] leading-relaxed text-stone-600">{c.useCaseDiff}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </Section>
+
+          {/* 10 CMT corner */}
+          <Section id="cmt" n={10} title="CMT exam corner" lead="What gets tested, and where candidates slip.">
+            <Label className="mb-3">Key formulas</Label>
+            <div className="space-y-2.5">
+              {edu.cmtCorner.keyFormulas.map((f, i) => <FormulaBlock key={i} size="sm">{f}</FormulaBlock>)}
+            </div>
+            <div className="mt-12 grid gap-10 md:grid-cols-2">
+              <Column title="Frequently tested concepts" rule="border-emerald-700/60"><Bullets items={edu.cmtCorner.testedConcepts} tone="emerald" /></Column>
+              <div>
+                <h3 className="mb-5 border-b border-rose-400/70 pb-3 text-[13px] font-semibold text-stone-900">Exam traps</h3>
+                <div className="space-y-6">
+                  {edu.cmtCorner.traps.map((t, i) => <Callout key={i} kind="trap">{t}</Callout>)}
+                </div>
+              </div>
+            </div>
+          </Section>
+
+          {/* 11 Practice */}
+          <Section id="practice" n={11} title="Practice" lead="Check your understanding before moving on.">
+            <Quiz edu={edu} />
+            {edu.practice.exercises.length > 0 && (
+              <div className="mt-12">
+                <h3 className="font-serif text-[22px] text-stone-900">Chart exercises</h3>
+                <div className="mt-5"><Bullets items={edu.practice.exercises} /></div>
+              </div>
+            )}
+          </Section>
+
+          {/* 12 Tutor */}
+          <Section id="tutor" n={12} title="Ask Chartix Scholar" lead="Your CMT-trained study assistant — ask anything about this indicator.">
+            <Tutor edu={edu} />
+          </Section>
+        </div>
+      </div>
     </div>
   );
 }
 
-// ── Module 13 streaming AI tutor (reuses /api/public-chat) ──
+// ── Practice quiz ──
+function Quiz({ edu }: { edu: IndicatorEducation }) {
+  const [picked, setPicked] = useState<Record<number, number>>({});
+  const total = edu.practice.quiz.length;
+  const answered = Object.keys(picked).length;
+  const correct = edu.practice.quiz.filter((q, i) => picked[i] === q.answer).length;
+  return (
+    <div>
+      {answered > 0 && (
+        <p className="mb-6 text-[13px] text-stone-500">
+          <span className="font-medium text-stone-900">{correct} of {answered}</span> correct · {total - answered} remaining
+        </p>
+      )}
+      <div className="space-y-6">
+        {edu.practice.quiz.map((q, qi) => {
+          const sel = picked[qi];
+          const done = sel != null;
+          return (
+            <div key={qi} className="rounded-2xl border border-stone-200 bg-white p-6">
+              <p className="font-mono text-[11px] text-stone-400">Question {qi + 1} of {total}</p>
+              <p className="mt-2 text-[16px] font-medium leading-snug text-stone-900">{q.q}</p>
+              <div className="mt-5 grid gap-2.5">
+                {q.options.map((opt, oi) => {
+                  const isCorrect = oi === q.answer;
+                  const isSel = sel === oi;
+                  let cls = 'border-stone-200 text-stone-700 hover:border-stone-400 hover:bg-stone-50';
+                  let mark = 'border-stone-300 text-stone-500';
+                  if (done && isCorrect) { cls = 'border-emerald-700/50 bg-emerald-50/60 text-stone-900'; mark = 'border-emerald-700 bg-emerald-700 text-white'; }
+                  else if (done && isSel) { cls = 'border-rose-300 bg-rose-50/60 text-stone-900'; mark = 'border-rose-500 bg-rose-500 text-white'; }
+                  else if (done) cls = 'border-stone-200 text-stone-400';
+                  return (
+                    <button key={oi} type="button" disabled={done} onClick={() => setPicked(p => ({ ...p, [qi]: oi }))}
+                      className={`flex items-center gap-3.5 rounded-xl border px-4 py-3 text-left text-[14.5px] transition disabled:cursor-default ${cls}`}>
+                      <span className={`flex h-6 w-6 flex-none items-center justify-center rounded-full border text-[11px] font-medium ${mark}`}>
+                        {done && isCorrect ? <Check className="h-3.5 w-3.5" /> : done && isSel ? <X className="h-3.5 w-3.5" /> : String.fromCharCode(65 + oi)}
+                      </span>
+                      <span>{opt}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {done && (
+                <div className="mt-5 border-l-2 border-stone-300 pl-4">
+                  <p className={`text-[10.5px] font-semibold uppercase tracking-[0.14em] ${sel === q.answer ? 'text-emerald-800' : 'text-rose-700'}`}>
+                    {sel === q.answer ? 'Correct' : 'Not quite'}
+                  </p>
+                  <p className="mt-1 text-[14.5px] leading-[1.7] text-stone-600">{q.explanation}</p>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── lightweight markdown for the tutor stream (bold, code, bullet/numbered lists) ──
 function renderInline(text: string): ReactNode {
   const parts = text.split(/(\*\*.*?\*\*|`.*?`)/g);
   return parts.map((p, i) => {
-    if (p.startsWith('**') && p.endsWith('**')) return <strong key={i} className="font-semibold text-zinc-900">{p.slice(2, -2)}</strong>;
-    if (p.startsWith('`') && p.endsWith('`')) return <code key={i} className="rounded bg-zinc-200 px-1 font-mono text-[12px]">{p.slice(1, -1)}</code>;
+    if (p.startsWith('**') && p.endsWith('**')) return <strong key={i} className="font-semibold text-stone-900">{p.slice(2, -2)}</strong>;
+    if (p.startsWith('`') && p.endsWith('`')) return <code key={i} className="rounded bg-stone-100 px-1 font-mono text-[12.5px]">{p.slice(1, -1)}</code>;
     return <span key={i}>{p}</span>;
   });
 }
@@ -536,23 +602,23 @@ function TutorMarkdown({ content }: { content: string }) {
   const out: ReactNode[] = [];
   let bullets: ReactNode[] = [];
   let k = 0;
-  const flush = () => { if (bullets.length) { out.push(<ul key={`u${k++}`} className="my-1.5 space-y-1 pl-1">{bullets}</ul>); bullets = []; } };
+  const flush = () => { if (bullets.length) { out.push(<ul key={`u${k++}`} className="my-2 space-y-1.5 pl-1">{bullets}</ul>); bullets = []; } };
   for (const raw of lines) {
     const line = raw.trim();
     if (!line) { flush(); continue; }
     const bullet = line.match(/^[-•*]\s+(.*)/);
     const numbered = line.match(/^\d+\.\s+(.*)/);
     if (bullet) {
-      bullets.push(<li key={`b${k++}`} className="flex items-start gap-2"><span className="mt-1.5 flex-none text-emerald-500">▸</span><span>{renderInline(bullet[1])}</span></li>);
+      bullets.push(<li key={`b${k++}`} className="flex items-start gap-3"><span className="mt-[10px] h-1 w-1 flex-none rounded-full bg-stone-400" /><span>{renderInline(bullet[1])}</span></li>);
     } else if (numbered) {
-      bullets.push(<li key={`b${k++}`} className="flex items-start gap-2"><span className="flex-none font-semibold text-emerald-600">{line.match(/^\d+/)![0]}.</span><span>{renderInline(numbered[1])}</span></li>);
+      bullets.push(<li key={`b${k++}`} className="flex items-start gap-2.5"><span className="flex-none font-medium text-emerald-800">{line.match(/^\d+/)![0]}.</span><span>{renderInline(numbered[1])}</span></li>);
     } else {
       flush();
-      out.push(<p key={`p${k++}`} className="my-1.5 first:mt-0">{renderInline(line)}</p>);
+      out.push(<p key={`p${k++}`} className="my-2 first:mt-0">{renderInline(line)}</p>);
     }
   }
   flush();
-  return <div className="text-[13.5px] leading-relaxed text-zinc-700">{out}</div>;
+  return <div className="text-[14.5px] leading-[1.7] text-stone-700">{out}</div>;
 }
 
 const DAILY_FREE_LIMIT = 3;
@@ -612,47 +678,46 @@ function Tutor({ edu }: { edu: IndicatorEducation }) {
 
   const remaining = Math.max(0, DAILY_FREE_LIMIT - used);
 
-  // Hard upsell once the daily cap is hit
   if (limited) {
     return (
-      <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white px-6 py-7 text-center">
-        <Sparkles className="mx-auto h-7 w-7 text-emerald-600" />
-        <p className="mt-3 text-base font-bold text-emerald-900">You&apos;ve used your free questions for today</p>
-        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-zinc-600">{limited}</p>
-        <Link href="/sign-up" className="mt-5 inline-flex items-center gap-2 rounded-full bg-emerald-700 px-6 py-3 text-sm font-bold text-white transition hover:bg-emerald-600">
-          Enroll for unlimited access <Send className="h-4 w-4" />
+      <div className="rounded-2xl border border-stone-200 bg-white px-6 py-10 text-center">
+        <p className="font-serif text-[24px] text-stone-900">You’ve used your free questions for today</p>
+        <p className="mx-auto mt-3 max-w-md text-[14.5px] leading-relaxed text-stone-500">{limited}</p>
+        <Link href="/sign-up" className="mt-6 inline-flex items-center gap-2 rounded-full bg-emerald-800 px-6 py-3 text-sm font-medium text-white transition hover:bg-emerald-900">
+          Enroll for unlimited access <ArrowUpRight className="h-4 w-4" />
         </Link>
-        <p className="mt-3 text-[11px] text-zinc-400">Unlimited Chartix Scholar + notes, 3,500+ MCQs, mock tests & analytics.</p>
+        <p className="mt-4 text-xs text-stone-400">Unlimited Chartix Scholar + notes, 3,500+ MCQs, mock tests & analytics.</p>
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-sm leading-relaxed text-zinc-600">{edu.aiTutor.intro}</p>
-        <span className="flex-none rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">{remaining}/{DAILY_FREE_LIMIT} free today</span>
+    <div className="rounded-2xl border border-stone-200 bg-white p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <p className="max-w-xl text-[14.5px] leading-relaxed text-stone-600">{edu.aiTutor.intro}</p>
+        <span className="flex-none text-xs text-stone-400">{remaining} of {DAILY_FREE_LIMIT} free questions left today</span>
       </div>
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-5 flex flex-wrap gap-2">
         {edu.aiTutor.suggestedQuestions.map((s, i) => (
           <button key={i} type="button" onClick={() => ask(s)} disabled={busy}
-            className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-50">{s}</button>
+            className="rounded-full border border-stone-200 px-3.5 py-1.5 text-[13px] text-stone-600 transition hover:border-stone-400 hover:text-stone-900 disabled:opacity-50">{s}</button>
         ))}
       </div>
-      <form onSubmit={e => { e.preventDefault(); ask(input); }} className="mt-3 flex gap-2">
+      <form onSubmit={e => { e.preventDefault(); ask(input); }} className="mt-5 flex gap-2">
         <input value={input} onChange={e => setInput(e.target.value)} placeholder={`Ask about ${edu.name}…`}
-          className="flex-1 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100" />
-        <button type="submit" disabled={busy || !input.trim()} className="flex items-center gap-1.5 rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:opacity-50">
+          className="min-w-0 flex-1 rounded-full border border-stone-200 bg-[#FAFAF8] px-5 py-3 text-[14.5px] text-stone-900 placeholder:text-stone-400 focus:border-stone-400 focus:bg-white focus:outline-none" />
+        <button type="submit" disabled={busy || !input.trim()} aria-label="Ask"
+          className="flex h-12 w-12 flex-none items-center justify-center rounded-full bg-emerald-800 text-white transition hover:bg-emerald-900 disabled:opacity-40">
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
         </button>
       </form>
       {(asked || answer) && (
-        <div className="mt-4 space-y-3">
-          {asked && <p className="text-sm font-semibold text-zinc-800">{asked}</p>}
-          <div className="rounded-xl border border-zinc-200 bg-zinc-50/60 px-4 py-3">
-            {answer ? <TutorMarkdown content={answer} /> : (busy ? <span className="inline-flex items-center gap-2 text-sm text-zinc-400"><Loader2 className="h-4 w-4 animate-spin" /> Thinking…</span> : null)}
+        <div className="mt-6 border-t border-stone-200 pt-6">
+          {asked && <p className="text-[15px] font-medium text-stone-900">{asked}</p>}
+          <div className="mt-3">
+            {answer ? <TutorMarkdown content={answer} /> : (busy ? <span className="inline-flex items-center gap-2 text-sm text-stone-400"><Loader2 className="h-4 w-4 animate-spin" /> Thinking…</span> : null)}
           </div>
-          <p className="text-[11px] text-zinc-400">The Chartix Scholar answers from the CMT curriculum. <Link href="/sign-up" className="font-semibold text-emerald-600 hover:underline">Enroll</Link> for unlimited questions + the full study platform.</p>
+          <p className="mt-5 text-xs text-stone-400">The Chartix Scholar answers from the CMT curriculum. <Link href="/sign-up" className="text-emerald-800 underline underline-offset-2">Enroll</Link> for unlimited questions + the full study platform.</p>
         </div>
       )}
     </div>

@@ -430,7 +430,7 @@ function fmt(v: number | null, d = 2) {
   return v === null || !Number.isFinite(v) ? '—' : v.toFixed(d);
 }
 
-export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
+export function IndicatorTool({ indicator, embedded = false }: { indicator: IndicatorKey; embedded?: boolean }) {
   const meta = META[indicator];
   const bars = AAPL_SAMPLE;
   const N = bars.length;
@@ -488,7 +488,7 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
 
   const sl = <T,>(arr: T[]) => arr.slice(lo, hi + 1);
   const dates = sl(bars.map((b) => b.date.slice(5)));
-  const priceSeries = { label: 'Close', color: '#18181b', values: sl(bars.map((b) => b.close)) };
+  const priceSeries = { label: 'Close', color: '#292524', values: sl(bars.map((b) => b.close)) };
 
   const chart = (() => {
     if (indicator === 'roc')
@@ -548,161 +548,170 @@ export function IndicatorTool({ indicator }: { indicator: IndicatorKey }) {
       indicators={[{ label: '+DI', color: EMERALD, values: sl(dmi.plusDI) }, { label: '−DI', color: RED, values: sl(dmi.minusDI) }, { label: 'ADX', color: PURPLE, values: sl(dmi.adx) }]} refLines={[{ value: 25, label: '25 strong trend' }]} />;
   })();
 
+  const seg = (on: boolean) =>
+    `rounded-md px-2.5 py-1 text-[12.5px] transition ${on ? 'bg-white font-medium text-stone-900 shadow-sm ring-1 ring-stone-200' : 'text-stone-500 hover:text-stone-900'}`;
+  const presetActive = (cnt: number) => toDate === lastDate && fromDate === bars[Math.max(0, N - cnt)].date;
+  const controlLabel = 'text-[11px] font-medium uppercase tracking-[0.14em] text-stone-400';
+  const dateInput = 'rounded-md border border-stone-200 bg-white px-2.5 py-1.5 text-[13px] text-stone-800 focus:border-stone-400 focus:outline-none';
+
   return (
     <div className="space-y-6">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-widest text-emerald-700">Interactive Tool</p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-zinc-950 sm:text-3xl">{meta.name}</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-600">{meta.blurb}</p>
-      </div>
+      {!embedded && (
+        <div>
+          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-800">Interactive tool</p>
+          <h1 className="mt-3 font-serif text-[40px] font-normal leading-tight text-stone-900">{meta.name}</h1>
+          <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-stone-500">{meta.blurb}</p>
+        </div>
+      )}
 
-      {/* Controls */}
-      <div className="space-y-3 rounded-xl border border-zinc-200 bg-white p-4">
-        {isMa ? (
-          <div className="space-y-4">
-            {/* Period */}
-            <div className="flex flex-wrap items-center gap-4">
-              <label className="flex items-center gap-3 text-sm text-zinc-700">
-                <span className="font-medium whitespace-nowrap">Period: <span className="text-emerald-700 font-bold">{period}</span></span>
-                <input type="range" min={2} max={200} value={period} onChange={(e) => setPeriod(Number(e.target.value))} className="w-40 accent-emerald-600" />
-              </label>
-              <div className="flex flex-wrap items-center gap-1">
-                {MA_PRESETS.map((p) => (
-                  <button key={p} type="button" onClick={() => setPeriod(p)}
-                    className={`rounded-md px-2.5 py-1 text-xs font-semibold transition border ${period === p ? 'bg-emerald-700 text-white border-emerald-700' : 'border-zinc-200 text-zinc-600 hover:border-emerald-400 hover:text-emerald-700'}`}>
-                    {p}
-                  </button>
-                ))}
+      <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white">
+        {/* Controls */}
+        <div className="flex flex-wrap items-end gap-x-10 gap-y-5 border-b border-stone-200 px-5 py-5 sm:px-6">
+          {isMa ? (
+            <>
+              <div>
+                <p className={controlLabel}>Period</p>
+                <div className="mt-2 flex items-center gap-3">
+                  <input type="range" min={2} max={200} value={period} onChange={(e) => setPeriod(Number(e.target.value))} className="w-32 accent-emerald-800" aria-label="Period" />
+                  <span className="w-8 font-mono text-[13px] text-stone-900">{period}</span>
+                  <div className="inline-flex rounded-lg bg-stone-100 p-0.5">
+                    {MA_PRESETS.map((p) => (
+                      <button key={p} type="button" onClick={() => setPeriod(p)} className={seg(period === p)}>{p}</button>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
-            {/* MA colour picker */}
-            {indicator !== 'distma' && (
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="text-sm font-medium text-zinc-700">MA colour:</span>
-                {MA_COLORS_LIST.map((c) => (
-                  <button key={c.value} type="button" title={c.label} onClick={() => setMaColor(c.value)}
-                    className={`h-6 w-6 rounded-full border-2 transition ${maColor === c.value ? 'border-zinc-900 scale-110' : 'border-transparent hover:border-zinc-400'}`}
-                    style={{ backgroundColor: c.value }} />
-                ))}
-                <span className="text-xs text-zinc-400 ml-1">{MA_COLORS_LIST.find((c) => c.value === maColor)?.label}</span>
-              </div>
-            )}
-            {/* Bollinger std-dev multiplier */}
-            {indicator === 'bb' && (
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-medium text-zinc-700">Std deviations:</span>
-                {[1, 2, 3].map((m) => (
-                  <button key={m} type="button" onClick={() => setMult(m)}
-                    className={`rounded-md px-2.5 py-1 text-xs font-semibold transition border ${mult === m ? 'bg-emerald-700 text-white border-emerald-700' : 'border-zinc-200 text-zinc-600 hover:border-emerald-400 hover:text-emerald-700'}`}>
-                    {m}σ
-                  </button>
-                ))}
-                <span className="text-xs text-zinc-400 ml-1">Default is 2 standard deviations</span>
-              </div>
-            )}
-          </div>
-        ) : usesEma ? (
-          <div className="flex flex-wrap items-center gap-5">
-            {([['Fast EMA', fast, setFast], ['Slow EMA', slow, setSlow], ['Signal', signal, setSignal]] as const).map(([lbl, val, set]) => (
-              <label key={lbl} className="flex items-center gap-2 text-sm text-zinc-700">
-                <span className="font-medium">{lbl}</span>
-                <input type="number" min={2} max={50} value={val} onChange={(e) => set(Math.max(2, Math.min(50, Number(e.target.value) || 2)))}
-                  className="w-16 rounded-lg border border-zinc-300 px-2 py-1 text-sm" />
-              </label>
-            ))}
-          </div>
-        ) : usesPeriod ? (
-          <label className="flex items-center gap-3 text-sm text-zinc-700">
-            <span className="font-medium whitespace-nowrap">Period: <span className="text-emerald-700">{period}</span></span>
-            <input type="range" min={2} max={20} value={period} onChange={(e) => setPeriod(Number(e.target.value))} className="w-full max-w-xs accent-emerald-600" />
-          </label>
-        ) : (
-          <p className="text-sm text-zinc-600">
-            {indicator === 'obv' ? 'OBV has no period setting — it is a cumulative running total of volume, adding on up days and subtracting on down days.' : 'The ADL has no period setting — it is a cumulative running total of volume.'}
-          </p>
-        )}
-
-        {/* Date range */}
-        <div className="space-y-2 border-t border-zinc-100 pt-3">
-          <div className="flex flex-wrap items-center gap-4">
-            <label className="flex items-center gap-2 text-sm text-zinc-700">
-              <span className="font-medium">From</span>
-              <input type="date" min={firstDate} max={lastDate} value={fromDate} onChange={(e) => e.target.value && setFromDate(e.target.value)}
-                className="rounded-lg border border-zinc-300 px-2 py-1 text-sm" />
-            </label>
-            <label className="flex items-center gap-2 text-sm text-zinc-700">
-              <span className="font-medium">To</span>
-              <input type="date" min={firstDate} max={lastDate} value={toDate} onChange={(e) => e.target.value && setToDate(e.target.value)}
-                className="rounded-lg border border-zinc-300 px-2 py-1 text-sm" />
-            </label>
-            <div className="flex items-center gap-1">
-              {PRESETS.map(([lbl, cnt]) => (
-                <button key={lbl} type="button" onClick={() => setPreset(cnt)}
-                  className="rounded-md border border-zinc-200 px-2 py-1 text-xs font-medium text-zinc-600 hover:border-emerald-400 hover:text-emerald-700">
-                  {lbl}
-                </button>
+              {indicator !== 'distma' && (
+                <div>
+                  <p className={controlLabel}>Line colour</p>
+                  <div className="mt-2.5 flex items-center gap-2">
+                    {MA_COLORS_LIST.map((c) => (
+                      <button key={c.value} type="button" title={c.label} aria-label={c.label} onClick={() => setMaColor(c.value)}
+                        className={`h-5 w-5 rounded-full ring-offset-2 transition ${maColor === c.value ? 'ring-2 ring-stone-400' : 'hover:ring-1 hover:ring-stone-300'}`}
+                        style={{ backgroundColor: c.value }} />
+                    ))}
+                  </div>
+                </div>
+              )}
+              {indicator === 'bb' && (
+                <div>
+                  <p className={controlLabel}>Std deviations</p>
+                  <div className="mt-2 inline-flex rounded-lg bg-stone-100 p-0.5">
+                    {[1, 2, 3].map((m) => (
+                      <button key={m} type="button" onClick={() => setMult(m)} className={seg(mult === m)}>{m}σ</button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : usesEma ? (
+            <div className="flex flex-wrap gap-6">
+              {([['Fast EMA', fast, setFast], ['Slow EMA', slow, setSlow], ['Signal', signal, setSignal]] as const).map(([lbl, val, set]) => (
+                <label key={lbl} className="block">
+                  <span className={controlLabel}>{lbl}</span>
+                  <input type="number" min={2} max={50} value={val} onChange={(e) => set(Math.max(2, Math.min(50, Number(e.target.value) || 2)))}
+                    className={`mt-2 block w-20 font-mono ${dateInput}`} />
+                </label>
               ))}
             </div>
-          </div>
-          <p className="text-xs text-zinc-400">Showing {hi - lo + 1} of {N} bars ({bars[lo].date} → {bars[hi].date}). Calculations use the full 5-year history, so values are correct from the first day shown.</p>
-        </div>
-      </div>
+          ) : usesPeriod ? (
+            <div>
+              <p className={controlLabel}>Period</p>
+              <div className="mt-2 flex items-center gap-3">
+                <input type="range" min={2} max={20} value={period} onChange={(e) => setPeriod(Number(e.target.value))} className="w-44 accent-emerald-800" aria-label="Period" />
+                <span className="font-mono text-[13px] text-stone-900">{period}</span>
+              </div>
+            </div>
+          ) : (
+            <p className="max-w-md text-[13.5px] leading-relaxed text-stone-500">
+              {indicator === 'obv' ? 'OBV has no period setting — it is a cumulative running total of volume, adding on up days and subtracting on down days.' : 'The ADL has no period setting — it is a cumulative running total of volume.'}
+            </p>
+          )}
 
-      {/* Combined chart: price on top, indicator below */}
-      <div className="rounded-xl border border-zinc-200 bg-white p-4">
-        {chart}
+          <div className="sm:ml-auto">
+            <p className={controlLabel}>Date range</p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <div className="inline-flex rounded-lg bg-stone-100 p-0.5">
+                {PRESETS.map(([lbl, cnt]) => (
+                  <button key={lbl} type="button" onClick={() => setPreset(cnt)} className={seg(presetActive(cnt))}>{lbl}</button>
+                ))}
+              </div>
+              <input type="date" min={firstDate} max={lastDate} value={fromDate} onChange={(e) => e.target.value && setFromDate(e.target.value)} className={dateInput} aria-label="From date" />
+              <span className="text-stone-300">–</span>
+              <input type="date" min={firstDate} max={lastDate} value={toDate} onChange={(e) => e.target.value && setToDate(e.target.value)} className={dateInput} aria-label="To date" />
+            </div>
+          </div>
+        </div>
+
+        {/* Chart: price on top, indicator below */}
+        <div className="px-3 pb-4 pt-5 sm:px-5">
+          {chart}
+        </div>
+        <p className="border-t border-stone-100 px-5 py-3 text-xs text-stone-400 sm:px-6">
+          Showing {hi - lo + 1} of {N} bars ({bars[lo].date} → {bars[hi].date}). Calculations use the full 5-year history, so values are correct from the first day shown.
+        </p>
       </div>
 
       {/* Calculation table */}
-      <div className="rounded-xl border border-zinc-200 bg-white">
-        <p className="border-b border-zinc-100 px-4 py-3 text-sm font-semibold text-zinc-800">Step-by-step calculation (selected dates)</p>
-        <div className="max-h-[420px] overflow-auto">
+      <details open className="group overflow-hidden rounded-2xl border border-stone-200 bg-white">
+        <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4 sm:px-6 [&::-webkit-details-marker]:hidden">
+          <span className="text-[14px] font-medium text-stone-900">Step-by-step calculation <span className="font-normal text-stone-400">· selected dates</span></span>
+          <span className="text-xs text-stone-500 group-open:hidden">Show table</span>
+          <span className="hidden text-xs text-stone-500 group-open:inline">Hide table</span>
+        </summary>
+        <div className="max-h-[420px] overflow-auto border-t border-stone-200">
           <CalcTable indicator={indicator} roc={sl(roc.rows)} rsi={sl(rsi.rows)} macd={sl(macd.rows)}
             stoch={sl(stoch.rows)} adl={sl(adl.rows)} mfi={sl(mfi.rows)} ppo={sl(ppo.rows)} dmi={sl(dmi.rows)}
             obv={sl(obv.rows)} cmf={sl(cmf.rows)} rvol={sl(rvol.rows)}
             sma={sl(sma.rows)} ema={sl(ema.rows)} lwma={sl(lwma.rows)} wilderma={sl(wilderma.rows)} distma={sl(distma.rows)} bb={sl(bb.rows)} />
         </div>
-      </div>
+      </details>
 
-      {/* Detailed explanation BELOW the table */}
-      <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-5 space-y-4">
+      {/* Explanation */}
+      <div className="grid gap-10 pt-6 md:grid-cols-2">
         <div>
-          <h2 className="text-base font-semibold text-emerald-900">What {meta.name} measures</h2>
-          <p className="mt-1 text-sm text-zinc-700">{meta.measures}</p>
+          <h3 className="text-[13px] font-semibold text-stone-900">What {meta.name} measures</h3>
+          <p className="mt-2 text-[15px] leading-[1.75] text-stone-600">{meta.measures}</p>
+          <h3 className="mt-8 text-[13px] font-semibold text-stone-900">How it is constructed</h3>
+          <ol className="mt-3 space-y-2.5">
+            {meta.construction.map((p, i) => (
+              <li key={p} className="flex gap-3 text-[15px] leading-[1.7] text-stone-600">
+                <span className="w-4 flex-none font-mono text-[12px] leading-[1.9] text-stone-400">{i + 1}</span><span>{p}</span>
+              </li>
+            ))}
+          </ol>
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-emerald-900">How it is constructed</h3>
-          <ol className="mt-1 list-decimal space-y-1 pl-5 text-sm text-zinc-700">{meta.construction.map((p) => <li key={p}>{p}</li>)}</ol>
-        </div>
-        <div>
-          <h3 className="text-sm font-semibold text-emerald-900">How to read it</h3>
-          <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-zinc-700">{meta.reading.map((p) => <li key={p}>{p}</li>)}</ul>
-        </div>
-        <div className="rounded-lg border border-emerald-200 bg-white p-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Formula</p>
-          <p className="mt-1 font-mono text-[13px] text-zinc-800">{meta.formula}</p>
+          <h3 className="text-[13px] font-semibold text-stone-900">How to read it</h3>
+          <ul className="mt-3 space-y-2.5">
+            {meta.reading.map((p) => (
+              <li key={p} className="flex items-start gap-3 text-[15px] leading-[1.7] text-stone-600"><span className="mt-[11px] h-1 w-1 flex-none rounded-full bg-stone-300" /><span>{p}</span></li>
+            ))}
+          </ul>
+          <p className="mt-8 text-[11px] font-medium uppercase tracking-[0.14em] text-stone-400">Formula</p>
+          <div className="mt-2.5 overflow-x-auto rounded-lg border border-stone-200 bg-[#F4F3EE] px-4 py-3">
+            <code className="font-mono text-[13px] leading-relaxed text-stone-800">{meta.formula}</code>
+          </div>
         </div>
       </div>
 
       {/* Real-world use cases */}
-      <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-5">
-        <p className="text-xs font-semibold uppercase tracking-widest text-amber-700">In Practice</p>
-        <h2 className="mt-1 text-base font-semibold text-amber-900">How traders use {meta.name} in real markets</h2>
-        <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-zinc-700">
-          {USE_CASES[indicator].map((u) => <li key={u}>{u}</li>)}
+      <div className="border-t border-stone-200 pt-8">
+        <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-stone-400">In practice</p>
+        <h3 className="mt-2 font-serif text-[22px] text-stone-900">How traders use {meta.name} in real markets</h3>
+        <ul className="mt-5 grid gap-x-10 gap-y-3 md:grid-cols-2">
+          {USE_CASES[indicator].map((u) => (
+            <li key={u} className="flex items-start gap-3 text-[15px] leading-[1.7] text-stone-600"><span className="mt-[11px] h-1 w-1 flex-none rounded-full bg-emerald-600" /><span>{u}</span></li>
+          ))}
         </ul>
-        <p className="mt-4 text-xs text-amber-700/80">Educational examples only — not investment or trading advice.</p>
+        <p className="mt-6 text-xs text-stone-400">Educational examples only — not investment or trading advice. Sample data: {N} AAPL daily bars, for learning the calculation. <Link href="/tools" className="text-emerald-800 underline underline-offset-2">Back to all tools</Link></p>
       </div>
-
-      <p className="text-center text-xs text-zinc-400">
-        Sample data: {N} AAPL daily bars, for learning the calculation. <Link href="/tools" className="text-emerald-700 underline">Back to all tools</Link>
-      </p>
     </div>
   );
 }
 
-function th(label: string) { return <th className="whitespace-nowrap px-3 py-2 text-right font-semibold text-zinc-600 first:text-left">{label}</th>; }
-function td(v: ReactNode, first = false) { return <td className={`whitespace-nowrap px-3 py-1.5 ${first ? 'text-left text-zinc-500' : 'text-right tabular-nums text-zinc-800'}`}>{v}</td>; }
+function th(label: string) { return <th className="whitespace-nowrap border-b border-stone-200 px-4 py-2.5 text-right text-[11px] font-medium uppercase tracking-[0.1em] text-stone-400 first:text-left">{label}</th>; }
+function td(v: ReactNode, first = false) { return <td className={`whitespace-nowrap px-4 py-2 ${first ? 'text-left font-mono text-[12px] text-stone-400' : 'text-right font-mono text-[12.5px] tabular-nums text-stone-700'}`}>{v}</td>; }
 function fmtInt(v: number | null) { return v === null || !Number.isFinite(v) ? '—' : Math.round(v).toLocaleString('en-US'); }
 
 function CalcTable({ indicator, roc, rsi, macd, stoch, adl, mfi, ppo, dmi, obv, cmf, rvol, sma, ema, lwma, wilderma, distma, bb }: {
@@ -728,82 +737,82 @@ function CalcTable({ indicator, roc, rsi, macd, stoch, adl, mfi, ppo, dmi, obv, 
   if (indicator === 'roc') {
     return (
       <table className="w-full text-[13px]">
-        <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('ROC %')}</tr></thead>
-        <tbody>{roc.map((r) => <tr key={r.date} className="border-t border-zinc-50">{td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.roc))}</tr>)}</tbody>
+        <thead className="sticky top-0 bg-white"><tr>{th('Date')}{th('Close')}{th('ROC %')}</tr></thead>
+        <tbody>{roc.map((r) => <tr key={r.date} className="border-t border-stone-100 hover:bg-stone-50/70">{td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.roc))}</tr>)}</tbody>
       </table>
     );
   }
   if (indicator === 'rsi') {
     return (
       <table className="w-full text-[13px]">
-        <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('Change')}{th('Gain')}{th('Loss')}{th('Avg Gain')}{th('Avg Loss')}{th('RS')}{th('RSI')}</tr></thead>
-        <tbody>{rsi.map((r) => <tr key={r.date} className="border-t border-zinc-50">{td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.change))}{td(fmt(r.gain))}{td(fmt(r.loss))}{td(fmt(r.avgGain))}{td(fmt(r.avgLoss))}{td(fmt(r.rs))}{td(fmt(r.rsi))}</tr>)}</tbody>
+        <thead className="sticky top-0 bg-white"><tr>{th('Date')}{th('Close')}{th('Change')}{th('Gain')}{th('Loss')}{th('Avg Gain')}{th('Avg Loss')}{th('RS')}{th('RSI')}</tr></thead>
+        <tbody>{rsi.map((r) => <tr key={r.date} className="border-t border-stone-100 hover:bg-stone-50/70">{td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.change))}{td(fmt(r.gain))}{td(fmt(r.loss))}{td(fmt(r.avgGain))}{td(fmt(r.avgLoss))}{td(fmt(r.rs))}{td(fmt(r.rsi))}</tr>)}</tbody>
       </table>
     );
   }
   if (indicator === 'stochastics') {
     return (
       <table className="w-full text-[13px]">
-        <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('Low n')}{th('High n')}{th('%K')}{th('%D')}</tr></thead>
-        <tbody>{stoch.map((r) => <tr key={r.date} className="border-t border-zinc-50">{td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.lowN))}{td(fmt(r.highN))}{td(fmt(r.k))}{td(fmt(r.d))}</tr>)}</tbody>
+        <thead className="sticky top-0 bg-white"><tr>{th('Date')}{th('Close')}{th('Low n')}{th('High n')}{th('%K')}{th('%D')}</tr></thead>
+        <tbody>{stoch.map((r) => <tr key={r.date} className="border-t border-stone-100 hover:bg-stone-50/70">{td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.lowN))}{td(fmt(r.highN))}{td(fmt(r.k))}{td(fmt(r.d))}</tr>)}</tbody>
       </table>
     );
   }
   if (indicator === 'adl') {
     return (
       <table className="w-full text-[13px]">
-        <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('Volume')}{th('Multiplier')}{th('Adj Volume')}{th('ADL')}</tr></thead>
-        <tbody>{adl.map((r) => <tr key={r.date} className="border-t border-zinc-50">{td(r.date, true)}{td(fmt(r.close))}{td(fmtInt(r.volume))}{td(fmt(r.multiplier))}{td(fmtInt(r.adjVol))}{td(fmtInt(r.adl))}</tr>)}</tbody>
+        <thead className="sticky top-0 bg-white"><tr>{th('Date')}{th('Close')}{th('Volume')}{th('Multiplier')}{th('Adj Volume')}{th('ADL')}</tr></thead>
+        <tbody>{adl.map((r) => <tr key={r.date} className="border-t border-stone-100 hover:bg-stone-50/70">{td(r.date, true)}{td(fmt(r.close))}{td(fmtInt(r.volume))}{td(fmt(r.multiplier))}{td(fmtInt(r.adjVol))}{td(fmtInt(r.adl))}</tr>)}</tbody>
       </table>
     );
   }
   if (indicator === 'mfi') {
     return (
       <table className="w-full text-[13px]">
-        <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('Typ Price')}{th('Pos Flow')}{th('Neg Flow')}{th('MFI')}</tr></thead>
-        <tbody>{mfi.map((r) => <tr key={r.date} className="border-t border-zinc-50">{td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.typical))}{td(fmtInt(r.posFlow))}{td(fmtInt(r.negFlow))}{td(fmt(r.mfi))}</tr>)}</tbody>
+        <thead className="sticky top-0 bg-white"><tr>{th('Date')}{th('Close')}{th('Typ Price')}{th('Pos Flow')}{th('Neg Flow')}{th('MFI')}</tr></thead>
+        <tbody>{mfi.map((r) => <tr key={r.date} className="border-t border-stone-100 hover:bg-stone-50/70">{td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.typical))}{td(fmtInt(r.posFlow))}{td(fmtInt(r.negFlow))}{td(fmt(r.mfi))}</tr>)}</tbody>
       </table>
     );
   }
   if (indicator === 'ppo') {
     return (
       <table className="w-full text-[13px]">
-        <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('Fast EMA')}{th('Slow EMA')}{th('PPO %')}{th('Signal')}{th('Histogram')}</tr></thead>
-        <tbody>{ppo.map((r) => <tr key={r.date} className="border-t border-zinc-50">{td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.emaFast))}{td(fmt(r.emaSlow))}{td(fmt(r.ppo))}{td(fmt(r.signal))}{td(fmt(r.hist))}</tr>)}</tbody>
+        <thead className="sticky top-0 bg-white"><tr>{th('Date')}{th('Close')}{th('Fast EMA')}{th('Slow EMA')}{th('PPO %')}{th('Signal')}{th('Histogram')}</tr></thead>
+        <tbody>{ppo.map((r) => <tr key={r.date} className="border-t border-stone-100 hover:bg-stone-50/70">{td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.emaFast))}{td(fmt(r.emaSlow))}{td(fmt(r.ppo))}{td(fmt(r.signal))}{td(fmt(r.hist))}</tr>)}</tbody>
       </table>
     );
   }
   if (indicator === 'dmi') {
     return (
       <table className="w-full text-[13px]">
-        <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('TR')}{th('+DI')}{th('−DI')}{th('DX')}{th('ADX')}</tr></thead>
-        <tbody>{dmi.map((r) => <tr key={r.date} className="border-t border-zinc-50">{td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.tr))}{td(fmt(r.plusDI))}{td(fmt(r.minusDI))}{td(fmt(r.dx))}{td(fmt(r.adx))}</tr>)}</tbody>
+        <thead className="sticky top-0 bg-white"><tr>{th('Date')}{th('Close')}{th('TR')}{th('+DI')}{th('−DI')}{th('DX')}{th('ADX')}</tr></thead>
+        <tbody>{dmi.map((r) => <tr key={r.date} className="border-t border-stone-100 hover:bg-stone-50/70">{td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.tr))}{td(fmt(r.plusDI))}{td(fmt(r.minusDI))}{td(fmt(r.dx))}{td(fmt(r.adx))}</tr>)}</tbody>
       </table>
     );
   }
   if (indicator === 'obv') {
     return (
       <table className="w-full text-[13px]">
-        <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('Volume')}{th('Direction')}{th('OBV')}</tr></thead>
-        <tbody>{obv.map((r) => <tr key={r.date} className="border-t border-zinc-50">{td(r.date, true)}{td(fmt(r.close))}{td(fmtInt(r.volume))}{td(<span className={r.direction === '+' ? 'text-emerald-600 font-semibold' : r.direction === '−' ? 'text-red-500 font-semibold' : 'text-zinc-400'}>{r.direction}</span>)}{td(fmtInt(r.obv))}</tr>)}</tbody>
+        <thead className="sticky top-0 bg-white"><tr>{th('Date')}{th('Close')}{th('Volume')}{th('Direction')}{th('OBV')}</tr></thead>
+        <tbody>{obv.map((r) => <tr key={r.date} className="border-t border-stone-100 hover:bg-stone-50/70">{td(r.date, true)}{td(fmt(r.close))}{td(fmtInt(r.volume))}{td(<span className={r.direction === '+' ? 'text-emerald-700 font-medium' : r.direction === '−' ? 'text-rose-600 font-medium' : 'text-stone-400'}>{r.direction}</span>)}{td(fmtInt(r.obv))}</tr>)}</tbody>
       </table>
     );
   }
   if (indicator === 'cmf') {
     return (
       <table className="w-full text-[13px]">
-        <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('Volume')}{th('Multiplier')}{th('MFV')}{th('Sum MFV')}{th('Sum Vol')}{th('CMF')}</tr></thead>
-        <tbody>{cmf.map((r) => <tr key={r.date} className="border-t border-zinc-50">{td(r.date, true)}{td(fmt(r.close))}{td(fmtInt(r.volume))}{td(fmt(r.multiplier))}{td(fmtInt(r.mfv))}{td(r.sumMfv === null ? '—' : fmtInt(r.sumMfv))}{td(r.sumVol === null ? '—' : fmtInt(r.sumVol))}{td(fmt(r.cmf, 4))}</tr>)}</tbody>
+        <thead className="sticky top-0 bg-white"><tr>{th('Date')}{th('Close')}{th('Volume')}{th('Multiplier')}{th('MFV')}{th('Sum MFV')}{th('Sum Vol')}{th('CMF')}</tr></thead>
+        <tbody>{cmf.map((r) => <tr key={r.date} className="border-t border-stone-100 hover:bg-stone-50/70">{td(r.date, true)}{td(fmt(r.close))}{td(fmtInt(r.volume))}{td(fmt(r.multiplier))}{td(fmtInt(r.mfv))}{td(r.sumMfv === null ? '—' : fmtInt(r.sumMfv))}{td(r.sumVol === null ? '—' : fmtInt(r.sumVol))}{td(fmt(r.cmf, 4))}</tr>)}</tbody>
       </table>
     );
   }
   if (indicator === 'rvol') {
     return (
       <table className="w-full text-[13px]">
-        <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('Volume')}{th('Avg Volume')}{th('RVOL')}</tr></thead>
-        <tbody>{rvol.map((r) => <tr key={r.date} className="border-t border-zinc-50">
+        <thead className="sticky top-0 bg-white"><tr>{th('Date')}{th('Close')}{th('Volume')}{th('Avg Volume')}{th('RVOL')}</tr></thead>
+        <tbody>{rvol.map((r) => <tr key={r.date} className="border-t border-stone-100 hover:bg-stone-50/70">
           {td(r.date, true)}{td(fmt(r.close))}{td(fmtInt(r.volume))}{td(r.avgVolume === null ? '—' : fmtInt(r.avgVolume))}
-          {td(<span className={r.rvol === null ? '' : r.rvol >= 2 ? 'text-red-600 font-semibold' : r.rvol >= 1 ? 'text-emerald-600 font-semibold' : 'text-zinc-400'}>{r.rvol === null ? '—' : fmt(r.rvol)}</span>)}
+          {td(<span className={r.rvol === null ? '' : r.rvol >= 2 ? 'text-rose-600 font-medium' : r.rvol >= 1 ? 'text-emerald-700 font-medium' : 'text-stone-400'}>{r.rvol === null ? '—' : fmt(r.rvol)}</span>)}
         </tr>)}</tbody>
       </table>
     );
@@ -811,42 +820,42 @@ function CalcTable({ indicator, roc, rsi, macd, stoch, adl, mfi, ppo, dmi, obv, 
   if (indicator === 'sma') {
     return (
       <table className="w-full text-[13px]">
-        <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('SMA')}</tr></thead>
-        <tbody>{sma.map((r) => <tr key={r.date} className="border-t border-zinc-50">{td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.sma))}</tr>)}</tbody>
+        <thead className="sticky top-0 bg-white"><tr>{th('Date')}{th('Close')}{th('SMA')}</tr></thead>
+        <tbody>{sma.map((r) => <tr key={r.date} className="border-t border-stone-100 hover:bg-stone-50/70">{td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.sma))}</tr>)}</tbody>
       </table>
     );
   }
   if (indicator === 'ema') {
     return (
       <table className="w-full text-[13px]">
-        <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('EMA')}</tr></thead>
-        <tbody>{ema.map((r) => <tr key={r.date} className="border-t border-zinc-50">{td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.ema))}</tr>)}</tbody>
+        <thead className="sticky top-0 bg-white"><tr>{th('Date')}{th('Close')}{th('EMA')}</tr></thead>
+        <tbody>{ema.map((r) => <tr key={r.date} className="border-t border-stone-100 hover:bg-stone-50/70">{td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.ema))}</tr>)}</tbody>
       </table>
     );
   }
   if (indicator === 'lwma') {
     return (
       <table className="w-full text-[13px]">
-        <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('LWMA')}</tr></thead>
-        <tbody>{lwma.map((r) => <tr key={r.date} className="border-t border-zinc-50">{td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.lwma))}</tr>)}</tbody>
+        <thead className="sticky top-0 bg-white"><tr>{th('Date')}{th('Close')}{th('LWMA')}</tr></thead>
+        <tbody>{lwma.map((r) => <tr key={r.date} className="border-t border-stone-100 hover:bg-stone-50/70">{td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.lwma))}</tr>)}</tbody>
       </table>
     );
   }
   if (indicator === 'wilderma') {
     return (
       <table className="w-full text-[13px]">
-        <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('Wilder MA')}</tr></thead>
-        <tbody>{wilderma.map((r) => <tr key={r.date} className="border-t border-zinc-50">{td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.wma))}</tr>)}</tbody>
+        <thead className="sticky top-0 bg-white"><tr>{th('Date')}{th('Close')}{th('Wilder MA')}</tr></thead>
+        <tbody>{wilderma.map((r) => <tr key={r.date} className="border-t border-stone-100 hover:bg-stone-50/70">{td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.wma))}</tr>)}</tbody>
       </table>
     );
   }
   if (indicator === 'distma') {
     return (
       <table className="w-full text-[13px]">
-        <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('SMA')}{th('Distance %')}</tr></thead>
-        <tbody>{distma.map((r) => <tr key={r.date} className="border-t border-zinc-50">
+        <thead className="sticky top-0 bg-white"><tr>{th('Date')}{th('Close')}{th('SMA')}{th('Distance %')}</tr></thead>
+        <tbody>{distma.map((r) => <tr key={r.date} className="border-t border-stone-100 hover:bg-stone-50/70">
           {td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.sma))}
-          {td(<span className={r.dist === null ? '' : r.dist > 0 ? 'text-emerald-600 font-semibold' : 'text-red-500 font-semibold'}>{fmt(r.dist)}%</span>)}
+          {td(<span className={r.dist === null ? '' : r.dist > 0 ? 'text-emerald-700 font-medium' : 'text-rose-600 font-medium'}>{fmt(r.dist)}%</span>)}
         </tr>)}</tbody>
       </table>
     );
@@ -854,18 +863,18 @@ function CalcTable({ indicator, roc, rsi, macd, stoch, adl, mfi, ppo, dmi, obv, 
   if (indicator === 'bb') {
     return (
       <table className="w-full text-[13px]">
-        <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('Middle (SMA)')}{th('Std Dev')}{th('Upper')}{th('Lower')}{th('%B')}</tr></thead>
-        <tbody>{bb.map((r) => <tr key={r.date} className="border-t border-zinc-50">
+        <thead className="sticky top-0 bg-white"><tr>{th('Date')}{th('Close')}{th('Middle (SMA)')}{th('Std Dev')}{th('Upper')}{th('Lower')}{th('%B')}</tr></thead>
+        <tbody>{bb.map((r) => <tr key={r.date} className="border-t border-stone-100 hover:bg-stone-50/70">
           {td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.middle))}{td(fmt(r.stdev))}{td(fmt(r.upper))}{td(fmt(r.lower))}
-          {td(<span className={r.pctB === null ? '' : r.pctB >= 100 ? 'text-red-600 font-semibold' : r.pctB <= 0 ? 'text-emerald-600 font-semibold' : 'text-zinc-800'}>{r.pctB === null ? '—' : fmt(r.pctB, 0) + '%'}</span>)}
+          {td(<span className={r.pctB === null ? '' : r.pctB >= 100 ? 'text-rose-600 font-medium' : r.pctB <= 0 ? 'text-emerald-700 font-medium' : 'text-stone-700'}>{r.pctB === null ? '—' : fmt(r.pctB, 0) + '%'}</span>)}
         </tr>)}</tbody>
       </table>
     );
   }
   return (
     <table className="w-full text-[13px]">
-      <thead className="sticky top-0 bg-zinc-50"><tr>{th('Date')}{th('Close')}{th('Fast EMA')}{th('Slow EMA')}{th('MACD')}{th('Signal')}{th('Histogram')}</tr></thead>
-      <tbody>{macd.map((r) => <tr key={r.date} className="border-t border-zinc-50">{td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.emaFast))}{td(fmt(r.emaSlow))}{td(fmt(r.macd))}{td(fmt(r.signal))}{td(fmt(r.hist))}</tr>)}</tbody>
+      <thead className="sticky top-0 bg-white"><tr>{th('Date')}{th('Close')}{th('Fast EMA')}{th('Slow EMA')}{th('MACD')}{th('Signal')}{th('Histogram')}</tr></thead>
+      <tbody>{macd.map((r) => <tr key={r.date} className="border-t border-stone-100 hover:bg-stone-50/70">{td(r.date, true)}{td(fmt(r.close))}{td(fmt(r.emaFast))}{td(fmt(r.emaSlow))}{td(fmt(r.macd))}{td(fmt(r.signal))}{td(fmt(r.hist))}</tr>)}</tbody>
     </table>
   );
 }

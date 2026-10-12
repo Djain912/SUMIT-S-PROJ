@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import Image from 'next/image';
-import { ArrowRight, ChevronRight, Calculator } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 import { ScrollPopup } from '@/components/marketing/ScrollPopup';
+import { LabHeader, LabFooter, LabCta } from '@/components/tools/lab-header';
 
 export const metadata: Metadata = {
   title: 'Chartix Indicator Lab | Free Interactive Technical Analysis Tools',
@@ -43,90 +43,74 @@ const TOOLS = [
   { key: 'distma',      name: 'Distance from MA (%)',        desc: '(Close − SMA) / SMA × 100. Shows how far price is from its trend.',   tag: 'Moving Avg' },
 ];
 
-const TAG_COLORS: Record<string, string> = {
-  Momentum:   'bg-blue-50 text-blue-700 border-blue-200',
-  Volume:     'bg-purple-50 text-purple-700 border-purple-200',
-  Trend:      'bg-amber-50 text-amber-700 border-amber-200',
-  'Moving Avg': 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  Volatility: 'bg-rose-50 text-rose-700 border-rose-200',
-};
+const GROUPS: { tag: string; title: string; note: string }[] = [
+  { tag: 'Momentum',   title: 'Momentum',        note: 'How fast price is moving — and whether that speed is fading.' },
+  { tag: 'Trend',      title: 'Trend',           note: 'Direction and strength of the prevailing move.' },
+  { tag: 'Volume',     title: 'Volume',          note: 'Whether participation confirms what price is doing.' },
+  { tag: 'Volatility', title: 'Volatility',      note: 'How wide price is swinging relative to its average.' },
+  { tag: 'Moving Avg', title: 'Moving Averages', note: 'Smoothing price to reveal the underlying trend.' },
+];
 
 export default function ToolsIndexPage() {
   return (
-    <div className="min-h-screen bg-white">
-      {/* Navbar */}
-      <nav className="sticky top-0 z-50 border-b border-emerald-100 bg-white/95 backdrop-blur shadow-sm">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8">
-          <Link href="/" className="flex items-center">
-            <Image src="/chartix-wordmark.png" alt="Chartix" width={132} height={34} priority />
-          </Link>
-          <div className="flex items-center gap-3">
-            <Link href="/sign-in" className="hidden text-sm font-medium text-zinc-500 hover:text-emerald-700 transition sm:block">Log In</Link>
-            <Link href="/sign-up" className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition">
-              Enroll Free <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-[#FAFAF8] text-stone-900">
+      <LabHeader />
 
       <main>
-        {/* Hero */}
-        <section className="bg-gradient-to-b from-emerald-50 to-white py-14 sm:py-18">
-          <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
-            <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-emerald-600">
-              100% Free · No Login Required
-            </span>
-            <h1 className="mt-4 text-4xl font-extrabold tracking-tight text-emerald-900 sm:text-5xl">
-              Chartix Indicator Lab
-            </h1>
-            <p className="mt-4 text-base leading-7 text-zinc-500 max-w-xl mx-auto">
-              Build every major technical indicator yourself — interactive charts, step-by-step calculations, and clear explanations. The best way to truly understand how each indicator works.
-            </p>
-          </div>
-        </section>
-
-        {/* Tool grid */}
-        <section className="mx-auto max-w-6xl px-4 pb-20 sm:px-6 lg:px-8">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {TOOLS.map((t) => (
-              <Link key={t.key} href={`/tools/${t.key}`}
-                className="group flex flex-col justify-between rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:border-emerald-300 hover:shadow-md">
-                <div>
-                  <div className="flex items-start justify-between gap-2">
-                    <h2 className="text-sm font-bold text-zinc-900 group-hover:text-emerald-800">{t.name}</h2>
-                    <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${TAG_COLORS[t.tag]}`}>{t.tag}</span>
-                  </div>
-                  <p className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-700">
-                    <Calculator className="h-3 w-3" /> Calculation Method &amp; Live Chart
-                  </p>
-                  <p className="mt-1.5 text-xs leading-5 text-zinc-500">{t.desc}</p>
-                </div>
-                <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-emerald-700">
-                  Open tool <ChevronRight className="h-3.5 w-3.5" />
-                </div>
-              </Link>
+        <section className="mx-auto max-w-6xl px-4 pb-14 pt-16 sm:px-6 sm:pt-24 lg:px-8">
+          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-800">100% free · No login required</p>
+          <h1 className="mt-5 max-w-3xl font-serif text-[44px] font-normal leading-[1.05] tracking-[-0.01em] text-stone-900 sm:text-[64px]">
+            Chartix Indicator Lab
+          </h1>
+          <p className="mt-6 max-w-2xl text-[17px] leading-relaxed text-stone-500">
+            Build every major technical indicator yourself — interactive charts, step-by-step calculations, and clear explanations. The best way to truly understand how each indicator works.
+          </p>
+          <dl className="mt-10 flex flex-wrap gap-x-10 gap-y-4 border-t border-stone-200 pt-6 text-sm">
+            {[['Indicators', String(TOOLS.length)], ['Families', String(GROUPS.length)], ['Price data', '5 years, daily']].map(([k, v]) => (
+              <div key={k}>
+                <dt className="text-[11px] uppercase tracking-[0.14em] text-stone-400">{k}</dt>
+                <dd className="mt-1 font-serif text-2xl text-stone-900">{v}</dd>
+              </div>
             ))}
-          </div>
+          </dl>
         </section>
 
-        {/* CTA */}
-        <section className="bg-emerald-900 py-16">
-          <div className="mx-auto max-w-2xl px-4 text-center">
-            <h2 className="text-2xl font-bold text-white sm:text-3xl">Ready to go beyond the calculator?</h2>
-            <p className="mt-3 text-sm text-emerald-300">
-              Chartix has full CMT notes, 10,000+ exam-level MCQs, mock tests and the Chartix Scholar — for all three levels.
-            </p>
-            <Link href="/sign-up" className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-8 py-3.5 text-sm font-bold text-emerald-900 hover:bg-emerald-50 transition">
-              Start free — no card needed <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
+        <section className="mx-auto max-w-6xl px-4 pb-24 sm:px-6 lg:px-8">
+          {GROUPS.map((g) => {
+            const items = TOOLS.filter((t) => t.tag === g.tag);
+            return (
+              <div key={g.tag} className="grid gap-6 border-t border-stone-200 py-10 lg:grid-cols-[280px_1fr] lg:gap-12">
+                <div>
+                  <h2 className="font-serif text-[28px] leading-tight text-stone-900">{g.title}</h2>
+                  <p className="mt-2 max-w-xs text-sm leading-relaxed text-stone-500">{g.note}</p>
+                  <p className="mt-3 text-xs text-stone-400">{items.length} {items.length === 1 ? 'indicator' : 'indicators'}</p>
+                </div>
+                <ul className="divide-y divide-stone-200 border-y border-stone-200 lg:border-t-0">
+                  {items.map((t) => (
+                    <li key={t.key}>
+                      <Link href={`/tools/${t.key}`} className="group flex items-start justify-between gap-6 py-5 transition">
+                        <div className="min-w-0">
+                          <p className="text-[17px] font-medium text-stone-900 transition group-hover:text-emerald-800">{t.name}</p>
+                          <p className="mt-1 text-sm leading-relaxed text-stone-500">{t.desc}</p>
+                        </div>
+                        <span className="mt-1 flex h-8 w-8 flex-none items-center justify-center rounded-full border border-stone-200 text-stone-400 transition group-hover:border-emerald-800 group-hover:bg-emerald-800 group-hover:text-white">
+                          <ArrowUpRight className="h-4 w-4" />
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
         </section>
+
+        <div className="mx-auto max-w-6xl px-4 pb-20 sm:px-6 lg:px-8">
+          <LabCta />
+        </div>
       </main>
 
-      <footer className="border-t border-zinc-100 py-6 text-center text-xs text-zinc-400">
-        © {new Date().getFullYear()} Chartix · <Link href="/" className="hover:text-emerald-700">Home</Link> · <Link href="/pricing" className="hover:text-emerald-700">Pricing</Link>
-      </footer>
-
+      <LabFooter />
       <ScrollPopup />
     </div>
   );
