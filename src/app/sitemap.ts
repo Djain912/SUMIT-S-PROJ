@@ -18,6 +18,9 @@ const staticRoutes: Array<{
   { path: '/tools',               priority: 0.8, changeFrequency: 'monthly' },
   { path: '/tools/index-builder', priority: 0.8, changeFrequency: 'monthly' },
   { path: '/tools/fii-dii',       priority: 0.8, changeFrequency: 'daily'   },
+  { path: '/tools/fii-dii/history', priority: 0.7, changeFrequency: 'daily' },
+  { path: '/tools/fii-dii/fno',     priority: 0.7, changeFrequency: 'daily' },
+  { path: '/tools/fii-dii/sectors', priority: 0.6, changeFrequency: 'weekly' },
   { path: '/about',               priority: 0.6, changeFrequency: 'monthly' },
   { path: '/contact',             priority: 0.5, changeFrequency: 'monthly' },
 ];
