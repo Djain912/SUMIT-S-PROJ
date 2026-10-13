@@ -2,7 +2,7 @@ import { Redis } from '@upstash/redis';
 import { sendTelegramMessage, sendTelegramPhotos, telegramConfigured } from '@/lib/telegram';
 import { getCashDays, getFnoDays, getSectors } from './data';
 import { renderDailyCard, renderFnoCard, renderFnoTrendsCard, renderSectorCard } from './cards';
-import { FNO_POSITIONS, cr, fmtDate, lastDays, longShare, num, stance, streak } from './format';
+import { cr, fmtDate, longShare, stance } from './format';
 
 // End-of-day Telegram delivery for the FII/DII tracker, called by the logger cron.
 //  • Posts the daily card, the F&O snapshot and the F&O trends grid as three
@@ -14,7 +14,8 @@ import { FNO_POSITIONS, cr, fmtDate, lastDays, longShare, num, stance, streak } 
 
 // Captions get forwarded to the public, so always link the live site (never a local dev URL).
 const PUBLIC_SITE = 'https://chartix.in';
-const link = (path = '/tools/fii-dii') => `${PUBLIC_SITE}${path}?utm_source=telegram&utm_medium=share&utm_campaign=fii-dii`;
+// Short form: Telegram and WhatsApp both turn bare chartix.in/... text into links.
+const link = (path = '/tools/fii-dii') => `chartix.in${path}?utm_source=telegram`;
 
 let redis: Redis | null = null;
 function kv(): Redis | null {
@@ -44,57 +45,47 @@ async function isTradingDay(iso: string): Promise<boolean> {
   return !!res?.ok;
 }
 
+const shortDate = (iso: string) => fmtDate(iso);
+const flow = (v: number) => `${v < 0 ? 'Sold' : 'Bought'} ${cr(v, { sign: false, compact: false })}`;
+
 function dailyCaption(rows: Awaited<ReturnType<typeof getCashDays>>) {
   const d = rows[rows.length - 1];
-  const f = streak(rows, 'fiiNet');
-  const di = streak(rows, 'diiNet');
-  const streaks = [
-    f.n >= 2 ? `FIIs have ${f.buying ? 'bought' : 'sold'} ${f.n} sessions in a row` : '',
-    di.n >= 2 ? `DIIs have ${di.buying ? 'bought' : 'sold'} ${di.n} in a row` : '',
-  ].filter(Boolean).join('; ');
   return [
-    `FII / DII data — ${fmtDate(d.date, 'long')}`,
-    `FII: ${cr(d.fiiNet, { compact: false })} (net ${d.fiiNet < 0 ? 'sold' : 'bought'})`,
-    `DII: ${cr(d.diiNet, { compact: false })} (net ${d.diiNet < 0 ? 'sold' : 'bought'})`,
-    `Net: ${cr(d.fiiNet + d.diiNet, { compact: false })}`,
-    ...(streaks ? [`${streaks}.`] : []),
+    `FII / DII data · ${shortDate(d.date)}`,
     '',
-    `Free daily FII & DII data → ${link()}`,
+    `FII: ${flow(d.fiiNet)}`,
+    `DII: ${flow(d.diiNet)}`,
+    '',
+    `Full data: ${link()}`,
   ].join('\n');
 }
+
+const MOOD: Record<string, string> = {
+  'heavily short': 'bearish', 'leaning short': 'mildly bearish', balanced: 'neutral',
+  'leaning long': 'mildly bullish', 'heavily long': 'bullish',
+};
 
 function fnoCaption(days: Awaited<ReturnType<typeof getFnoDays>>) {
   const d = days[days.length - 1];
   const p = longShare(d.fii.idxFut);
+  const side = p < 50 ? `${(100 - p).toFixed(0)}% short` : `${p.toFixed(0)}% long`;
   const calls = d.fii.idxCall.long - d.fii.idxCall.short;
   const puts = d.fii.idxPut.long - d.fii.idxPut.short;
-  const tilt = calls < 0 && puts > 0 ? 'Net sellers of calls and buyers of puts — a defensive tilt.'
-    : calls > 0 && puts < 0 ? 'Net buyers of calls and sellers of puts — a bullish tilt.'
-      : 'Options book mixed, no clear tilt.';
   return [
-    `FII F&O positioning — ${fmtDate(d.date, 'long')}`,
-    `Index futures: ${p.toFixed(0)}% long / ${(100 - p).toFixed(0)}% short (${stance(p)}), net ${num(d.fii.idxFut.long - d.fii.idxFut.short, true)} contracts`,
-    `Index calls net ${num(calls, true)} · Index puts net ${num(puts, true)}`,
-    tilt,
+    `FII F&O positions · ${shortDate(d.date)}`,
     '',
-    `Free daily FII & DII data → ${link('/tools/fii-dii/fno')}`,
+    `Index futures: ${side} (${MOOD[stance(p)]})`,
+    `Calls: net ${calls < 0 ? 'sold' : 'bought'} · Puts: net ${puts < 0 ? 'sold' : 'bought'}`,
+    '',
+    `Full data: ${link('/tools/fii-dii/fno')}`,
   ].join('\n');
 }
 
 function trendsCaption(days: Awaited<ReturnType<typeof getFnoDays>>) {
-  const data = lastDays(days, 92);
-  const first = data[0];
-  const last = data[data.length - 1];
-  const lines = FNO_POSITIONS.map((pos) => {
-    const a = pos.pick(first), b = pos.pick(last);
-    const now = b.long - b.short;
-    return `${pos.title}: net ${num(now, true)} (${num(now - (a.long - a.short), true)} since ${fmtDate(first.date, 'day')})`;
-  });
   return [
-    `F&O net positions — last 3 months to ${fmtDate(last.date)}`,
-    ...lines,
+    `F&O positions, last 3 months · ${shortDate(days[days.length - 1].date)}`,
     '',
-    `Free daily FII & DII data → ${link('/tools/fii-dii/fno')}`,
+    `Full data: ${link('/tools/fii-dii/fno')}`,
   ].join('\n');
 }
 
@@ -144,11 +135,12 @@ export async function runTelegramNotify({ morning }: { morning: boolean }) {
         const top = [...sectors].sort((a, b) => b.aumPct - a.aumPct)[0];
         const out1 = [...sectors].sort((a, b) => a.fortnightCr - b.fortnightCr)[0];
         await sendTelegramPhotos([{ png: await renderSectorCard(sectors, asOf), name: `sectors-${asOf}` }], [
-          `FPI sector snapshot — NSDL report, period ending ${fmtDate(asOf)}`,
-          `${top.name} is the largest FPI holding at ${top.aumPct.toFixed(1)}%.`,
-          `Biggest fortnight outflow: ${out1.name} (${cr(out1.fortnightCr)}).`,
+          `FPI sector data · NSDL report to ${shortDate(asOf)}`,
           '',
-          `Sector-wise FPI data → ${link('/tools/fii-dii/sectors')}`,
+          `Largest holding: ${top.name} (${top.aumPct.toFixed(1)}%)`,
+          `Biggest outflow: ${out1.name} (${cr(out1.fortnightCr)})`,
+          '',
+          `Full data: ${link('/tools/fii-dii/sectors')}`,
         ].join('\n'));
         out.sectors = { posted: asOf };
       } catch (e) {
