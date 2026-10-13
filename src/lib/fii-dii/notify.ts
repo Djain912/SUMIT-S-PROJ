@@ -2,12 +2,14 @@ import { Redis } from '@upstash/redis';
 import { siteConfig } from '@/lib/site';
 import { sendTelegramMessage, sendTelegramPhotos, telegramConfigured } from '@/lib/telegram';
 import { getCashDays, getFnoDays, getSectors } from './data';
-import { renderDailyCard, renderFnoCard, renderSectorCard } from './cards';
-import { cr, fmtDate, longShare, num, stance, streak } from './format';
+import { renderDailyCard, renderFnoCard, renderFnoTrendsCard, renderSectorCard } from './cards';
+import { FNO_POSITIONS, cr, fmtDate, lastDays, longShare, num, stance, streak } from './format';
 
 // End-of-day Telegram delivery for the FII/DII tracker, called by the logger cron.
-//  • Posts the daily + F&O cards once per session, as soon as both are stored
-//    (the 8 AM run posts whatever exists if the evening never completed).
+//  • Posts the daily card, the F&O snapshot and the F&O trends grid as three
+//    separate messages (each with its own caption), once per session each, as
+//    soon as both cash and F&O are stored. The 8 AM run posts whatever exists
+//    if the evening never completed.
 //  • Posts the sector card once per new NSDL report.
 //  • On the 8 AM run, alerts if the last trading day is still missing data.
 
@@ -60,10 +62,39 @@ function dailyCaption(rows: Awaited<ReturnType<typeof getCashDays>>) {
   ].join('\n');
 }
 
-function fnoLine(days: Awaited<ReturnType<typeof getFnoDays>>) {
+function fnoCaption(days: Awaited<ReturnType<typeof getFnoDays>>) {
   const d = days[days.length - 1];
   const p = longShare(d.fii.idxFut);
-  return `F&O: FIIs ${p.toFixed(0)}% long in index futures (${stance(p)}), net ${num(d.fii.idxFut.long - d.fii.idxFut.short, true)} contracts.`;
+  const calls = d.fii.idxCall.long - d.fii.idxCall.short;
+  const puts = d.fii.idxPut.long - d.fii.idxPut.short;
+  const tilt = calls < 0 && puts > 0 ? 'Net sellers of calls and buyers of puts — a defensive tilt.'
+    : calls > 0 && puts < 0 ? 'Net buyers of calls and sellers of puts — a bullish tilt.'
+      : 'Options book mixed, no clear tilt.';
+  return [
+    `FII F&O positioning — ${fmtDate(d.date, 'long')}`,
+    `Index futures: ${p.toFixed(0)}% long / ${(100 - p).toFixed(0)}% short (${stance(p)}), net ${num(d.fii.idxFut.long - d.fii.idxFut.short, true)} contracts`,
+    `Index calls net ${num(calls, true)} · Index puts net ${num(puts, true)}`,
+    tilt,
+    '',
+    `Free daily FII & DII data → ${link('/tools/fii-dii/fno')}`,
+  ].join('\n');
+}
+
+function trendsCaption(days: Awaited<ReturnType<typeof getFnoDays>>) {
+  const data = lastDays(days, 92);
+  const first = data[0];
+  const last = data[data.length - 1];
+  const lines = FNO_POSITIONS.map((pos) => {
+    const a = pos.pick(first), b = pos.pick(last);
+    const now = b.long - b.short;
+    return `${pos.title}: net ${num(now, true)} (${num(now - (a.long - a.short), true)} since ${fmtDate(first.date, 'day')})`;
+  });
+  return [
+    `F&O net positions — last 3 months to ${fmtDate(last.date)}`,
+    ...lines,
+    '',
+    `Free daily FII & DII data → ${link('/tools/fii-dii/fno')}`,
+  ].join('\n');
 }
 
 export async function runTelegramNotify({ morning }: { morning: boolean }) {
@@ -71,28 +102,33 @@ export async function runTelegramNotify({ morning }: { morning: boolean }) {
   const store = kv();
   const out: Record<string, unknown> = {};
 
-  // 1. Daily + F&O cards
+  // 1. Daily card, F&O snapshot and F&O trends — three separate messages
   try {
     const [cash, fno] = await Promise.all([getCashDays(), getFnoDays()]);
     const latest = cash[cash.length - 1];
     const fnoReady = !!fno.length && fno[fno.length - 1].date === latest?.date;
-    const key = `fii-dii:tg:daily:${latest?.date}`;
     // Without Redis we can't de-duplicate across runs, so only the single 8 AM run posts.
-    const shouldTry = latest && (store ? fnoReady || morning : morning);
-    if (shouldTry && (!store || (await store.set(key, '1', { nx: true, ex: 60 * 60 * 24 * 10 })) === 'OK')) {
+    const shouldTry = !!latest && (store ? fnoReady || morning : morning);
+    const items = !shouldTry ? [] : [
+      { id: 'cash', render: () => renderDailyCard(cash), caption: () => dailyCaption(cash) },
+      ...(fnoReady ? [
+        { id: 'fno', render: () => renderFnoCard(fno), caption: () => fnoCaption(fno) },
+        { id: 'fno-trends', render: () => renderFnoTrendsCard(fno), caption: () => trendsCaption(fno) },
+      ] : []),
+    ];
+    const posted: string[] = [];
+    for (const item of items) {
+      const key = `fii-dii:tg:${item.id}:${latest.date}`;
+      if (store && (await store.set(key, '1', { nx: true, ex: 60 * 60 * 24 * 10 })) !== 'OK') continue;
       try {
-        const photos = [{ png: await renderDailyCard(cash), name: `fii-dii-${latest.date}` }];
-        if (fnoReady) photos.push({ png: await renderFnoCard(fno), name: `fno-${latest.date}` });
-        const caption = fnoReady ? `${dailyCaption(cash)}\n\n${fnoLine(fno)}` : dailyCaption(cash);
-        await sendTelegramPhotos(photos, caption);
-        out.daily = { posted: latest.date, withFno: fnoReady };
+        await sendTelegramPhotos([{ png: await item.render(), name: `${item.id}-${latest.date}` }], item.caption());
+        posted.push(item.id);
       } catch (e) {
-        await store?.del(key); // let the next run retry
+        await store?.del(key); // let the next run retry just this message
         throw e;
       }
-    } else {
-      out.daily = { posted: false, latest: latest?.date, fnoReady };
     }
+    out.daily = { latest: latest?.date, fnoReady, posted };
   } catch (e) {
     out.daily = { error: (e as Error).message };
   }

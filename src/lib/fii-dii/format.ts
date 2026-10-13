@@ -184,3 +184,14 @@ export function fmtStamp(isoTs: string | null): string {
   const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' }).toLowerCase();
   return `${date}, ${time} IST`;
 }
+
+/** The six F&O positions charted on the site and in the Telegram card. */
+export const FNO_POSITIONS: { key: string; title: string; who: 'fii' | 'dii'; pick: (d: FnoDay) => LongShort; hint: string }[] = [
+  { key: 'fii-idx-fut', title: 'FII index futures', who: 'fii', pick: (d) => d.fii.idxFut, hint: 'Below zero = net short the index' },
+  { key: 'fii-idx-call', title: 'FII index calls', who: 'fii', pick: (d) => d.fii.idxCall, hint: 'Below zero = net call writers' },
+  { key: 'fii-idx-put', title: 'FII index puts', who: 'fii', pick: (d) => d.fii.idxPut, hint: 'Above zero = net put buyers (protection)' },
+  { key: 'fii-stk-fut', title: 'FII stock futures', who: 'fii', pick: (d) => d.fii.stkFut, hint: 'Single-stock futures, often paired with cash holdings' },
+  { key: 'dii-idx-fut', title: 'DII index futures', who: 'dii', pick: (d) => d.dii.idxFut, hint: 'Mostly hedging by domestic funds' },
+  { key: 'dii-stk-fut', title: 'DII stock futures', who: 'dii', pick: (d) => d.dii.stkFut, hint: 'Largely hedges and arbitrage — a big short is normal' },
+];
+

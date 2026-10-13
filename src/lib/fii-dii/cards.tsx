@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { ImageResponse } from 'next/og';
 import { loadFont } from '@/lib/reports/render';
 import {
-  COLORS, cr, fmtDate, longShare, num, sessionSummary, stance, sum,
+  COLORS, FNO_POSITIONS, axisCr, cr, fmtDate, lastDays, longShare, niceTicks, num, sessionSummary, stance, sum,
   type CashDay, type FnoDay, type LongShort, type Sector,
 } from './format';
 
@@ -210,6 +210,71 @@ export async function renderSectorCard(sectors: Sector[], asOf: string): Promise
       <div style={{ display: 'flex', marginTop: 34, fontSize: 20, fontWeight: 700, letterSpacing: 2, color: MUTED }}>BIGGEST FORTNIGHT MOVES</div>
       <div style={{ display: 'flex', flexDirection: 'column', marginTop: 8 }}>
         {movers.map((s) => row(s.name, (Math.abs(s.fortnightCr) / maxFlow) * 100, s.fortnightCr >= 0 ? COLORS.buy : COLORS.sell, cr(s.fortnightCr)))}
+      </div>
+    </Frame>,
+  );
+}
+
+/** One small net-position line chart (satori renders inline SVG paths; labels are divs). */
+function NetMini({ title, color, hint, pts }: { title: string; color: string; hint: string; pts: { date: string; net: number }[] }) {
+  const CW = 344, CH = 122, LW = 48;
+  const vals = pts.map((p) => p.net);
+  const ticks = niceTicks(Math.min(0, ...vals), Math.max(0, ...vals), 3);
+  const lo = ticks[0], hi = ticks[ticks.length - 1];
+  const n = pts.length;
+  const x = (k: number) => (n <= 1 ? 0 : (k / (n - 1)) * (CW - 8));
+  const y = (v: number) => CH - ((v - lo) / (hi - lo)) * CH;
+  const line = pts.map((p, k) => `${k ? 'L' : 'M'}${x(k).toFixed(1)},${y(p.net).toFixed(1)}`).join('');
+  const last = pts[n - 1];
+  const change = last.net - pts[0].net;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', width: 460, background: '#FFFFFF', border: `1px solid ${LINE}`, borderRadius: 22, padding: '16px 20px 12px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <div style={{ display: 'flex', alignItems: 'center', fontSize: 21, fontWeight: 800 }}>
+          <div style={{ display: 'flex', width: 12, height: 12, borderRadius: 3, background: color, marginRight: 9 }} />{title}
+        </div>
+        <div style={{ display: 'flex', fontSize: 21, fontWeight: 800 }}>{num(last.net, true)}</div>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 15, color: BODY }}>
+        <div style={{ display: 'flex' }}>{hint}</div>
+        <div style={{ display: 'flex' }}>{`${num(change, true)} in period`}</div>
+      </div>
+      <div style={{ display: 'flex', marginTop: 12 }}>
+        <div style={{ display: 'flex', position: 'relative', width: LW, height: CH }}>
+          {ticks.map((t) => (
+            <div key={t} style={{ display: 'flex', position: 'absolute', right: 8, top: y(t) - 9, fontSize: 14, color: MUTED }}>{axisCr(t)}</div>
+          ))}
+        </div>
+        <svg width={CW} height={CH} viewBox={`0 0 ${CW} ${CH}`}>
+          {ticks.map((t) => <path key={t} d={`M0,${y(t)}H${CW}`} stroke={t === 0 ? '#A8A29E' : '#EEECE7'} strokeWidth={1} />)}
+          <path d={`${line}L${x(n - 1)},${y(0)}L0,${y(0)}Z`} fill={color} fillOpacity={0.08} />
+          <path d={line} fill="none" stroke={color} strokeWidth={2.5} strokeLinejoin="round" />
+          <circle cx={x(n - 1)} cy={y(last.net)} r={5} fill={color} />
+        </svg>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, marginLeft: LW, fontSize: 14, color: MUTED }}>
+        <div style={{ display: 'flex' }}>{fmtDate(pts[0].date, 'day')}</div>
+        <div style={{ display: 'flex' }}>{fmtDate(last.date, 'day')}</div>
+      </div>
+    </div>
+  );
+}
+
+/** 2×3 grid of the six F&O net positions over the last three months. */
+export async function renderFnoTrendsCard(days: FnoDay[]): Promise<ArrayBuffer> {
+  const data = lastDays(days, 92);
+  const d = data[data.length - 1];
+  const src = await logo();
+  const cells = FNO_POSITIONS.map((p) => (
+    <NetMini key={p.key} title={p.title} hint={p.hint.replace(' (protection)', '').replace(', often paired with cash holdings', '').replace(' — a big short is normal', '')}
+      color={COLORS[p.who]} pts={data.map((x) => { const v = p.pick(x); return { date: x.date, net: v.long - v.short }; })} />
+  ));
+  return render(
+    <Frame logoSrc={src} eyebrow="FII & DII DATA · DERIVATIVES" title="F&O net positions over time" subtitle={`Last 3 months to ${fmtDate(d.date, 'long')} · net contracts · L = lakh, k = thousand`}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {[0, 2, 4].map((i) => (
+          <div key={i} style={{ display: 'flex', gap: 16 }}>{cells[i]}{cells[i + 1]}</div>
+        ))}
       </div>
     </Frame>,
   );

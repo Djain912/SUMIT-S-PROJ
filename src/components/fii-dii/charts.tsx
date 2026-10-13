@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode, type PointerEvent } from 'react';
 import {
-  COLORS, axisCr, cr, fmtDate, fmtMonth, lastDays, longShare, niceTicks, num,
+  COLORS, FNO_POSITIONS as POSITIONS, axisCr, cr, fmtDate, fmtMonth, lastDays, longShare, niceTicks, num,
   type CashDay, type FnoDay, type MonthTotal,
 } from '@/lib/fii-dii/format';
 import { Segmented, Swatch } from './shell';
@@ -328,7 +328,6 @@ export function LongShareChart({ days }: { days: FnoDay[] }) {
 
 // ── F&O: net contracts over time, one small chart per position ──
 type NetPt = { date: string; net: number; long: number; short: number };
-type Pick = (d: FnoDay) => { long: number; short: number };
 
 const SW = 440;
 const SPAD = { l: 44, r: 10, t: 12, b: 26 };
@@ -390,14 +389,6 @@ function NetLine({ pts, color, height = 210 }: { pts: NetPt[]; color: string; he
   );
 }
 
-const POSITIONS: { key: string; title: string; who: 'fii' | 'dii'; pick: Pick; hint: string }[] = [
-  { key: 'fii-idx-fut', title: 'FII index futures', who: 'fii', pick: (d) => d.fii.idxFut, hint: 'Below zero = net short the index' },
-  { key: 'fii-idx-call', title: 'FII index calls', who: 'fii', pick: (d) => d.fii.idxCall, hint: 'Below zero = net call writers' },
-  { key: 'fii-idx-put', title: 'FII index puts', who: 'fii', pick: (d) => d.fii.idxPut, hint: 'Above zero = net put buyers (protection)' },
-  { key: 'fii-stk-fut', title: 'FII stock futures', who: 'fii', pick: (d) => d.fii.stkFut, hint: 'Single-stock futures, often paired with cash holdings' },
-  { key: 'dii-idx-fut', title: 'DII index futures', who: 'dii', pick: (d) => d.dii.idxFut, hint: 'Mostly hedging by domestic funds' },
-  { key: 'dii-stk-fut', title: 'DII stock futures', who: 'dii', pick: (d) => d.dii.stkFut, hint: 'Largely hedges and arbitrage — a big short is normal' },
-];
 
 export function FnoTrends({ days }: { days: FnoDay[] }) {
   const [range, setRange] = useState<'1M' | '3M' | 'ALL'>('3M');
