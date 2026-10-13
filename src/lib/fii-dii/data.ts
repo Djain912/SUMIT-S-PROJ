@@ -15,6 +15,9 @@ type ArchiveRow = {
 // failed verification for Jan–Mar 2026 and skip sessions in Apr–early May.
 export const CASH_HISTORY_FROM = '2026-05-12';
 
+/** Cleared by the logger cron whenever it stores new data. */
+export const FII_DII_CACHE_TAG = 'fii-dii-data';
+
 // Open MrChartist feed, falling back to the bundled copy. Used only to fill
 // cash sessions our cron missed; its F&O history failed verification and is not used.
 async function getFeed(): Promise<ArchiveRow[]> {
@@ -55,7 +58,7 @@ export const getCashDays = unstable_cache(async (): Promise<CashDay[]> => {
   }
   for (const r of rows) if (r.fiiBuy > 0 || r.diiBuy > 0) byDate.set(r.date, r);
   return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
-}, ['fii-dii-cash-days-v2'], { revalidate: 900 });
+}, ['fii-dii-cash-days-v2'], { revalidate: 900, tags: [FII_DII_CACHE_TAG] });
 
 // F&O open interest exactly as logged from NSE participant-OI archives by our cron.
 export const getFnoDays = unstable_cache(async (): Promise<FnoDay[]> => {
@@ -79,7 +82,7 @@ export const getFnoDays = unstable_cache(async (): Promise<FnoDay[]> => {
     });
   }
   return out.sort((a, b) => a.date.localeCompare(b.date));
-}, ['fii-dii-fno-days-v2'], { revalidate: 900 });
+}, ['fii-dii-fno-days-v2'], { revalidate: 900, tags: [FII_DII_CACHE_TAG] });
 
 /** When our cron last wrote fresh cash / F&O data (ISO timestamps). */
 export const getLastUpdated = unstable_cache(async () => {
@@ -88,7 +91,7 @@ export const getLastUpdated = unstable_cache(async () => {
     prisma.fnoLog.findFirst({ orderBy: { updatedAt: 'desc' }, select: { updatedAt: true } }),
   ]);
   return { cash: cash?.updatedAt.toISOString() ?? null, fno: fno?.updatedAt.toISOString() ?? null };
-}, ['fii-dii-last-updated'], { revalidate: 900 });
+}, ['fii-dii-last-updated'], { revalidate: 900, tags: [FII_DII_CACHE_TAG] });
 
 type RawSector = { name: string; aumPct: number; fortnightCr: number; oneYearCr: number; fiiOwn: number; historyCr: number[]; lastDate?: string };
 

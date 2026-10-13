@@ -10,7 +10,7 @@ import type { CumulativeFlow, SectorSnapshot } from './fii-dii-data';
 // instances of the same Manrope family, generated once via fonttools from
 // public/fonts/studio/Manrope-Variable.woff2, specifically for this
 // server-side renderer. Both ₹ (U+20B9) and − (U+2212) are present.
-type Weight = 400 | 700 | 800;
+export type Weight = 400 | 700 | 800;
 const FONT_FILES: Record<Weight, string> = {
   400: 'manrope-regular.ttf',
   700: 'manrope-semibold.ttf',
@@ -18,7 +18,7 @@ const FONT_FILES: Record<Weight, string> = {
 };
 const fontCache = new Map<Weight, ArrayBuffer>();
 
-async function loadFont(weight: Weight): Promise<ArrayBuffer> {
+export async function loadFont(weight: Weight): Promise<ArrayBuffer> {
   const cached = fontCache.get(weight);
   if (cached) return cached;
   const p = path.join(process.cwd(), 'public', 'fonts', 'reports', FONT_FILES[weight]);

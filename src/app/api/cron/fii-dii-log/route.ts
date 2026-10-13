@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { prisma } from '@/lib/db/prisma';
+import { FII_DII_CACHE_TAG } from '@/lib/fii-dii/data';
+import { runTelegramNotify } from '@/lib/fii-dii/notify';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -217,6 +220,15 @@ export async function GET(request: Request) {
       : { stored: false, reason: 'No new NSE archive files in the lookback window' };
   } catch (e) {
     results.fno = { stored: false, error: (e as Error).message };
+  }
+
+  // 3. Refresh the public pages, then deliver Telegram posts / alerts
+  revalidateTag(FII_DII_CACHE_TAG);
+  const run = new URL(request.url).searchParams.get('run');
+  try {
+    results.telegram = await runTelegramNotify({ morning: run === 'morning' });
+  } catch (e) {
+    results.telegram = { error: (e as Error).message };
   }
 
   return NextResponse.json({ ok: true, ...results });

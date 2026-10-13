@@ -32,7 +32,7 @@
       "schedule": "30 17 * * *"
     },
     {
-      "path": "/api/cron/fii-dii-log",
+      "path": "/api/cron/fii-dii-log?run=morning",
       "schedule": "30 2 * * *"
     }
   ]

@@ -6,6 +6,10 @@ const projectRoot = dirname(fileURLToPath(import.meta.url));
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   outputFileTracingRoot: projectRoot,
+  // Server-rendered share cards read these from disk.
+  outputFileTracingIncludes: {
+    '/api/cron/fii-dii-log': ['./public/fonts/reports/**', './public/chartix-wordmark.png'],
+  },
   images: {
     remotePatterns: [
       {
