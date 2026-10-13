@@ -23,7 +23,7 @@ export default function FiiDiiLayout({ children }: { children: React.ReactNode }
         </p>
       </main>
       <LabFooter />
-      <ScrollPopup />
+      <ScrollPopup triggerPct={20} />
       <IndexBuilderTimedBanner />
     </div>
   );

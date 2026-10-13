@@ -13,7 +13,8 @@ function trackEvent(name: string) {
   }
 }
 
-export function ScrollPopup() {
+/** Shows once per session after the reader scrolls `triggerPct` % of the page. */
+export function ScrollPopup({ triggerPct = 60 }: { triggerPct?: number } = {}) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -24,7 +25,7 @@ export function ScrollPopup() {
       const docH = document.documentElement.scrollHeight - window.innerHeight;
       if (docH <= 0) return;
       const pct = (window.scrollY / docH) * 100;
-      if (pct >= 60) {
+      if (pct >= triggerPct) {
         setVisible(true);
         window.removeEventListener('scroll', handleScroll);
         trackEvent('popup_shown');
@@ -33,7 +34,7 @@ export function ScrollPopup() {
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [triggerPct]);
 
   function dismiss() {
     setVisible(false);
