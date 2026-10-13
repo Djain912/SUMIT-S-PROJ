@@ -55,6 +55,7 @@ function dailyCaption(rows: Awaited<ReturnType<typeof getCashDays>>) {
     '',
     `FII: ${flow(d.fiiNet)}`,
     `DII: ${flow(d.diiNet)}`,
+    `Net (FII + DII): ${cr(d.fiiNet + d.diiNet, { compact: false })}`,
     '',
     `Full data: ${link()}`,
   ].join('\n');
