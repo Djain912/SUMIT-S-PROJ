@@ -5,9 +5,6 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 // Server-side proxy for the official NSE FII/DII trading-activity API.
-// The static dashboard at /fii-dii-app calls this first; if NSE blocks the
-// server IP the dashboard still falls back to browser CORS proxies and then
-// to its bundled archive, so a failure here is never fatal.
 
 const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36';

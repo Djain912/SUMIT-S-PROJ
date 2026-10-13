@@ -1,7 +1,7 @@
 import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/db/prisma';
-import archive from '../../../public/fii-dii-app/data/history.json';
-import bundledSectors from '../../../public/fii-dii-app/data/sectors.json';
+import archive from './fallback/history.json';
+import bundledSectors from './fallback/sectors.json';
 import { nseDateToIso, type CashDay, type FnoDay, type Sector } from './format';
 
 type ArchiveRow = {

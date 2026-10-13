@@ -108,14 +108,7 @@ export async function getSectorSnapshot(topN = 8): Promise<SectorSnapshot | null
 
   if (!raw || raw.length === 0) {
     source = 'local-fallback';
-    try {
-      const fs = await import('fs/promises');
-      const path = await import('path');
-      const p = path.join(process.cwd(), 'public', 'fii-dii-app', 'data', 'sectors.json');
-      raw = JSON.parse(await fs.readFile(p, 'utf8'));
-    } catch {
-      return null;
-    }
+    raw = (await import('@/lib/fii-dii/fallback/sectors.json')).default as RawRow[];
   }
 
   if (!raw || raw.length === 0) return null;

@@ -24,6 +24,11 @@ const nextConfig = {
   async redirects() {
     return [
       {
+        source: '/fii-dii-app/:path*',
+        destination: '/tools/fii-dii',
+        permanent: true,
+      },
+      {
         source: '/feedback',
         destination: 'https://forms.gle/fUSrURc3w9pBePf48',
         permanent: false,
