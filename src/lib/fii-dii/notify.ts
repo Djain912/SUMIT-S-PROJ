@@ -1,5 +1,4 @@
 import { Redis } from '@upstash/redis';
-import { siteConfig } from '@/lib/site';
 import { sendTelegramMessage, sendTelegramPhotos, telegramConfigured } from '@/lib/telegram';
 import { getCashDays, getFnoDays, getSectors } from './data';
 import { renderDailyCard, renderFnoCard, renderFnoTrendsCard, renderSectorCard } from './cards';
@@ -13,7 +12,9 @@ import { FNO_POSITIONS, cr, fmtDate, lastDays, longShare, num, stance, streak } 
 //  • Posts the sector card once per new NSDL report.
 //  • On the 8 AM run, alerts if the last trading day is still missing data.
 
-const link = (path = '/tools/fii-dii') => `${siteConfig.url}${path}?utm_source=telegram&utm_medium=share&utm_campaign=fii-dii`;
+// Captions get forwarded to the public, so always link the live site (never a local dev URL).
+const PUBLIC_SITE = 'https://chartix.in';
+const link = (path = '/tools/fii-dii') => `${PUBLIC_SITE}${path}?utm_source=telegram&utm_medium=share&utm_campaign=fii-dii`;
 
 let redis: Redis | null = null;
 function kv(): Redis | null {
@@ -179,7 +180,7 @@ export async function runTelegramNotify({ morning }: { morning: boolean }) {
             missing.includes('F&O open interest')
               ? 'F&O will be filled automatically on the next run if NSE has published the file.'
               : 'NSE only shows the latest session, so this cash day may need to be added manually.',
-            `Check: ${siteConfig.url}/tools/fii-dii/history`,
+            `Check: ${PUBLIC_SITE}/tools/fii-dii/history`,
           ].join('\n'));
           out.alert = { sent: day, missing };
         } else {
