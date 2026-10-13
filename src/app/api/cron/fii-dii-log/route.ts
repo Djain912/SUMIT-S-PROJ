@@ -3,11 +3,13 @@ import { prisma } from '@/lib/db/prisma';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
-export const maxDuration = 30;
+export const maxDuration = 60;
 
-// Vercel calls this at 6:30 PM IST (13:00 UTC) Mon–Fri.
-// It fetches the day's FII/DII cash + F&O data from NSE and upserts
-// into Neon so we build a permanent historical record automatically.
+// Vercel calls this several times each evening and once next morning (see
+// vercel.json). NSE's cash API only ever returns the latest session and often
+// publishes after 7 PM IST, so a single early run lost that day for good; the
+// repeated runs (and the 8 AM catch-up, before the next session replaces it)
+// make sure every session is captured. Upserts make repeat runs harmless.
 // Protected by CRON_SECRET — Vercel sends it as Authorization: Bearer <secret>.
 
 const UA =
@@ -122,30 +124,50 @@ function parseFnoCsv(csv: string, date: string): FnoRow | null {
   return row;
 }
 
-async function fetchFno(): Promise<FnoRow | null> {
-  const today = new Date();
-  // Try today and yesterday (NSE archives update same-day but sometimes lag)
-  for (let i = 0; i < 3; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    const dd   = String(d.getDate()).padStart(2, '0');
-    const mm   = String(d.getMonth() + 1).padStart(2, '0');
-    const yyyy = d.getFullYear();
-    const label = `${dd}-${MONTHS[d.getMonth()]}-${yyyy}`;
-    const url = `https://archives.nseindia.com/content/nsccl/fao_participant_oi_${dd}${mm}${yyyy}.csv`;
-    try {
-      const res = await fetch(url, {
-        headers: { 'User-Agent': UA, Accept: 'text/csv,*/*' },
-        cache: 'no-store',
-        signal: AbortSignal.timeout(10_000),
-      });
-      if (!res.ok) continue;
-      const csv = await res.text();
-      const parsed = parseFnoCsv(csv, label);
-      if (parsed) return parsed;
-    } catch { continue; }
+const FNO_LOOKBACK_DAYS = 10;
+
+/** Weekdays in the last N calendar days, in IST, as NSE archive file keys + our date labels. */
+function recentWeekdays(n: number) {
+  const out: { file: string; label: string }[] = [];
+  const nowIst = new Date(Date.now() + 5.5 * 3600_000);
+  for (let i = 0; i < n; i++) {
+    const d = new Date(nowIst);
+    d.setUTCDate(nowIst.getUTCDate() - i);
+    const dow = d.getUTCDay();
+    if (dow === 0 || dow === 6) continue;
+    const dd = String(d.getUTCDate()).padStart(2, '0');
+    const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const yyyy = d.getUTCFullYear();
+    out.push({ file: `${dd}${mm}${yyyy}`, label: `${dd}-${MONTHS[d.getUTCMonth()]}-${yyyy}` });
   }
-  return null;
+  return out;
+}
+
+async function fetchFnoDay(file: string, label: string): Promise<FnoRow | null> {
+  try {
+    const res = await fetch(`https://archives.nseindia.com/content/nsccl/fao_participant_oi_${file}.csv`, {
+      headers: { 'User-Agent': UA, Accept: 'text/csv,*/*' },
+      cache: 'no-store',
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) return null;
+    return parseFnoCsv(await res.text(), label);
+  } catch {
+    return null;
+  }
+}
+
+// NSE keeps every participant-OI file permanently, so each run re-checks the
+// recent window and fills any session we don't have yet (holidays simply 404).
+async function fetchMissingFno(days = FNO_LOOKBACK_DAYS): Promise<FnoRow[]> {
+  const candidates = recentWeekdays(days);
+  const have = new Set(
+    (await prisma.fnoLog.findMany({ where: { date: { in: candidates.map((c) => c.label) } }, select: { date: true } })).map((r) => r.date),
+  );
+  // Always re-fetch the newest weekday too, in case it was stored before NSE finalised it.
+  const todo = candidates.filter((c, i) => i === 0 || !have.has(c.label));
+  const rows = await Promise.all(todo.map((c) => fetchFnoDay(c.file, c.label)));
+  return rows.filter((r): r is FnoRow => r !== null);
 }
 
 // ── Handler ──────────────────────────────────────────────────────────────
@@ -182,28 +204,17 @@ export async function GET(request: Request) {
     results.cash = { stored: false, error: (e as Error).message };
   }
 
-  // 2. F&O OI
+  // 2. F&O OI — store every recent session that is missing
   try {
-    const fno = await fetchFno();
-    if (fno) {
-      await prisma.fnoLog.upsert({
-        where: { date: fno.date },
-        update: {
-          fiiIdxFutLong: fno.fiiIdxFutLong, fiiIdxFutShort: fno.fiiIdxFutShort,
-          fiiStkFutLong: fno.fiiStkFutLong, fiiStkFutShort: fno.fiiStkFutShort,
-          fiiIdxCallLong: fno.fiiIdxCallLong, fiiIdxCallShort: fno.fiiIdxCallShort,
-          fiiIdxPutLong: fno.fiiIdxPutLong, fiiIdxPutShort: fno.fiiIdxPutShort,
-          diiIdxFutLong: fno.diiIdxFutLong, diiIdxFutShort: fno.diiIdxFutShort,
-          diiStkFutLong: fno.diiStkFutLong, diiStkFutShort: fno.diiStkFutShort,
-          diiIdxCallLong: fno.diiIdxCallLong, diiIdxCallShort: fno.diiIdxCallShort,
-          diiIdxPutLong: fno.diiIdxPutLong, diiIdxPutShort: fno.diiIdxPutShort,
-        },
-        create: { ...fno },
-      });
-      results.fno = { stored: true, date: fno.date };
-    } else {
-      results.fno = { stored: false, reason: 'NSE archive not yet published' };
+    const days = Number(new URL(request.url).searchParams.get('fnoDays')) || FNO_LOOKBACK_DAYS;
+    const found = await fetchMissingFno(Math.min(days, 400));
+    for (const fno of found) {
+      const { date, ...values } = fno;
+      await prisma.fnoLog.upsert({ where: { date }, update: values, create: fno });
     }
+    results.fno = found.length
+      ? { stored: true, dates: found.map((f) => f.date) }
+      : { stored: false, reason: 'No new NSE archive files in the lookback window' };
   } catch (e) {
     results.fno = { stored: false, error: (e as Error).message };
   }
