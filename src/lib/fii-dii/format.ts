@@ -18,7 +18,6 @@ export type Sector = {
   aumPct: number;
   fortnightCr: number;
   oneYearCr: number;
-  fiiOwn: number;
   historyCr: number[];
 };
 

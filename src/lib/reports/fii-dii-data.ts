@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db/prisma';
+import { getSectors } from '@/lib/fii-dii/data';
 
 /**
  * Real data for the FII/DII report images (weekly + monthly). No LLM
@@ -60,63 +61,20 @@ export type SectorRow = {
 
 export type SectorSnapshot = {
   rows: SectorRow[];
-  /** NSDL reporting date embedded in the source file, e.g. "Apr152026" -> "15 Apr 2026" */
+  /** NSDL report date, e.g. "30 Sep 2026" — always shown on the image. */
   asOf: string | null;
-  source: 'github' | 'local-fallback';
 };
 
-const MONTH_ABBR: Record<string, string> = {
-  Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06',
-  Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12',
-};
-
-function parseLastDate(raw: string | undefined): string | null {
-  // Source format: "Apr152026" (Mon + DD + YYYY, no separators)
-  if (!raw) return null;
-  const m = raw.match(/^([A-Za-z]{3})(\d{1,2})(\d{4})$/);
-  if (!m) return null;
-  const [, mon, day, year] = m;
-  const mm = MONTH_ABBR[mon];
-  if (!mm) return null;
-  const d = new Date(`${year}-${mm}-${String(day).padStart(2, '0')}`);
-  if (Number.isNaN(d.getTime())) return null;
-  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
-/**
- * Same two-source pattern as the public FII/DII terminal: try the live
- * GitHub-hosted snapshot first, fall back to our bundled local copy if it's
- * unreachable. The local copy can be stale, so `asOf` (parsed from the
- * source's own `lastDate` field) is always surfaced and must be shown on
- * the image - never silently presented as "this week's" data.
- */
+/** Top sectors by fortnight flow, from the same direct NSDL source as the public page. */
 export async function getSectorSnapshot(topN = 8): Promise<SectorSnapshot | null> {
-  type RawRow = { name: string; fortnightCr: number; oneYearCr: number; aumPct: number; lastDate?: string };
-
-  let raw: RawRow[] | null = null;
-  let source: SectorSnapshot['source'] = 'github';
-
-  try {
-    const res = await fetch(
-      'https://raw.githubusercontent.com/MrChartist/fii-dii-data/main/data/sectors.json',
-      { signal: AbortSignal.timeout(8000), cache: 'no-store' },
-    );
-    if (res.ok) raw = await res.json();
-  } catch {
-    // fall through to local
-  }
-
-  if (!raw || raw.length === 0) {
-    source = 'local-fallback';
-    raw = (await import('@/lib/fii-dii/fallback/sectors.json')).default as RawRow[];
-  }
-
-  if (!raw || raw.length === 0) return null;
-
-  const rows: SectorRow[] = raw
+  const { sectors, asOf } = await getSectors();
+  if (!sectors.length) return null;
+  const rows: SectorRow[] = sectors
     .map((r) => ({ name: r.name, fortnightCr: r.fortnightCr, oneYearCr: r.oneYearCr, aumPct: r.aumPct }))
     .sort((a, b) => Math.abs(b.fortnightCr) - Math.abs(a.fortnightCr))
     .slice(0, topN);
-
-  return { rows, asOf: parseLastDate(raw[0]?.lastDate), source };
+  const label = asOf
+    ? new Date(`${asOf}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).replace('Sept', 'Sep')
+    : null;
+  return { rows, asOf: label };
 }
