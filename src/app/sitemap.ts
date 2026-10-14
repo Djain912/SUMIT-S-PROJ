@@ -2,6 +2,9 @@ import type { MetadataRoute } from 'next';
 import { siteConfig } from '@/lib/site';
 import { prisma } from '@/lib/db/prisma';
 
+// Regenerate hourly so newly published blog posts reach the sitemap without a redeploy.
+export const revalidate = 3600;
+
 const INDICATOR_KEYS = [
   'roc', 'macd', 'rsi', 'stochastics', 'adl', 'mfi', 'ppo',
   'dmi', 'obv', 'cmf', 'rvol', 'sma', 'ema', 'lwma', 'wilderma', 'distma', 'bb',
