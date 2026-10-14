@@ -100,6 +100,16 @@ function parseNsdlDate(raw?: string): string | null {
   return m ? nseDateToIso(`${m[2]}-${m[1]}-${m[3]}`) : null;
 }
 
+// The feed's figures lag one NSDL report behind the date it claims (its
+// "15 Apr 2026" data matches NSDL's 31 Mar 2026 report), so step back one fortnight.
+function previousFortnight(iso: string | null): string | null {
+  if (!iso) return null;
+  const [y, m, d] = iso.split('-').map(Number);
+  if (d > 15) return `${y}-${String(m).padStart(2, '0')}-15`;
+  const end = new Date(Date.UTC(y, m - 1, 0));
+  return end.toISOString().slice(0, 10);
+}
+
 // NSDL fortnightly sector data via the open MrChartist feed, falling back to
 // the bundled copy. The report date is always returned so the page can say
 // exactly how old the numbers are.
@@ -118,7 +128,7 @@ export async function getSectors(): Promise<{ sectors: Sector[]; asOf: string | 
     // keep bundled copy
   }
   return {
-    asOf: parseNsdlDate(raw[0]?.lastDate),
+    asOf: previousFortnight(parseNsdlDate(raw[0]?.lastDate)),
     sectors: raw.map((s) => ({
       name: s.name, aumPct: s.aumPct, fortnightCr: s.fortnightCr, oneYearCr: s.oneYearCr,
       fiiOwn: s.fiiOwn, historyCr: s.historyCr ?? [],
