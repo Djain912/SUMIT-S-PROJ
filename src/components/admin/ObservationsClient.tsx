@@ -22,6 +22,8 @@ export type Obs = {
   createdAt: string | Date;
 };
 
+export type DeskStatus = { breadthDate: string | null; fiiDate: string | null };
+
 const FIRST_REPLY = 'Daily charts like this, plus free CMT prep tools: chartix.in';
 
 /** Rasterise a card SVG to PNG with the studio fonts baked in. */
@@ -151,7 +153,21 @@ function PostCard({ o }: { o: Obs }) {
   );
 }
 
-export function ObservationsClient({ initialObs }: { initialObs: Obs[] }) {
+function daysOld(d: string | null) {
+  if (!d) return Infinity;
+  return Math.round((Date.now() - Date.parse(`${d}T12:00:00Z`)) / 86400_000);
+}
+
+function HealthChip({ label, ok, value }: { label: string; ok: boolean; value: string }) {
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium ${ok ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${ok ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+      {label}: {value}
+    </span>
+  );
+}
+
+export function ObservationsClient({ initialObs, status }: { initialObs: Obs[]; status?: DeskStatus }) {
   const [loading, setLoading] = useState(false);
   const [zipping, setZipping] = useState(false);
   const [sending, setSending] = useState(false);
@@ -246,6 +262,22 @@ export function ObservationsClient({ initialObs }: { initialObs: Obs[] }) {
           {loading ? 'Reading the markets…' : obs.length ? 'Regenerate' : "Generate today's desk"}
         </button>
       </div>
+
+      {(() => {
+        const morning = obs.filter((o) => o.slot !== 'evening');
+        const evening = obs.filter((o) => o.slot === 'evening');
+        const sent = (l: Obs[]) => l.filter((o) => o.sentAt).length;
+        // Weekend gaps are normal: data only updates on trading days.
+        const fresh = (d: string | null) => daysOld(d) <= 4;
+        return (
+          <div className="flex flex-wrap gap-2" aria-label="Pipeline health">
+            <HealthChip label="Breadth data" ok={fresh(status?.breadthDate ?? null)} value={status?.breadthDate ?? 'none'} />
+            <HealthChip label="FII/DII data" ok={fresh(status?.fiiDate ?? null)} value={status?.fiiDate ?? 'none'} />
+            <HealthChip label="Telegram, morning" ok value={`${sent(morning)} of ${morning.length} sent`} />
+            {evening.length > 0 && <HealthChip label="Telegram, evening" ok value={`${sent(evening)} of ${evening.length} sent`} />}
+          </div>
+        );
+      })()}
 
       {error && <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
       {sentMsg && <p className="rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{sentMsg}</p>}

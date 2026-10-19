@@ -18,9 +18,12 @@ export async function POST(request: Request) {
     }
 
     const today = new Date().toISOString().slice(0, 10);
-    // Regenerates the morning desk; an evening run (if any) is kept.
-    await prisma.marketObservation.deleteMany({ where: { date: today, OR: [{ slot: 'morning' }, { slot: null }] } });
-    const result = await runMarketDesk(today, { slot: 'morning', maxPosts: 6 });
+    // Regenerates the morning posts not yet sent to Telegram. Sent posts and any
+    // evening run are kept, and the new set avoids their stories.
+    const morning = { date: today, OR: [{ slot: 'morning' }, { slot: null }] };
+    const sent = await prisma.marketObservation.count({ where: { ...morning, sentAt: { not: null } } });
+    await prisma.marketObservation.deleteMany({ where: { ...morning, sentAt: null } });
+    const result = await runMarketDesk(today, { slot: 'morning', maxPosts: Math.max(1, 6 - sent) });
     return NextResponse.json({ ...result, date: today });
   } catch (err) {
     console.error('[observations/generate] unhandled error:', err);

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
-import { runMarketDesk } from '@/lib/observations/run';
+import { pruneOldPosts, runMarketDesk } from '@/lib/observations/run';
 import { sendDeskTranche } from '@/lib/observations/telegram';
 
 export const maxDuration = 60;
@@ -31,7 +31,8 @@ export async function GET(req: Request) {
 
   try {
     if (task === 'generate') {
-      return NextResponse.json({ date: today, morning: await ensureMorning(today) });
+      const pruned = await pruneOldPosts(today).catch(() => 0);
+      return NextResponse.json({ date: today, morning: await ensureMorning(today), pruned });
     }
     if (task === 'send') {
       const tranche = url.searchParams.get('tranche') ?? '1';

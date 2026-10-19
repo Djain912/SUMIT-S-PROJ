@@ -5,6 +5,7 @@
 import path from 'path';
 import { Resvg } from '@resvg/resvg-js';
 import { SANS, SERIF } from './card-svg';
+import { withLogo } from './logo';
 
 const FONT_DIR = path.join(process.cwd(), 'public', 'fonts', 'desk');
 const FONT_FILES = [
@@ -18,7 +19,7 @@ const FONT_FILES = [
 /** Card SVG (1600×900) → PNG at the given width (default 1.5×). */
 export function renderCardPng(svg: string, width = 2400): Buffer {
   // resvg stops at the first unknown family in a list, so name the bundled fonts directly.
-  const direct = svg.split(SERIF).join('Instrument Serif').split(SANS).join('Manrope');
+  const direct = withLogo(svg).split(SERIF).join('Instrument Serif').split(SANS).join('Manrope');
   const resvg = new Resvg(direct, {
     fitTo: { mode: 'width', value: width },
     font: {

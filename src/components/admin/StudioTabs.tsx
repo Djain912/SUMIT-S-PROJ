@@ -4,18 +4,18 @@ import { useState } from 'react';
 import { Instagram, TrendingUp, BarChart2 } from 'lucide-react';
 import { StudioClient } from './StudioClient';
 import { FiiDiiReportClient } from './FiiDiiReportClient';
-import { ObservationsClient, type Obs } from './ObservationsClient';
+import { ObservationsClient, type DeskStatus, type Obs } from './ObservationsClient';
 
 const TABS = [
   { key: 'observations', label: 'Market Desk', icon: BarChart2,
-    desc: 'Six data-backed posts for X every morning: streaks, multi-year extremes, flows, ratios and seasonality, each with a chart card and ready-to-post text.' },
+    desc: 'Data-backed posts for X — breadth, valuations, flows, streaks, extremes, ratios and seasonality — each with a chart card and ready-to-post text, delivered to Telegram at 8:30 AM, 1:00 PM and 9:00 PM IST.' },
   { key: 'content', label: 'Content Studio', icon: Instagram,
     desc: 'Generate the daily carousel, preview it, and download print-ready PNGs. Themes and layouts rotate automatically so the feed never looks repetitive.' },
   { key: 'reports', label: 'Market Reports', icon: TrendingUp,
     desc: 'Weekly and monthly FII/DII cash-flow and sector snapshots, built from real data — nothing here is AI-written.' },
 ] as const;
 
-export function StudioTabs({ logoUrl, initialObs }: { logoUrl?: string; initialObs?: Obs[] }) {
+export function StudioTabs({ logoUrl, initialObs, status }: { logoUrl?: string; initialObs?: Obs[]; status?: DeskStatus }) {
   const [tab, setTab] = useState<(typeof TABS)[number]['key']>('observations');
   const active = TABS.find((t) => t.key === tab)!;
 
@@ -42,7 +42,7 @@ export function StudioTabs({ logoUrl, initialObs }: { logoUrl?: string; initialO
         ))}
       </div>
 
-      {tab === 'observations' && <ObservationsClient initialObs={initialObs ?? []} />}
+      {tab === 'observations' && <ObservationsClient initialObs={initialObs ?? []} status={status} />}
       {tab === 'content' && <StudioClient logoUrl={logoUrl} />}
       {tab === 'reports' && <FiiDiiReportClient />}
     </div>

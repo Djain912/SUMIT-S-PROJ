@@ -82,9 +82,15 @@ export async function runMarketDesk(date: string, opts: { slot?: Slot; maxPosts?
     prisma.breadthDaily.findMany({ orderBy: { date: 'asc' } }).catch(() => []),
     fetchNseData(),
   ]);
-  const breadth = breadthRows.map((r) => ({ ...r, sectors: (r.sectors as BreadthPoint['sectors']) ?? null }));
+  // Never post stale readings: if a feeder job stopped, skip its posts instead of repeating old data.
+  const fresh = (d?: string) => !!d && daysBetween(d, date) <= 5;
+  const breadth = fresh(breadthRows.at(-1)?.date)
+    ? breadthRows.map((r) => ({ ...r, sectors: (r.sectors as BreadthPoint['sectors']) ?? null }))
+    : [];
+  const flowRows = fresh(flows.at(-1)?.date) ? flows : [];
+  if (!breadth.length) console.warn('[market-desk] breadth data stale or missing — skipping breadth posts');
 
-  const candidates = applyNovelty(detectInsights(core, sectors, flows, new Date(), { breadth, nse }), history, date);
+  const candidates = applyNovelty(detectInsights(core, sectors, flowRows, new Date(), { breadth, nse }), history, date);
   const chosen = pickDiverse(candidates, opts.maxPosts);
   const copies = await Promise.all(chosen.map(writeCopy));
 
@@ -112,4 +118,11 @@ export async function runMarketDesk(date: string, opts: { slot?: Slot; maxPosts?
 
   await prisma.$transaction(rows.map((data) => prisma.marketObservation.create({ data })));
   return { count: rows.length, candidates: candidates.length };
+}
+
+/** Keep ~3 months of posts (novelty needs 30 days); older rows only cost storage. */
+export async function pruneOldPosts(today: string) {
+  const cutoff = new Date(Date.parse(today) - 90 * 86400_000).toISOString().slice(0, 10);
+  const { count } = await prisma.marketObservation.deleteMany({ where: { date: { lt: cutoff } } });
+  return count;
 }

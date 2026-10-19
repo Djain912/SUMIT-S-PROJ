@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { StudioTabs } from '@/components/admin/StudioTabs';
 import { prisma } from '@/lib/db/prisma';
+import { withLogo } from '@/lib/observations/logo';
 
 export const metadata: Metadata = {
   title: 'Studio | Admin — Chartix',
@@ -18,9 +19,13 @@ export const dynamic = 'force-dynamic';
 export default async function StudioPage() {
   // Latest Market Desk run (today's, or the most recent one if today's hasn't run).
   const latest = await prisma.marketObservation.findFirst({ orderBy: { date: 'desc' }, select: { date: true } });
-  const observations = latest
-    ? await prisma.marketObservation.findMany({ where: { date: latest.date }, orderBy: { score: 'desc' } })
-    : [];
+  const [rows, breadth, fii] = await Promise.all([
+    latest ? prisma.marketObservation.findMany({ where: { date: latest.date }, orderBy: { score: 'desc' } }) : [],
+    prisma.breadthDaily.findFirst({ orderBy: { date: 'desc' }, select: { date: true } }),
+    prisma.fiiDiiLog.findFirst({ orderBy: { date: 'desc' }, select: { date: true } }),
+  ]);
+  const observations = rows.map((o) => ({ ...o, chartSvg: withLogo(o.chartSvg) }));
+  const status = { breadthDate: breadth?.date ?? null, fiiDate: fii?.date ?? null };
   return (
     <>
       {/* Carousel typography. Self-hosted, SIL Open Font Licence. */}
@@ -35,7 +40,7 @@ export default async function StudioPage() {
         }}
       />
 
-      <StudioTabs logoUrl="/studio-logo.png" initialObs={observations} />
+      <StudioTabs logoUrl="/studio-logo.png" initialObs={observations} status={status} />
     </>
   );
 }
