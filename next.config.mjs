@@ -9,6 +9,8 @@ const nextConfig = {
   // Server-rendered share cards read these from disk.
   outputFileTracingIncludes: {
     '/api/cron/fii-dii-log': ['./public/fonts/reports/**', './public/chartix-wordmark.png'],
+    '/api/cron/market-observations': ['./public/fonts/desk/**'],
+    '/api/admin/observations/telegram': ['./public/fonts/desk/**'],
   },
   images: {
     remotePatterns: [
@@ -19,7 +21,7 @@ const nextConfig = {
     ],
     formats: ['image/avif', 'image/webp'],
   },
-  serverExternalPackages: ['ws', '@neondatabase/serverless', 'pdf-parse'],
+  serverExternalPackages: ['ws', '@neondatabase/serverless', 'pdf-parse', '@resvg/resvg-js'],
   compress: true,
   poweredByHeader: false,
   experimental: {

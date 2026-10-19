@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, Copy, Download, ExternalLink, Loader2, RefreshCw, Sparkles } from 'lucide-react';
+import { Check, Copy, Download, ExternalLink, Loader2, RefreshCw, Send, Sparkles } from 'lucide-react';
 import { X_LIMIT, xLength } from '@/lib/observations/x-length';
 
 export type Obs = {
@@ -144,6 +144,8 @@ function PostCard({ o }: { o: Obs }) {
 export function ObservationsClient({ initialObs }: { initialObs: Obs[] }) {
   const [loading, setLoading] = useState(false);
   const [zipping, setZipping] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sentMsg, setSentMsg] = useState('');
   const [error, setError] = useState('');
   const obs = initialObs;
 
@@ -166,6 +168,22 @@ export function ObservationsClient({ initialObs }: { initialObs: Obs[] }) {
     } catch {
       setError('Network error');
       setLoading(false);
+    }
+  }
+
+  async function sendTelegram() {
+    setSending(true);
+    setError('');
+    setSentMsg('');
+    try {
+      const r = await fetch('/api/admin/observations/telegram', { method: 'POST' });
+      const body = await r.json().catch(() => ({}));
+      if (!r.ok) setError(body?.error ?? `Telegram send failed (HTTP ${r.status})`);
+      else setSentMsg(`Sent ${body.sent} posts to Telegram${body.failed?.length ? ` (${body.failed.length} failed)` : ''}.`);
+    } catch {
+      setError('Network error');
+    } finally {
+      setSending(false);
     }
   }
 
@@ -198,9 +216,15 @@ export function ObservationsClient({ initialObs }: { initialObs: Obs[] }) {
             )}
           </p>
           <p className="mt-0.5 text-xs text-zinc-500">
-            Built from 15 years of market data. Every number is computed and fact-checked, never invented by AI.
+            Built from 15 years of market data. Every number is computed and fact-checked, never invented by AI. Sent to Telegram automatically each morning.
           </p>
         </div>
+        {obs.length > 0 && (
+          <button onClick={sendTelegram} disabled={sending} className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50 disabled:opacity-60">
+            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            Send to Telegram
+          </button>
+        )}
         {obs.length > 0 && (
           <button onClick={downloadAll} disabled={zipping} className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50 disabled:opacity-60">
             {zipping ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
@@ -214,6 +238,7 @@ export function ObservationsClient({ initialObs }: { initialObs: Obs[] }) {
       </div>
 
       {error && <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
+      {sentMsg && <p className="rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{sentMsg}</p>}
 
       <details className="group rounded-xl border border-emerald-100 bg-emerald-50/50 px-4 py-3 text-sm text-emerald-950">
         <summary className="flex cursor-pointer list-none items-center gap-2 font-medium">

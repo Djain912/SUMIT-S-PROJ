@@ -24,8 +24,8 @@ const ACCENT = '#0B5D3B';
 const POS = '#1F7A4D';
 const NEG = '#B3412F';
 
-const SERIF = "StudioSerif, 'Instrument Serif', Georgia, 'Times New Roman', serif";
-const SANS = "StudioSans, Manrope, 'Helvetica Neue', Arial, sans-serif";
+export const SERIF = "StudioSerif, 'Instrument Serif', Georgia, 'Times New Roman', serif";
+export const SANS = "StudioSans, Manrope, 'Helvetica Neue', Arial, sans-serif";
 
 export type LineChart = {
   kind: 'line';

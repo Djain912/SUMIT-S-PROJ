@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 import { runMarketDesk } from '@/lib/observations/run';
+import { sendDeskToTelegram } from '@/lib/observations/telegram';
 
 export const maxDuration = 60;
 
-// Daily Market Desk run (vercel.json: 00:30 UTC = 6:00 AM IST).
+// Daily Market Desk run (vercel.json: 00:30 UTC = 6:00 AM IST), then Telegram delivery.
 export async function GET(req: Request) {
   const auth = req.headers.get('authorization');
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -21,7 +22,9 @@ export async function GET(req: Request) {
 
   try {
     const result = await runMarketDesk(today);
-    return NextResponse.json({ ...result, date: today });
+    // Deliver the morning's posts to Telegram. Never fails the run itself.
+    const telegram = await sendDeskToTelegram(today).catch((e: Error) => ({ error: e.message }));
+    return NextResponse.json({ ...result, date: today, telegram });
   } catch (err) {
     console.error('[cron/market-observations] failed:', err);
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Failed' }, { status: 502 });
