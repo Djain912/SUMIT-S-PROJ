@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { RefreshCw, Download } from 'lucide-react';
+import { Check, Copy, Download, ExternalLink, Loader2, RefreshCw, Sparkles } from 'lucide-react';
+import { X_LIMIT, xLength } from '@/lib/observations/x-length';
 
-type Obs = {
+export type Obs = {
   id: string;
   date: string;
   symbol: string;
@@ -14,12 +15,141 @@ type Obs = {
   sourceLine: string;
   score: number;
   chartType: string;
+  postText: string | null;
+  category: string | null;
+  createdAt: string | Date;
 };
 
+const FIRST_REPLY = 'Daily charts like this, plus free CMT prep tools: chartix.in';
+
+/** Rasterise a card SVG to PNG with the studio fonts baked in. */
+async function svgToPngBlob(svg: string, scale = 2): Promise<Blob> {
+  const { getFontEmbedCss } = await import('@/lib/studio/font-embed');
+  const css = await getFontEmbedCss();
+  const withFonts = svg.replace(/<svg([^>]*)>/, `<svg$1><style>${css}</style>`);
+  const url = URL.createObjectURL(new Blob([withFonts], { type: 'image/svg+xml' }));
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = () => reject(new Error('Could not render the card.'));
+      i.src = url;
+    });
+    const canvas = document.createElement('canvas');
+    canvas.width = 1600 * scale;
+    canvas.height = 900 * scale;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Canvas unavailable.');
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return await new Promise<Blob>((resolve, reject) =>
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('PNG export failed.'))), 'image/png'));
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+function fileName(o: Obs) {
+  const slug = o.metricName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return `chartix-${o.date}-${slug}.png`;
+}
+
+function triggerDownload(blob: Blob, name: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+function PostCard({ o }: { o: Obs }) {
+  const [text, setText] = useState(o.postText ?? o.headline);
+  const [copied, setCopied] = useState<'post' | 'reply' | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const len = xLength(text);
+
+  async function copy(what: 'post' | 'reply') {
+    await navigator.clipboard.writeText(what === 'post' ? text : FIRST_REPLY);
+    setCopied(what);
+    setTimeout(() => setCopied(null), 1500);
+  }
+
+  async function download() {
+    setBusy(true);
+    setErr('');
+    try {
+      triggerDownload(await svgToPngBlob(o.chartSvg), fileName(o));
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Export failed');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <article className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+      <div className="border-b border-zinc-100 bg-[#FAF8F3] [&>svg]:block [&>svg]:h-auto [&>svg]:w-full" dangerouslySetInnerHTML={{ __html: o.chartSvg }} />
+      <div className="space-y-3 p-4">
+        <div className="flex items-center gap-2">
+          <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-800">
+            {o.category ?? o.chartType}
+          </span>
+          <span className="truncate text-xs text-zinc-500">{o.metricName}</span>
+          <span className="ml-auto text-[11px] tabular-nums text-zinc-400" title="Newsworthiness score">score {Math.round(o.score)}</span>
+        </div>
+
+        <div>
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rows={5}
+            aria-label="Post text"
+            className="w-full resize-y rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm leading-6 text-zinc-800 focus:border-zinc-400 focus:bg-white focus:outline-none"
+          />
+          <div className="mt-1 flex justify-end">
+            <span className={`text-[11px] tabular-nums ${len > X_LIMIT ? 'font-semibold text-red-600' : 'text-zinc-400'}`}>
+              {len} / {X_LIMIT}
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2">
+          <button onClick={() => copy('post')} className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-zinc-900 py-2 text-xs font-semibold text-white hover:bg-zinc-800">
+            {copied === 'post' ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+            {copied === 'post' ? 'Copied' : 'Copy post'}
+          </button>
+          <button onClick={download} disabled={busy} className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-zinc-200 py-2 text-xs font-semibold text-zinc-800 hover:bg-zinc-50 disabled:opacity-60">
+            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+            PNG
+          </button>
+          <a
+            href={`https://x.com/intent/post?text=${encodeURIComponent(text)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-zinc-200 py-2 text-xs font-semibold text-zinc-800 hover:bg-zinc-50"
+          >
+            <ExternalLink className="h-3.5 w-3.5" /> Open in X
+          </a>
+        </div>
+        <button onClick={() => copy('reply')} className="text-[11px] text-zinc-500 underline decoration-zinc-300 underline-offset-2 hover:text-zinc-800">
+          {copied === 'reply' ? 'Copied — paste it as the first reply' : 'Copy first reply (link goes here, not in the post)'}
+        </button>
+        {err && <p className="text-xs text-red-600">{err}</p>}
+      </div>
+    </article>
+  );
+}
+
 export function ObservationsClient({ initialObs }: { initialObs: Obs[] }) {
-  const [obs] = useState<Obs[]>(initialObs);
   const [loading, setLoading] = useState(false);
+  const [zipping, setZipping] = useState(false);
   const [error, setError] = useState('');
+  const obs = initialObs;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const date = obs[0]?.date;
+  const generatedAt = obs[0] ? new Date(obs[0].createdAt).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' }) : '';
 
   async function generate() {
     setLoading(true);
@@ -32,7 +162,6 @@ export function ObservationsClient({ initialObs }: { initialObs: Obs[] }) {
         setLoading(false);
         return;
       }
-      // Reload page to get fresh data
       window.location.reload();
     } catch {
       setError('Network error');
@@ -40,79 +169,73 @@ export function ObservationsClient({ initialObs }: { initialObs: Obs[] }) {
     }
   }
 
-  function downloadSvg(o: Obs) {
-    const blob = new Blob([o.chartSvg], { type: 'image/svg+xml' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `observation-${o.symbol}-${o.date}.svg`;
-    a.click();
-    URL.revokeObjectURL(url);
+  async function downloadAll() {
+    setZipping(true);
+    setError('');
+    try {
+      for (const o of obs) {
+        triggerDownload(await svgToPngBlob(o.chartSvg), fileName(o));
+        await new Promise((r) => setTimeout(r, 400));
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Export failed');
+    } finally {
+      setZipping(false);
+    }
   }
 
-  const today = new Date().toISOString().slice(0, 10);
-  const isToday = obs.length > 0 && obs[0].date === today;
-
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-zinc-500">
-            {obs.length > 0
-              ? `${obs.length} posts ready · ${isToday ? 'Generated today' : `Last: ${obs[0]?.date}`}`
-              : 'No posts yet — click Generate'}
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="mr-auto">
+          <p className="text-sm font-medium text-zinc-900">
+            {obs.length > 0 ? `${obs.length} posts ready` : 'No posts yet'}
+            {date && (
+              <span className="font-normal text-zinc-500">
+                {' · '}
+                {date === today ? `generated today, ${generatedAt} IST` : `from ${date} — today's run hasn't happened yet`}
+              </span>
+            )}
+          </p>
+          <p className="mt-0.5 text-xs text-zinc-500">
+            Built from 15 years of market data. Every number is computed and fact-checked, never invented by AI.
           </p>
         </div>
-        <button
-          onClick={generate}
-          disabled={loading}
-          className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60"
-        >
+        {obs.length > 0 && (
+          <button onClick={downloadAll} disabled={zipping} className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50 disabled:opacity-60">
+            {zipping ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            All PNGs
+          </button>
+        )}
+        <button onClick={generate} disabled={loading} className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60">
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          {loading ? 'Generating…' : "Generate Today's Posts"}
+          {loading ? 'Reading the markets…' : obs.length ? 'Regenerate' : "Generate today's desk"}
         </button>
       </div>
 
       {error && <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
 
+      <details className="group rounded-xl border border-emerald-100 bg-emerald-50/50 px-4 py-3 text-sm text-emerald-950">
+        <summary className="flex cursor-pointer list-none items-center gap-2 font-medium">
+          <Sparkles className="h-4 w-4 text-emerald-700" /> How to grow on X with these
+          <span className="ml-auto text-xs font-normal text-emerald-700 group-open:hidden">show</span>
+        </summary>
+        <ul className="mt-2 list-disc space-y-1 pl-5 text-[13px] leading-6 text-emerald-900">
+          <li>Post 2–3 a day, not all six at once: around 8:30 AM, 1 PM and 7 PM IST. Top-scored posts first.</li>
+          <li>Always attach the PNG. Posts with a chart get far more reach than text alone.</li>
+          <li>Keep links out of the post itself. Paste the &ldquo;first reply&rdquo; with chartix.in under your own post.</li>
+          <li>Reply to every comment in the first hour, and quote-post big accounts when a card adds context to their take.</li>
+          <li>Pin your best-performing card each week. Consistency (daily, same look) is what builds a following.</li>
+        </ul>
+      </details>
+
       {obs.length === 0 ? (
         <div className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50 py-16 text-center">
-          <p className="text-sm text-zinc-400">No observations yet. Click &quot;Generate&quot; to create today&apos;s posts.</p>
+          <p className="text-sm text-zinc-500">No posts yet. Click &ldquo;Generate today&apos;s desk&rdquo;. It takes about 20 seconds.</p>
         </div>
       ) : (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {obs.map((o) => (
-            <div key={o.id} className="group overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
-              {/* SVG preview */}
-              <div
-                className="aspect-video w-full bg-white"
-                dangerouslySetInnerHTML={{ __html: o.chartSvg }}
-              />
-
-              {/* Info */}
-              <div className="p-4">
-                <div className="mb-1 flex items-center gap-2">
-                  <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
-                    {o.metricName}
-                  </span>
-                  <span className="ml-auto text-[10px] text-zinc-400">score {Math.round(o.score)}</span>
-                </div>
-                <p className="text-sm font-semibold leading-snug text-zinc-900">{o.headline}</p>
-                {o.subtext && (
-                  <p className="mt-1 text-xs text-zinc-500 line-clamp-2">{o.subtext}</p>
-                )}
-                <p className="mt-2 text-[10px] text-zinc-400">Source: {o.sourceLine}</p>
-
-                <button
-                  onClick={() => downloadSvg(o)}
-                  className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-zinc-200 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
-                >
-                  <Download className="h-3.5 w-3.5" />
-                  Download SVG
-                </button>
-              </div>
-            </div>
-          ))}
+        <div className="grid gap-6 xl:grid-cols-2">
+          {obs.map((o) => <PostCard key={o.id} o={o} />)}
         </div>
       )}
     </div>

@@ -4,24 +4,11 @@ import { useState } from 'react';
 import { Instagram, TrendingUp, BarChart2 } from 'lucide-react';
 import { StudioClient } from './StudioClient';
 import { FiiDiiReportClient } from './FiiDiiReportClient';
-import { ObservationsClient } from './ObservationsClient';
-
-type Obs = {
-  id: string;
-  date: string;
-  symbol: string;
-  metricName: string;
-  headline: string;
-  subtext: string | null;
-  chartSvg: string;
-  sourceLine: string;
-  score: number;
-  chartType: string;
-};
+import { ObservationsClient, type Obs } from './ObservationsClient';
 
 const TABS = [
-  { key: 'observations', label: 'Market Observations', icon: BarChart2,
-    desc: 'Daily auto-generated market observation posts — 52-week highs/lows, big moves, cross-asset returns — ready to download and post to Twitter/Instagram.' },
+  { key: 'observations', label: 'Market Desk', icon: BarChart2,
+    desc: 'Six data-backed posts for X every morning: streaks, multi-year extremes, flows, ratios and seasonality, each with a chart card and ready-to-post text.' },
   { key: 'content', label: 'Content Studio', icon: Instagram,
     desc: 'Generate the daily carousel, preview it, and download print-ready PNGs. Themes and layouts rotate automatically so the feed never looks repetitive.' },
   { key: 'reports', label: 'Market Reports', icon: TrendingUp,

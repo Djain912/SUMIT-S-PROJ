@@ -686,10 +686,14 @@ model MarketObservation {
   chartType   String   // "line" | "bar" | "hbar"
   currentVal  Float
   contextNote String   @db.Text  // internal context used to generate headline
+  postText    String?  @db.Text  // ready-to-post X text (fact-checked)
+  insightKey  String?            // novelty key, e.g. "streak:^NSEI:-1" — avoids repeating a story
+  category    String?            // insight family: streak | move | ratio | flows | …
   createdAt   DateTime @default(now())
 
   @@index([date])
   @@index([score])
+  @@index([insightKey])
 }
 
 // ── Candidate feedback on prep materials (CMT Prep Provider guideline #5) ──

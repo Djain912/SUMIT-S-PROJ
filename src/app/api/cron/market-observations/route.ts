@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
-import { fetchAllSeries } from '@/lib/observations/fetch-market-data';
-import { detectObservations } from '@/lib/observations/detect-observations';
-import { polishAllHeadlines } from '@/lib/observations/generate-headlines';
+import { runMarketDesk } from '@/lib/observations/run';
 
 export const maxDuration = 60;
 
+// Daily Market Desk run (vercel.json: 00:30 UTC = 6:00 AM IST).
 export async function GET(req: Request) {
   const auth = req.headers.get('authorization');
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -20,33 +19,11 @@ export async function GET(req: Request) {
     return NextResponse.json({ skipped: true, date: today, existing });
   }
 
-  const series = await fetchAllSeries();
-  if (!series.length) {
-    return NextResponse.json({ error: 'No market data' }, { status: 502 });
+  try {
+    const result = await runMarketDesk(today);
+    return NextResponse.json({ ...result, date: today });
+  } catch (err) {
+    console.error('[cron/market-observations] failed:', err);
+    return NextResponse.json({ error: err instanceof Error ? err.message : 'Failed' }, { status: 502 });
   }
-
-  const raw = detectObservations(series);
-  const observations = await polishAllHeadlines(raw);
-
-  const rows = await prisma.$transaction(
-    observations.map((o) =>
-      prisma.marketObservation.create({
-        data: {
-          date: today,
-          symbol: o.symbol,
-          metricName: o.metricName,
-          headline: o.headline,
-          subtext: o.subtext ?? '',
-          chartSvg: o.chartSvg,
-          sourceLine: o.sourceLine,
-          score: o.score,
-          chartType: o.chartType,
-          currentVal: o.currentVal,
-          contextNote: o.contextNote,
-        },
-      }),
-    ),
-  );
-
-  return NextResponse.json({ count: rows.length, date: today });
 }

@@ -10,16 +10,17 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 /**
- * Social Studio — generates the daily Instagram / LinkedIn carousel.
+ * Social Studio — the daily Market Desk posts for X, the Instagram / LinkedIn
+ * carousel, and FII/DII reports.
  * Access is already restricted: every page under (dashboard)/admin runs
  * requireAdminUser() in the admin layout.
  */
 export default async function StudioPage() {
-  const today = new Date().toISOString().slice(0, 10);
-  const observations = await prisma.marketObservation.findMany({
-    where: { date: today },
-    orderBy: { score: 'desc' },
-  });
+  // Latest Market Desk run (today's, or the most recent one if today's hasn't run).
+  const latest = await prisma.marketObservation.findFirst({ orderBy: { date: 'desc' }, select: { date: true } });
+  const observations = latest
+    ? await prisma.marketObservation.findMany({ where: { date: latest.date }, orderBy: { score: 'desc' } })
+    : [];
   return (
     <>
       {/* Carousel typography. Self-hosted, SIL Open Font Licence. */}
