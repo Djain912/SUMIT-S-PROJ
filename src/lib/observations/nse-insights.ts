@@ -48,21 +48,6 @@ const HEAVYWEIGHTS: [string, string][] = [
 ];
 const HEAVY_NAME = new Map(HEAVYWEIGHTS);
 
-/** Pull a number from a tool response whose key matches all the given fragments. */
-function pickNum(obj: unknown, ...frags: string[]): number | null {
-  const stack: unknown[] = [obj];
-  while (stack.length) {
-    const o = stack.pop();
-    if (!o || typeof o !== 'object') continue;
-    for (const [k, v] of Object.entries(o as Record<string, unknown>)) {
-      const key = k.toLowerCase();
-      if (typeof v === 'number' && frags.every((f) => key.includes(f))) return v;
-      if (v && typeof v === 'object') stack.push(v);
-    }
-  }
-  return null;
-}
-
 /** Fetch everything the NSE insights need. Never throws — a failure just means fewer posts. */
 export async function fetchNseData(): Promise<NseData> {
   const out: NseData = { valuations: [], movers: null, weekMovers: null, sectors: null, mood: null, heavyweights: [] };
@@ -88,13 +73,13 @@ export async function fetchNseData(): Promise<NseData> {
   out.mood = mood;
   const ok = sectorParts.filter((c): c is Compared => !!c?.indices);
   if (ok.length) out.sectors = { ...ok[0], indices: ok.flatMap((c) => c.indices) };
+  // get_stock_vs_index: { date, stock: { return_pct }, index: { return_pct }, outperformance_pct_points }
   out.heavyweights = rel.flatMap((r, i) => {
-    if (!r) return [];
-    const stockReturn = pickNum(r, 'stock', 'return');
-    const indexReturn = pickNum(r, 'index', 'return');
-    const outperf = pickNum(r, 'outperform') ?? (stockReturn != null && indexReturn != null ? stockReturn - indexReturn : null);
-    if (stockReturn == null || indexReturn == null || outperf == null) return [];
-    return [{ symbol: HEAVYWEIGHTS[i][0], stockReturn, indexReturn, outperformance: outperf, date: String(r.date ?? '') }];
+    const stockReturn = (r?.stock as { return_pct?: number } | undefined)?.return_pct;
+    const indexReturn = (r?.index as { return_pct?: number } | undefined)?.return_pct;
+    if (typeof stockReturn !== 'number' || typeof indexReturn !== 'number') return [];
+    const outperf = typeof r?.outperformance_pct_points === 'number' ? r.outperformance_pct_points : stockReturn - indexReturn;
+    return [{ symbol: HEAVYWEIGHTS[i][0], stockReturn, indexReturn, outperformance: outperf, date: String(r?.date ?? '') }];
   });
   console.log(`[market-desk] NSE MCP: ${out.valuations.length} valuations, movers ${!!out.movers}/${!!out.weekMovers}, sectors ${out.sectors?.indices.length ?? 0}, vix ${!!out.mood?.india_vix}, heavyweights ${out.heavyweights.length}`);
   return out;
