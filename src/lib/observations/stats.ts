@@ -148,12 +148,18 @@ export function fmtValue(v: number, unit: Unit): string {
       return v.toFixed(2) + '%';
     case 'ratio':
       return v.toFixed(v < 10 ? 2 : 1);
+    case 'pct':
+      return v.toFixed(1) + '%';
+    case 'count':
+      return Math.round(v).toLocaleString('en-IN');
   }
 }
 
 /** Compact axis label. `step` (the tick spacing) keeps decimals consistent across an axis. */
 export function fmtAxis(v: number, unit: Unit, step?: number): string {
   if (Math.abs(v) < 1e-9) v = 0;
+  if (unit === 'pct') return v.toFixed(0) + '%';
+  if (unit === 'count') return Math.round(v).toLocaleString('en-IN');
   if (step != null && step < 1000 && unit !== 'yield' && unit !== 'index-in' && unit !== 'index-us') {
     const dec = step >= 1 ? 0 : step >= 0.1 ? 1 : 2;
     const prefix = unit === 'usd' ? '$' : unit === 'inr' ? '₹' : '';

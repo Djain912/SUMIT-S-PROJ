@@ -7,12 +7,19 @@ import { fetchMarketData } from './fetch-market-data';
 import { detectInsights, GROUP, type Category, type Insight } from './insights';
 import { renderCard } from './card-svg';
 import { writeCopy } from './write-copy';
+import { fetchNseData } from './nse-insights';
+import type { BreadthPoint } from './breadth-insights';
 
 const MAX_POSTS = 6;
 const MAX_PER_CATEGORY = 2;
+// Groups whose stories overlap too much to run twice on one day.
+const SINGLE_GROUPS = new Set(['india-sectors']);
 
 // How long a story stays "already told". Weekly-style posts get a longer rest.
-const REST_DAYS: Partial<Record<Category, number>> = { seasonality: 20, sectors: 6, scoreboard: 6, drawdown: 10, ratio: 7 };
+const REST_DAYS: Partial<Record<Category, number>> = {
+  seasonality: 20, sectors: 6, scoreboard: 6, drawdown: 10, ratio: 7,
+  'sector-breadth': 6, valuation: 7, 'index-movers': 6, divergence: 5,
+};
 
 function daysBetween(a: string, b: string) {
   return Math.round((Date.parse(b) - Date.parse(a)) / 86400_000);
@@ -47,7 +54,7 @@ export function pickDiverse(insights: Insight[]): Insight[] {
     const group = GROUP[ins.symbol] ?? ins.symbol;
     if (symbols.has(ins.symbol)) continue;
     if (groupCat.has(`${group}|${ins.category}`)) continue;     // S&P and Nasdaq crash = one story
-    if ((perGroup.get(group) ?? 0) >= 2) continue;
+    if ((perGroup.get(group) ?? 0) >= (SINGLE_GROUPS.has(group) ? 1 : 2)) continue;
     if ((perCat.get(ins.category) ?? 0) >= MAX_PER_CATEGORY) continue;
     if (ins.score < 40 && picked.length >= 4) break;
     picked.push(ins);
@@ -64,12 +71,15 @@ export async function runMarketDesk(date: string) {
   if (core.length < 8) throw new Error(`Only ${core.length} market series loaded — Yahoo Finance may be blocking this server.`);
 
   const since = new Date(Date.parse(date) - 30 * 86400_000).toISOString().slice(0, 10);
-  const [flows, history] = await Promise.all([
+  const [flows, history, breadthRows, nse] = await Promise.all([
     prisma.fiiDiiLog.findMany({ orderBy: { date: 'asc' }, select: { date: true, fiiNet: true, diiNet: true } }).catch(() => []),
     prisma.marketObservation.findMany({ where: { date: { gte: since, lt: date } }, select: { date: true, insightKey: true } }),
+    prisma.breadthDaily.findMany({ orderBy: { date: 'asc' } }).catch(() => []),
+    fetchNseData(),
   ]);
+  const breadth = breadthRows.map((r) => ({ ...r, sectors: (r.sectors as BreadthPoint['sectors']) ?? null }));
 
-  const candidates = applyNovelty(detectInsights(core, sectors, flows), history, date);
+  const candidates = applyNovelty(detectInsights(core, sectors, flows, new Date(), { breadth, nse }), history, date);
   const chosen = pickDiverse(candidates);
   const copies = await Promise.all(chosen.map(writeCopy));
 

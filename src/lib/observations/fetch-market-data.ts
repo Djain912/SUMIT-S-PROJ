@@ -14,7 +14,9 @@ export type Unit =
   | 'inr'       // rupee price: ₹94.92
   | 'level'     // plain level, no currency: VIX 18.4, DXY 101.8
   | 'yield'     // percent level: 4.21%
-  | 'ratio';    // ratio: 72.6
+  | 'ratio'     // ratio: 72.6
+  | 'pct'       // share of a whole, 0–100: 18.4%
+  | 'count';    // whole number: 142
 
 export type Region = 'india' | 'global';
 

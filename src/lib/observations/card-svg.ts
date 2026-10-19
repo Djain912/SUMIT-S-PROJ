@@ -41,7 +41,7 @@ export type LineChart = {
 export type BarChart = {
   kind: 'bars';
   items: { label: string; value: number }[];
-  format: 'pct' | 'crore';
+  format: 'pct' | 'crore' | 'share';
   avg?: { value: number; label: string };
   emphasizeLast?: boolean;
 };
@@ -49,7 +49,7 @@ export type BarChart = {
 export type HBarChart = {
   kind: 'hbars';
   items: { label: string; value: number }[];
-  format: 'pct';
+  format: 'pct' | 'share';  // share: 0–100 readings, coloured by above/below 50
   caption?: string;
 };
 
@@ -95,8 +95,9 @@ function wrap(text: string, maxWidth: number, size: number, em: number): string[
   return lines;
 }
 
-function fmtBarValue(v: number, format: 'pct' | 'crore') {
+function fmtBarValue(v: number, format: 'pct' | 'crore' | 'share') {
   if (format === 'pct') return fmtPct(v, 1);
+  if (format === 'share') return `${v.toFixed(0)}%`;
   const a = Math.abs(v);
   const s = a >= 1000 ? `${(a / 1000).toFixed(1)}K` : a.toFixed(0);
   return `${v < 0 ? '−' : v > 0 ? '+' : ''}₹${s} cr`;
@@ -142,8 +143,10 @@ function lineChart(c: LineChart, box: Box): string {
   const span = maxV - minV || Math.abs(maxV) * 0.05 || 1;
   // Round tick values (1, 2, 2.5, 5 × 10ⁿ) read far better than arbitrary ones.
   const step = niceStep(span * 1.12, 4);
-  const lo = Math.floor((minV - span * 0.04) / step) * step;
-  const hi = Math.ceil((maxV + span * 0.08) / step) * step;
+  let lo = Math.floor((minV - span * 0.04) / step) * step;
+  let hi = Math.ceil((maxV + span * 0.08) / step) * step;
+  if (c.unit === 'pct') { lo = Math.max(lo, 0); hi = Math.min(hi, 100); } // shares live in 0–100
+  if (c.unit === 'count') lo = Math.max(lo, 0);
 
   const X = (i: number) => x0 + (n <= 1 ? 0 : (i / (n - 1)) * plotW);
   const Y = (v: number) => y0 + h - ((v - lo) / (hi - lo)) * h;
@@ -316,7 +319,7 @@ function hbarChart(c: HBarChart, box: Box): string {
     const cy = box.y + rowH * i + rowH / 2;
     const len = Math.max(3, Math.abs(it.value) * scale);
     const x = it.value >= 0 ? zeroX : zeroX - len;
-    const fill = it.value >= 0 ? POS : NEG;
+    const fill = c.format === 'share' ? (it.value >= 50 ? POS : NEG) : it.value >= 0 ? POS : NEG;
     parts.push(`<text x="${box.x}" y="${(cy + 7).toFixed(1)}" font-family="${SANS}" font-size="20" font-weight="600" fill="${INK}">${esc(it.label)}</text>`);
     parts.push(`<rect x="${x.toFixed(1)}" y="${(cy - barH / 2).toFixed(1)}" width="${len.toFixed(1)}" height="${barH.toFixed(1)}" rx="3" fill="${fill}" fill-opacity="0.9"/>`);
     const vx = it.value >= 0 ? x + len + 12 : x - 12;

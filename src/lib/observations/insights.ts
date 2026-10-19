@@ -5,6 +5,8 @@
 
 import type { Series, Unit } from './fetch-market-data';
 import type { CardSpec, ChartSpec } from './card-svg';
+import { detectBreadthInsights, type BreadthPoint } from './breadth-insights';
+import { detectNseInsights, nseSectorRows, type NseData } from './nse-insights';
 import {
   back, currentStreak, dailyReturns, fmtDay, fmtMonthYear, fmtPct, fmtValue, forwardStudy,
   lastIdxOfYearBefore, lastIndexWhere, median, monthName, pct, percentileRank, sma, stdev,
@@ -13,7 +15,8 @@ import {
 
 export type Category =
   | 'streak' | 'move' | 'extreme' | 'cross' | 'stretch' | 'drawdown'
-  | 'ratio' | 'seasonality' | 'sectors' | 'scoreboard' | 'flows';
+  | 'ratio' | 'seasonality' | 'sectors' | 'scoreboard' | 'flows'
+  | 'breadth' | 'divergence' | 'sector-breadth' | 'valuation' | 'index-movers';
 
 export type Insight = {
   key: string;          // novelty key — the same key won't lead again for a few days
@@ -39,6 +42,9 @@ export const GROUP: Record<string, string> = {
   '^NSEI': 'india-equity', '^NSEBANK': 'india-equity', '^NSEMDCP50': 'india-equity', '^CNXIT': 'india-equity', '^CNXPHARMA': 'india-equity',
   '^GSPC': 'us-equity', '^IXIC': 'us-equity',
   'GC=F': 'precious', 'SI=F': 'precious',
+  'breadth:above200': 'breadth', 'breadth:above50': 'breadth', 'breadth:golden': 'breadth', 'breadth:newlows': 'breadth',
+  'breadth:newhighs': 'breadth', 'breadth:advshare': 'breadth', 'breadth:mcclellan': 'breadth', 'breadth:divergence': 'breadth',
+  'breadth:sectors': 'breadth', sectors: 'india-sectors', 'nse-indices': 'india-sectors',
 };
 
 // Equity indices — where "higher a month later" studies make sense.
@@ -49,7 +55,7 @@ const last = <T,>(a: T[]) => a[a.length - 1];
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`;
 const sinceYear = (s: Series) => s.dates[0].slice(0, 4);
 
-function lineCard(
+export function lineCard(
   s: { dates: string[]; values: number[]; unit: Unit }, from: number,
   extra: Partial<Extract<ChartSpec, { kind: 'line' }>> = {},
 ): ChartSpec {
@@ -589,21 +595,32 @@ function seasonalityInsight(s: Series, now: Date): Insight | null {
 
 // ── 9. Sector scoreboard ────────────────────────────────────────────────────
 
-function sectorInsight(sectors: Series[], now: Date): Insight | null {
+type SectorRows = { rows: { label: string; m1: number; w1?: number }[]; asOf: string; source: string; basis: string };
+
+function etfSectorRows(sectors: Series[]): SectorRows | null {
   if (sectors.length < 6) return null;
-  const rows = sectors
-    .map((s) => ({ label: s.short, m1: pct(back(s.closes, 21), last(s.closes)), w1: pct(back(s.closes, 5), last(s.closes)) }))
-    .sort((a, b) => b.m1 - a.m1);
+  return {
+    rows: sectors.map((s) => ({ label: s.short, m1: pct(back(s.closes, 21), last(s.closes)), w1: pct(back(s.closes, 5), last(s.closes)) })),
+    asOf: sectors.map((s) => last(s.dates)).sort().pop()!,
+    source: 'NSE sector ETFs via Yahoo Finance',
+    basis: 'NSE sector ETFs',
+  };
+}
+
+function sectorInsight(data: SectorRows | null, now: Date): Insight | null {
+  if (!data || data.rows.length < 6) return null;
+  const rows = [...data.rows].sort((a, b) => b.m1 - a.m1);
   const top = rows[0];
   const bottom = last(rows);
   const spread = top.m1 - bottom.m1;
   const weekend = [0, 1, 6].includes(now.getUTCDay());
-  const asOf = sectors.map((s) => last(s.dates)).sort().pop()!;
   const facts = [
-    `Over the past month, ${top.label} was the best-performing Indian sector (${fmtPct(top.m1)}) and ${bottom.label} the weakest (${fmtPct(bottom.m1)}), based on NSE sector ETFs.`,
+    `Over the past month, ${top.label} was the best-performing Indian sector (${fmtPct(top.m1)}) and ${bottom.label} the weakest (${fmtPct(bottom.m1)}), based on ${data.basis}.`,
     `Spread between the best and worst sector: ${spread.toFixed(1)} percentage points.`,
-    `Past week: ${rows.slice().sort((a, b) => b.w1 - a.w1).slice(0, 3).map((r) => `${r.label} ${fmtPct(r.w1)}`).join(', ')} led.`,
   ];
+  if (rows.every((r) => r.w1 != null)) {
+    facts.push(`Past week: ${rows.slice().sort((a, b) => (b.w1 ?? 0) - (a.w1 ?? 0)).slice(0, 3).map((r) => `${r.label} ${fmtPct(r.w1 ?? 0)}`).join(', ')} led.`);
+  }
   return {
     key: 'sectors:india',
     category: 'sectors',
@@ -614,10 +631,10 @@ function sectorInsight(sectors: Series[], now: Date): Insight | null {
     card: {
       kicker: 'Sector scoreboard · India',
       headline: `${top.label} leads Indian sectors over the past month; ${bottom.label} lags`,
-      subtitle: `One-month total price return of NSE sector ETFs. Spread: ${spread.toFixed(1)} percentage points.`,
+      subtitle: `One-month price return of ${data.basis}. Spread: ${spread.toFixed(1)} percentage points.`,
       chart: { kind: 'hbars', items: rows.map((r) => ({ label: r.label, value: r.m1 })), format: 'pct' },
-      source: 'NSE sector ETFs via Yahoo Finance',
-      asOf: fmtDay(asOf),
+      source: data.source,
+      asOf: fmtDay(data.asOf),
     },
   };
 }
@@ -772,7 +789,9 @@ function flowsInsight(rows: FlowRow[]): Insight | null {
 
 // ── entry point ─────────────────────────────────────────────────────────────
 
-export function detectInsights(core: Series[], sectors: Series[], flows: FlowRow[], now = new Date()): Insight[] {
+export type ExtraData = { breadth?: BreadthPoint[]; nse?: NseData };
+
+export function detectInsights(core: Series[], sectors: Series[], flows: FlowRow[], now = new Date(), extra: ExtraData = {}): Insight[] {
   const all = new Map(core.map((s) => [s.symbol, s]));
   const out: Insight[] = [];
   const push = (i: Insight | null) => { if (i) out.push(i); };
@@ -794,14 +813,22 @@ export function detectInsights(core: Series[], sectors: Series[], flows: FlowRow
     const s = all.get(sym);
     if (s) push(seasonalityInsight(s, now));
   }
-  push(sectorInsight(sectors, now));
+  // Real Nifty sector indices from NSE when available; ETF proxies otherwise.
+  const nseSectors = extra.nse ? nseSectorRows(extra.nse) : null;
+  push(sectorInsight(
+    nseSectors ? { ...nseSectors, source: 'NSE (via NSE MCP)', basis: 'Nifty sector indices' } : etfSectorRows(sectors),
+    now,
+  ));
+  if (extra.nse) out.push(...detectNseInsights(extra.nse, now));
+  if (extra.breadth) out.push(...detectBreadthInsights(extra.breadth, all.get('^NSEI'), now));
   push(scoreboardInsight(all, now));
   push(flowsInsight(flows));
 
   // Indian audience first: small nudge for India-focused posts.
   for (const i of out) {
     const s = all.get(i.symbol);
-    if ((s && s.region === 'india') || ['flows', 'sectors', 'scoreboard'].includes(i.category) || i.symbol.includes('nifty')) i.score += 5;
+    const indiaCats = ['flows', 'sectors', 'scoreboard', 'breadth', 'divergence', 'sector-breadth', 'valuation', 'index-movers'];
+    if ((s && s.region === 'india') || indiaCats.includes(i.category) || i.symbol.includes('nifty')) i.score += 5;
   }
   return out.sort((a, b) => b.score - a.score);
 }

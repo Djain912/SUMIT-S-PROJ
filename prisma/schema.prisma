@@ -696,6 +696,41 @@ model MarketObservation {
   @@index([insightKey])
 }
 
+// ── Market breadth (Market Desk) ────────────────────────────────────────────
+// Daily closes for Nifty 500 stocks, loaded from NSE bhavcopy files. prevClose
+// is NSE's corporate-action-adjusted previous close, used to back-adjust for
+// splits and bonuses when computing moving averages.
+model StockDaily {
+  symbol    String
+  date      String   // YYYY-MM-DD
+  close     Float
+  prevClose Float
+
+  @@id([symbol, date])
+  @@index([date])
+}
+
+// One row per trading day of Nifty 500 breadth readings.
+model BreadthDaily {
+  date        String   @id      // YYYY-MM-DD
+  stocks      Int               // stocks with a close that day
+  advances    Int
+  declines    Int
+  unchanged   Int
+  pctAbove20  Float?            // % of stocks above their 20-day average
+  pctAbove50  Float?
+  pctAbove200 Float?
+  pctGolden   Float?            // % with 50-day average above 200-day
+  newHighs    Int?              // 52-week closing highs
+  newLows     Int?
+  adLine      Float             // cumulative advances − declines
+  ema19       Float             // McClellan components (EMAs of A − D)
+  ema39       Float
+  mcclellan   Float             // ema19 − ema39
+  sectors     Json?             // [{ name, stocks, pctAbove200, pctAbove50 }]
+  createdAt   DateTime @default(now())
+}
+
 // ── Candidate feedback on prep materials (CMT Prep Provider guideline #5) ──
 // Structured feedback the CMT Association can request results from.
 model CandidateFeedback {
