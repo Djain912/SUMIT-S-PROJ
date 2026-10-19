@@ -359,9 +359,17 @@ function stretchInsight(s: Series): Insight | null {
   for (let i = 201; i < n - 1; i++) if ((below ? d[i] <= today : d[i] >= today) && !(below ? d[i - 1] <= today : d[i - 1] >= today)) triggers.push(i);
   const st = forwardStudy(c, s.dates, triggers, 63, 40);
 
+  // Extra context so the post's second line carries new information.
+  const yr = c.slice(-252);
+  const extIdx = n - yr.length + (below ? yr.indexOf(Math.max(...yr)) : yr.indexOf(Math.min(...yr)));
+  const fromExt = pct(c[extIdx], last(c));
+  const chg3m = pct(back(c, 63), last(c));
+  const extLine = `${s.name} closed at ${fmtV(s, last(c))}, ${fmtPct(Math.abs(fromExt), 1, false)} ${below ? 'below' : 'above'} its 52-week ${below ? 'high' : 'low'} of ${fmtV(s, c[extIdx])} (${fmtMonthYear(s.dates[extIdx])}).`;
   const facts = [
-    `${s.name} is ${fmtPct(Math.abs(today), 1, false)} ${below ? 'below' : 'above'} its 200-day moving average.`,
+    `${s.name} is ${fmtPct(Math.abs(today), 1, false)} ${below ? 'below' : 'above'} its 200-day moving average of ${fmtV(s, m[n - 1])}.`,
     since ? `That is the widest gap ${below ? 'below' : 'above'} the average since ${since}.` : `Readings this stretched occur less than ${below ? Math.max(1, Math.round(p)) : Math.max(1, Math.round(100 - p))}% of the time since ${sinceYear(s)}.`,
+    extLine,
+    `Over the past three months, ${s.name} is ${fmtPct(chg3m)}.`,
   ];
   let keyStat: CardSpec['keyStat'] = { value: fmtPct(today), label: 'distance from the 200-day moving average' };
   if (st.n >= 6) {
@@ -370,8 +378,10 @@ function stretchInsight(s: Series): Insight | null {
   }
   const tweet = [
     `${s.name} is now ${fmtPct(Math.abs(today), 1, false)} ${below ? 'below' : 'above'} its 200-day average${since ? ` — the most stretched since ${since}` : ''}.`,
-    st.n >= 6 ? `In the ${st.n} previous episodes since ${sinceYear(s)}, it was higher 3 months later ${st.up} times (median ${fmtPct(st.median)}).` : '',
-  ].filter(Boolean).join('\n\n');
+    st.n >= 6
+      ? `In the ${st.n} previous episodes since ${sinceYear(s)}, it was higher 3 months later ${st.up} times (median ${fmtPct(st.median)}).`
+      : `It's ${fmtPct(Math.abs(fromExt), 1, false)} ${below ? 'below' : 'above'} its 52-week ${below ? 'high' : 'low'} of ${fmtV(s, c[extIdx])} from ${fmtMonthYear(s.dates[extIdx])}, and ${fmtPct(chg3m)} over three months.`,
+  ].join('\n\n');
 
   return {
     key: `stretch:${s.symbol}:${below ? 'below' : 'above'}`,

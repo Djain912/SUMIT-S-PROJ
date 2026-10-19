@@ -19,7 +19,7 @@ Hard rules:
 
 Return JSON: {"headline": string, "tweet": string}
 - headline: sentence case, at most 80 characters, MUST contain the key number. Shown large on the chart image.
-- tweet: at most 230 characters, two short paragraphs separated by a blank line. Paragraph 1: the striking fact with its number. Paragraph 2: the single most interesting piece of historical context from FACTS.
+- tweet: at most 230 characters, two short paragraphs separated by a blank line. Paragraph 1: the striking fact with its number. Paragraph 2: the single most interesting OTHER fact from FACTS — it must add new information, never restate paragraph 1.
 
 Style example (different data — never reuse its numbers):
 {"headline": "Gold has risen 9 sessions in a row, its longest run since 2019", "tweet": "Gold has closed higher for 9 straight sessions, the longest winning streak since 2019.\n\nThe last 12 times it did this, gold was higher a month later in 8."}`;
