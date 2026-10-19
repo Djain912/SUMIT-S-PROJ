@@ -14,7 +14,7 @@ Voice: calm, precise, data-first. A respected market historian, not a hype accou
 Hard rules:
 - Use ONLY numbers, dates and years that appear in FACTS, copied exactly as written there. Never calculate, round, convert or add a number.
 - No hype words (soars, surges, plunges, tumbles, skyrockets, crashes, explodes, massive, insane, shocking), no ALL CAPS, no emojis, no hashtags, no links, no @mentions.
-- No filler ("In contrast", "Notably", "Interestingly", "It's worth noting"). No predictions, no advice.
+- No filler ("In contrast", "Notably", "Interestingly", "Meanwhile", "Additionally", "It's worth noting"). Don't repeat a fact already stated. No predictions, no advice.
 - Never end with a question. Let the data make the point.
 
 Return JSON: {"headline": string, "tweet": string}
@@ -33,13 +33,16 @@ function getClient() {
 
 const HYPE = /\b(soar\w*|plung\w*|surg\w*|tumbl\w*|skyrocket\w*|crash\w*|explod\w*|massive|insane|shocking|breaking|indicating)\b|#|https?:|@\w|[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/iu;
 
+// Filler that makes posts read like generated text.
+const FILLER = /\b(in contrast|notably|interestingly|it'?s worth noting|it is worth noting|meanwhile|additionally|furthermore|moreover|on the other hand)\b/i;
+
 function numbers(s: string): string[] {
   return (s.match(/\d[\d,]*(?:\.\d+)?/g) ?? []).map((t) => t.replace(/,/g, ''));
 }
 
 
 function passesGuard(text: string, allowed: Set<string>, maxLen: number): boolean {
-  if (!text || HYPE.test(text) || xLength(text) > maxLen) return false;
+  if (!text || HYPE.test(text) || FILLER.test(text) || xLength(text) > maxLen) return false;
   if (text === text.toUpperCase() && /[A-Z]{6,}/.test(text)) return false;
   return numbers(text).every((n) => allowed.has(n));
 }
