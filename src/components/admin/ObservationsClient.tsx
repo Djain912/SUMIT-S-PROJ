@@ -256,7 +256,7 @@ export function ObservationsClient({ initialObs }: { initialObs: Obs[] }) {
           <span className="ml-auto text-xs font-normal text-emerald-700 group-open:hidden">show</span>
         </summary>
         <ul className="mt-2 list-disc space-y-1 pl-5 text-[13px] leading-6 text-emerald-900">
-          <li>Post each tranche as it lands on Telegram: 2 posts at 8:30 AM, 2 at 1:00 PM, and 2 fresh post-close posts at 9:00 PM IST (weekdays).</li>
+          <li>Post each tranche as it lands on Telegram: 3 posts at 8:30 AM, the rest at 1:00 PM, and 3 fresh post-close posts at 9:00 PM IST (weekdays).</li>
           <li>Always attach the PNG. Posts with a chart get far more reach than text alone.</li>
           <li>Keep links out of the post itself. Paste the &ldquo;first reply&rdquo; with chartix.in under your own post.</li>
           <li>Reply to every comment in the first hour, and quote-post big accounts when a card adds context to their take.</li>

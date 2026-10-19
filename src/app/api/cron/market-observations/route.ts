@@ -6,13 +6,13 @@ import { sendDeskTranche } from '@/lib/observations/telegram';
 export const maxDuration = 60;
 
 // Market Desk schedule (vercel.json, times IST):
-//   6:00 AM  (no task)          generate the morning desk — 4 posts, nothing sent yet
-//   8:30 AM  task=send&tranche=1  Telegram: top 2 morning posts
-//   1:00 PM  task=send&tranche=2  Telegram: next 2 morning posts
-//   9:00 PM  task=evening         weekdays: generate 2 fresh posts from today's close
-//                                 (breadth, FII/DII, closes) and send them
-const MORNING_POSTS = 4;
-const EVENING_POSTS = 2;
+//   6:00 AM  (no task)          generate the morning desk — 6 posts, nothing sent yet
+//   8:30 AM  task=send&tranche=1  Telegram: first 3 morning posts
+//   1:00 PM  task=send&tranche=2  Telegram: every remaining morning post
+//   9:00 PM  task=evening         weekdays: generate 3 fresh posts from today's close
+//                                 (breadth, FII/DII, closes) and send them all
+const MORNING_POSTS = 6;
+const EVENING_POSTS = 3;
 const TRANCHES: Record<string, string> = { '1': 'Morning tranche', '2': 'Midday tranche' };
 
 async function ensureMorning(today: string) {
@@ -37,7 +37,9 @@ export async function GET(req: Request) {
       const tranche = url.searchParams.get('tranche') ?? '1';
       // If the 6 AM run failed, generate now so the tranche still goes out.
       const morning = await ensureMorning(today);
-      const telegram = await sendDeskTranche(today, 'morning', 2, TRANCHES[tranche] ?? 'Tranche');
+      // Tranche 1 sends half; the last tranche sends everything still unsent.
+      const count = tranche === '1' ? Math.ceil(MORNING_POSTS / 2) : MORNING_POSTS;
+      const telegram = await sendDeskTranche(today, 'morning', count, TRANCHES[tranche] ?? 'Tranche');
       return NextResponse.json({ date: today, tranche, morning, telegram });
     }
     if (task === 'evening') {
