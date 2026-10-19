@@ -156,7 +156,7 @@ function lineChart(c: LineChart, box: Box): string {
     const yy = Y(v);
     parts.push(`<line x1="${x0}" y1="${yy.toFixed(1)}" x2="${x0 + plotW}" y2="${yy.toFixed(1)}" stroke="${GRID}" stroke-width="1.5"/>`);
     if (Math.abs(yy - badgeY) < 26) continue;
-    parts.push(`<text x="${x0 + plotW + 14}" y="${(yy + 6).toFixed(1)}" font-family="${SANS}" font-size="17" fill="${FAINT}" style="font-variant-numeric:tabular-nums">${esc(fmtAxis(v, c.unit))}</text>`);
+    parts.push(`<text x="${x0 + plotW + 14}" y="${(yy + 6).toFixed(1)}" font-family="${SANS}" font-size="17" fill="${FAINT}" style="font-variant-numeric:tabular-nums">${esc(fmtAxis(v, c.unit, step))}</text>`);
   }
 
   // x ticks: years when the window is long, months otherwise
@@ -367,7 +367,8 @@ export function renderCard(spec: CardSpec): string {
     const kx = W - M - 330;
     parts.push(`<rect x="${kx}" y="108" width="3" height="160" fill="${ACCENT}"/>`);
     let vs = 92;
-    while (textWidth(spec.keyStat.value, vs, SERIF_EM) > 300 && vs > 56) vs -= 6;
+    // Generous width estimate: ₹, %, K and digits run wider than average text.
+    while (textWidth(spec.keyStat.value, vs, 0.5) > 290 && vs > 48) vs -= 6;
     parts.push(`<text x="${kx + 28}" y="${108 + vs * 0.86}" font-family="${SERIF}" font-size="${vs}" fill="${ACCENT}" style="font-variant-numeric:tabular-nums">${esc(spec.keyStat.value)}</text>`);
     const kl = wrap(spec.keyStat.label, 300, 19, SANS_EM).slice(0, 3);
     let ky = 108 + vs * 0.86 + 38;

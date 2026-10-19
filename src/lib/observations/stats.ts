@@ -151,8 +151,14 @@ export function fmtValue(v: number, unit: Unit): string {
   }
 }
 
-/** Compact axis label. */
-export function fmtAxis(v: number, unit: Unit): string {
+/** Compact axis label. `step` (the tick spacing) keeps decimals consistent across an axis. */
+export function fmtAxis(v: number, unit: Unit, step?: number): string {
+  if (Math.abs(v) < 1e-9) v = 0;
+  if (step != null && step < 1000 && unit !== 'yield' && unit !== 'index-in' && unit !== 'index-us') {
+    const dec = step >= 1 ? 0 : step >= 0.1 ? 1 : 2;
+    const prefix = unit === 'usd' ? '$' : unit === 'inr' ? '₹' : '';
+    return prefix + v.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+  }
   if (unit === 'yield') return v.toFixed(1) + '%';
   if (unit === 'ratio') return v < 10 ? v.toFixed(2) : v.toFixed(0);
   if (unit === 'level') return v < 10 ? v.toFixed(1) : v.toFixed(0);
