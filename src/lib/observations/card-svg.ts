@@ -7,6 +7,7 @@
 
 import type { Unit } from './fetch-market-data';
 import { fmtAxis, fmtPct, fmtValue } from './stats';
+import { LOGO_DATA_URI, LOGO_H, LOGO_W } from './logo';
 
 export const X_HANDLE = '@Sumit_jain01';
 
@@ -393,7 +394,10 @@ export function renderCard(spec: CardSpec): string {
   parts.push(`<text x="${M}" y="864" font-family="${SANS}" font-size="18" fill="${FAINT}">${esc(`Source: ${spec.source}  ·  Data to ${spec.asOf}`)}</text>`);
   const tail = `chartix.in  ·  ${X_HANDLE}`;
   parts.push(`<text x="${W - M}" y="864" text-anchor="end" font-family="${SANS}" font-size="18" font-weight="600" fill="${MUTED}">${esc(tail)}</text>`);
-  parts.push(`<text x="${(W - M - textWidth(tail, 18, SANS_EM) - 18).toFixed(0)}" y="866" text-anchor="end" font-family="${SERIF}" font-size="32" fill="${INK}">Chartix</text>`);
+  const logoH = 46;
+  const logoW = (LOGO_W / LOGO_H) * logoH;
+  const logoX = W - M - textWidth(tail, 18, SANS_EM) - 24 - logoW;
+  parts.push(`<image href="${LOGO_DATA_URI}" x="${logoX.toFixed(0)}" y="${864 - 6 - logoH / 2}" width="${logoW.toFixed(0)}" height="${logoH}" preserveAspectRatio="xMidYMid meet"/>`);
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
 <defs><linearGradient id="area" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${ACCENT}" stop-opacity="0.10"/><stop offset="100%" stop-color="${ACCENT}" stop-opacity="0"/></linearGradient></defs>
