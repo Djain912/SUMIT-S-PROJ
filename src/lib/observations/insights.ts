@@ -16,7 +16,8 @@ import {
 export type Category =
   | 'streak' | 'move' | 'extreme' | 'cross' | 'stretch' | 'drawdown'
   | 'ratio' | 'seasonality' | 'sectors' | 'scoreboard' | 'flows'
-  | 'breadth' | 'divergence' | 'sector-breadth' | 'valuation' | 'index-movers';
+  | 'breadth' | 'divergence' | 'sector-breadth' | 'valuation' | 'index-movers'
+  | 'sector-pe' | 'vix' | 'heavyweights';
 
 export type Insight = {
   key: string;          // novelty key — the same key won't lead again for a few days
@@ -819,7 +820,7 @@ export function detectInsights(core: Series[], sectors: Series[], flows: FlowRow
     nseSectors ? { ...nseSectors, source: 'NSE (via NSE MCP)', basis: 'Nifty sector indices' } : etfSectorRows(sectors),
     now,
   ));
-  if (extra.nse) out.push(...detectNseInsights(extra.nse, now));
+  if (extra.nse) out.push(...detectNseInsights(extra.nse, now, all.get('^INDIAVIX')));
   if (extra.breadth) out.push(...detectBreadthInsights(extra.breadth, all.get('^NSEI'), now));
   push(scoreboardInsight(all, now));
   push(flowsInsight(flows));
@@ -827,7 +828,7 @@ export function detectInsights(core: Series[], sectors: Series[], flows: FlowRow
   // Indian audience first: small nudge for India-focused posts.
   for (const i of out) {
     const s = all.get(i.symbol);
-    const indiaCats = ['flows', 'sectors', 'scoreboard', 'breadth', 'divergence', 'sector-breadth', 'valuation', 'index-movers'];
+    const indiaCats = ['flows', 'sectors', 'scoreboard', 'breadth', 'divergence', 'sector-breadth', 'valuation', 'index-movers', 'sector-pe', 'vix', 'heavyweights'];
     if ((s && s.region === 'india') || indiaCats.includes(i.category) || i.symbol.includes('nifty')) i.score += 5;
   }
   return out.sort((a, b) => b.score - a.score);

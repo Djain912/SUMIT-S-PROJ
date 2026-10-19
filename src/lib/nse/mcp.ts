@@ -6,7 +6,7 @@ export const NSE_MCP_BHAVCOPY = 'https://mcp.nseindia.in/bhavcopy/cm/mcp';
 
 type Json = Record<string, unknown>;
 
-async function rpc(url: string, method: string, params: Json | undefined, sid: string | null, id: number | null) {
+async function rpc(url: string, method: string, params: Json | undefined, sid: string | null, id: number | null, timeoutMs = 12_000) {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     Accept: 'application/json, text/event-stream',
@@ -14,7 +14,7 @@ async function rpc(url: string, method: string, params: Json | undefined, sid: s
   };
   if (sid) headers['mcp-session-id'] = sid;
   const body = { jsonrpc: '2.0', method, ...(id != null ? { id } : {}), ...(params ? { params } : {}) };
-  const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), signal: AbortSignal.timeout(20_000), cache: 'no-store' });
+  const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), signal: AbortSignal.timeout(timeoutMs), cache: 'no-store' });
   const raw = await res.text();
   let data: Json | null = null;
   for (const line of raw.split('\n')) if (line.startsWith('data:')) data = JSON.parse(line.slice(5));
@@ -26,9 +26,10 @@ export class NseMcp {
   private sid: string | null = null;
   constructor(private url = NSE_MCP_BHAVCOPY) {}
 
-  private async ensure() {
+  /** Connects (fast-failing): NSE's servers are sometimes unreachable, e.g. late at night. */
+  async ensure() {
     if (this.sid) return;
-    const r = await rpc(this.url, 'initialize', { protocolVersion: '2025-03-26', capabilities: {}, clientInfo: { name: 'chartix-market-desk', version: '1.0' } }, null, 1);
+    const r = await rpc(this.url, 'initialize', { protocolVersion: '2025-03-26', capabilities: {}, clientInfo: { name: 'chartix-market-desk', version: '1.0' } }, null, 1, 8_000);
     if (r.status >= 400) throw new Error(`NSE MCP initialize failed (HTTP ${r.status})`);
     this.sid = r.sid;
     await rpc(this.url, 'notifications/initialized', undefined, this.sid, null).catch(() => {});

@@ -19,6 +19,7 @@ const SINGLE_GROUPS = new Set(['india-sectors']);
 const REST_DAYS: Partial<Record<Category, number>> = {
   seasonality: 20, sectors: 6, scoreboard: 6, drawdown: 10, ratio: 7,
   'sector-breadth': 6, valuation: 7, 'index-movers': 6, divergence: 5,
+  'sector-pe': 7, vix: 5, heavyweights: 7,
 };
 
 function daysBetween(a: string, b: string) {

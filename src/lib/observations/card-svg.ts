@@ -50,7 +50,7 @@ export type BarChart = {
 export type HBarChart = {
   kind: 'hbars';
   items: { label: string; value: number }[];
-  format: 'pct' | 'share';  // share: 0–100 readings, coloured by above/below 50
+  format: 'pct' | 'share' | 'mult' | 'pts';  // share: 0–100 (green ≥ 50); mult: 12.4×; pts: ±8.2 pts
   caption?: string;
 };
 
@@ -96,9 +96,11 @@ function wrap(text: string, maxWidth: number, size: number, em: number): string[
   return lines;
 }
 
-function fmtBarValue(v: number, format: 'pct' | 'crore' | 'share') {
+function fmtBarValue(v: number, format: 'pct' | 'crore' | 'share' | 'mult' | 'pts') {
   if (format === 'pct') return fmtPct(v, 1);
   if (format === 'share') return `${v.toFixed(0)}%`;
+  if (format === 'mult') return `${v.toFixed(1)}×`;
+  if (format === 'pts') return `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toFixed(1)} pts`;
   const a = Math.abs(v);
   const s = a >= 1000 ? `${(a / 1000).toFixed(1)}K` : a.toFixed(0);
   return `${v < 0 ? '−' : v > 0 ? '+' : ''}₹${s} cr`;
@@ -320,7 +322,7 @@ function hbarChart(c: HBarChart, box: Box): string {
     const cy = box.y + rowH * i + rowH / 2;
     const len = Math.max(3, Math.abs(it.value) * scale);
     const x = it.value >= 0 ? zeroX : zeroX - len;
-    const fill = c.format === 'share' ? (it.value >= 50 ? POS : NEG) : it.value >= 0 ? POS : NEG;
+    const fill = c.format === 'mult' ? ACCENT : c.format === 'share' ? (it.value >= 50 ? POS : NEG) : it.value >= 0 ? POS : NEG;
     parts.push(`<text x="${box.x}" y="${(cy + 7).toFixed(1)}" font-family="${SANS}" font-size="20" font-weight="600" fill="${INK}">${esc(it.label)}</text>`);
     parts.push(`<rect x="${x.toFixed(1)}" y="${(cy - barH / 2).toFixed(1)}" width="${len.toFixed(1)}" height="${barH.toFixed(1)}" rx="3" fill="${fill}" fill-opacity="0.9"/>`);
     const vx = it.value >= 0 ? x + len + 12 : x - 12;
