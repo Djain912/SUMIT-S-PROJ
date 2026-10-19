@@ -43,14 +43,14 @@ export function applyNovelty(insights: Insight[], history: { date: string; insig
   return insights.sort((a, b) => b.score - a.score);
 }
 
-export function pickDiverse(insights: Insight[]): Insight[] {
+export function pickDiverse(insights: Insight[], maxPosts = MAX_POSTS): Insight[] {
   const picked: Insight[] = [];
   const symbols = new Set<string>();
   const groupCat = new Set<string>();
   const perCat = new Map<Category, number>();
   const perGroup = new Map<string, number>();
   for (const ins of insights) {
-    if (picked.length >= MAX_POSTS) break;
+    if (picked.length >= maxPosts) break;
     const group = GROUP[ins.symbol] ?? ins.symbol;
     if (symbols.has(ins.symbol)) continue;
     if (groupCat.has(`${group}|${ins.category}`)) continue;     // S&P and Nasdaq crash = one story
@@ -66,21 +66,25 @@ export function pickDiverse(insights: Insight[]): Insight[] {
   return picked;
 }
 
-export async function runMarketDesk(date: string) {
+export type Slot = 'morning' | 'evening';
+
+export async function runMarketDesk(date: string, opts: { slot?: Slot; maxPosts?: number } = {}) {
+  const slot = opts.slot ?? 'morning';
   const { core, sectors } = await fetchMarketData();
   if (core.length < 8) throw new Error(`Only ${core.length} market series loaded — Yahoo Finance may be blocking this server.`);
 
   const since = new Date(Date.parse(date) - 30 * 86400_000).toISOString().slice(0, 10);
   const [flows, history, breadthRows, nse] = await Promise.all([
     prisma.fiiDiiLog.findMany({ orderBy: { date: 'asc' }, select: { date: true, fiiNet: true, diiNet: true } }).catch(() => []),
-    prisma.marketObservation.findMany({ where: { date: { gte: since, lt: date } }, select: { date: true, insightKey: true } }),
+    // Includes today's other slot, so the evening run doesn't repeat the morning's stories.
+    prisma.marketObservation.findMany({ where: { date: { gte: since, lte: date } }, select: { date: true, insightKey: true } }),
     prisma.breadthDaily.findMany({ orderBy: { date: 'asc' } }).catch(() => []),
     fetchNseData(),
   ]);
   const breadth = breadthRows.map((r) => ({ ...r, sectors: (r.sectors as BreadthPoint['sectors']) ?? null }));
 
   const candidates = applyNovelty(detectInsights(core, sectors, flows, new Date(), { breadth, nse }), history, date);
-  const chosen = pickDiverse(candidates);
+  const chosen = pickDiverse(candidates, opts.maxPosts);
   const copies = await Promise.all(chosen.map(writeCopy));
 
   const rows = chosen.map((ins, i) => {
@@ -101,6 +105,7 @@ export async function runMarketDesk(date: string) {
       postText: copy.tweet,
       insightKey: ins.key,
       category: ins.category,
+      slot,
     };
   });
 

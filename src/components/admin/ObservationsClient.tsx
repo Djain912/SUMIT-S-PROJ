@@ -17,6 +17,8 @@ export type Obs = {
   chartType: string;
   postText: string | null;
   category: string | null;
+  slot?: string | null;
+  sentAt?: string | Date | null;
   createdAt: string | Date;
 };
 
@@ -95,6 +97,14 @@ function PostCard({ o }: { o: Obs }) {
           <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-800">
             {o.category ?? o.chartType}
           </span>
+          {o.slot === 'evening' && (
+            <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700">Evening</span>
+          )}
+          {o.sentAt && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-600">
+              <Check className="h-3 w-3" /> Sent
+            </span>
+          )}
           <span className="truncate text-xs text-zinc-500">{o.metricName}</span>
           <span className="ml-auto text-[11px] tabular-nums text-zinc-400" title="Newsworthiness score">score {Math.round(o.score)}</span>
         </div>
@@ -216,7 +226,7 @@ export function ObservationsClient({ initialObs }: { initialObs: Obs[] }) {
             )}
           </p>
           <p className="mt-0.5 text-xs text-zinc-500">
-            Built from 15 years of market data. Every number is computed and fact-checked, never invented by AI. Sent to Telegram automatically each morning.
+            Built from 15 years of market data. Every number is computed and fact-checked, never invented by AI. Sent to Telegram in tranches: 8:30 AM, 1:00 PM and 9:00 PM IST.
           </p>
         </div>
         {obs.length > 0 && (
@@ -246,7 +256,7 @@ export function ObservationsClient({ initialObs }: { initialObs: Obs[] }) {
           <span className="ml-auto text-xs font-normal text-emerald-700 group-open:hidden">show</span>
         </summary>
         <ul className="mt-2 list-disc space-y-1 pl-5 text-[13px] leading-6 text-emerald-900">
-          <li>Post 2–3 a day, not all six at once: around 8:30 AM, 1 PM and 7 PM IST. Top-scored posts first.</li>
+          <li>Post each tranche as it lands on Telegram: 2 posts at 8:30 AM, 2 at 1:00 PM, and 2 fresh post-close posts at 9:00 PM IST (weekdays).</li>
           <li>Always attach the PNG. Posts with a chart get far more reach than text alone.</li>
           <li>Keep links out of the post itself. Paste the &ldquo;first reply&rdquo; with chartix.in under your own post.</li>
           <li>Reply to every comment in the first hour, and quote-post big accounts when a card adds context to their take.</li>

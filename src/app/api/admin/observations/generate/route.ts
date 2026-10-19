@@ -18,8 +18,9 @@ export async function POST(request: Request) {
     }
 
     const today = new Date().toISOString().slice(0, 10);
-    await prisma.marketObservation.deleteMany({ where: { date: today } });
-    const result = await runMarketDesk(today);
+    // Regenerates the morning desk; an evening run (if any) is kept.
+    await prisma.marketObservation.deleteMany({ where: { date: today, OR: [{ slot: 'morning' }, { slot: null }] } });
+    const result = await runMarketDesk(today, { slot: 'morning', maxPosts: 4 });
     return NextResponse.json({ ...result, date: today });
   } catch (err) {
     console.error('[observations/generate] unhandled error:', err);

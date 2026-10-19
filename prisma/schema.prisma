@@ -689,6 +689,8 @@ model MarketObservation {
   postText    String?  @db.Text  // ready-to-post X text (fact-checked)
   insightKey  String?            // novelty key, e.g. "streak:^NSEI:-1" — avoids repeating a story
   category    String?            // insight family: streak | move | ratio | flows | …
+  slot        String?            // "morning" (6 AM run) | "evening" (post-close run); null = morning
+  sentAt      DateTime?          // when it went to Telegram (tranches send unsent posts)
   createdAt   DateTime @default(now())
 
   @@index([date])
