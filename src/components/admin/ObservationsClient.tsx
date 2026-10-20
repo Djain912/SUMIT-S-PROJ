@@ -22,7 +22,7 @@ export type Obs = {
   createdAt: string | Date;
 };
 
-export type DeskStatus = { breadthDate: string | null; fiiDate: string | null };
+export type DeskStatus = { breadthDate: string | null; fiiDate: string | null; telegramReady?: boolean };
 
 const FIRST_REPLY = 'Daily charts like this, plus free CMT prep tools: chartix.in';
 
@@ -273,6 +273,7 @@ export function ObservationsClient({ initialObs, status }: { initialObs: Obs[]; 
           <div className="flex flex-wrap gap-2" aria-label="Pipeline health">
             <HealthChip label="Breadth data" ok={fresh(status?.breadthDate ?? null)} value={status?.breadthDate ?? 'none'} />
             <HealthChip label="FII/DII data" ok={fresh(status?.fiiDate ?? null)} value={status?.fiiDate ?? 'none'} />
+            <HealthChip label="Telegram on server" ok={!!status?.telegramReady} value={status?.telegramReady ? 'configured' : 'NOT configured — add TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in Vercel'} />
             <HealthChip label="Telegram, morning" ok value={`${sent(morning)} of ${morning.length} sent`} />
             {evening.length > 0 && <HealthChip label="Telegram, evening" ok value={`${sent(evening)} of ${evening.length} sent`} />}
           </div>

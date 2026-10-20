@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { StudioTabs } from '@/components/admin/StudioTabs';
 import { prisma } from '@/lib/db/prisma';
 import { withLogo } from '@/lib/observations/logo';
+import { telegramConfigured } from '@/lib/telegram';
 
 export const metadata: Metadata = {
   title: 'Studio | Admin — Chartix',
@@ -25,7 +26,7 @@ export default async function StudioPage() {
     prisma.fiiDiiLog.findFirst({ orderBy: { date: 'desc' }, select: { date: true } }),
   ]);
   const observations = rows.map((o) => ({ ...o, chartSvg: withLogo(o.chartSvg) }));
-  const status = { breadthDate: breadth?.date ?? null, fiiDate: fii?.date ?? null };
+  const status = { breadthDate: breadth?.date ?? null, fiiDate: fii?.date ?? null, telegramReady: telegramConfigured() };
   return (
     <>
       {/* Carousel typography. Self-hosted, SIL Open Font Licence. */}

@@ -41,13 +41,18 @@ export async function GET(req: Request) {
       // Tranche 1 sends half; the last tranche sends everything still unsent.
       const count = tranche === '1' ? Math.ceil(MORNING_POSTS / 2) : MORNING_POSTS;
       const telegram = await sendDeskTranche(today, 'morning', count, TRANCHES[tranche] ?? 'Tranche');
-      return NextResponse.json({ date: today, tranche, morning, telegram });
+      // A missing Telegram config must show up as a failed cron in Vercel's logs, not a silent skip.
+      const notConfigured = 'skipped' in telegram && telegram.skipped === 'Telegram not configured';
+      if (notConfigured) console.error('[cron/market-observations] Telegram env vars missing on this deployment');
+      return NextResponse.json({ date: today, tranche, morning, telegram }, { status: notConfigured ? 500 : 200 });
     }
     if (task === 'evening') {
       const existing = await prisma.marketObservation.count({ where: { date: today, slot: 'evening' } });
       const evening = existing ? { skipped: true, existing } : await runMarketDesk(today, { slot: 'evening', maxPosts: EVENING_POSTS });
       const telegram = await sendDeskTranche(today, 'evening', EVENING_POSTS, 'Evening tranche · after the close');
-      return NextResponse.json({ date: today, evening, telegram });
+      const notConfigured = 'skipped' in telegram && telegram.skipped === 'Telegram not configured';
+      if (notConfigured) console.error('[cron/market-observations] Telegram env vars missing on this deployment');
+      return NextResponse.json({ date: today, evening, telegram }, { status: notConfigured ? 500 : 200 });
     }
     return NextResponse.json({ error: `Unknown task ${task}` }, { status: 400 });
   } catch (err) {
