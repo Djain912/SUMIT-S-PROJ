@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { AuthError, requireAuthenticatedUser } from '@/server/policies/auth';
-import { resolveQuizQuestions } from '@/server/services/quiz.service';
+import { resolveQuizQuestions, withoutQuestionExplanations } from '@/server/services/quiz.service';
 import { quizSelectionSchema } from '@/server/validators/quiz';
 import { getChapterAccess } from '@/server/policies/access';
 
@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     const access = await getChapterAccess(user.email);
     const questions = await resolveQuizQuestions(selection, access.full ? 'ALL' : [...access.chapterIds]);
 
-    return NextResponse.json({ success: true, data: questions });
+    return NextResponse.json({ success: true, data: withoutQuestionExplanations(questions) });
   } catch (error) {
     if (error instanceof AuthError) {
       return NextResponse.json({ success: false, error: { message: error.message } }, { status: error.statusCode });

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { AuthError, requireAuthenticatedUser } from '@/server/policies/auth';
 import { validateCsrfOrigin } from '@/server/policies/csrf';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
-import { startQuizAttempt } from '@/server/services/quiz.service';
+import { startQuizAttempt, toInProgressAttempt } from '@/server/services/quiz.service';
 import { quizSelectionSchema } from '@/server/validators/quiz';
 import { getChapterAccess, getTrialState } from '@/server/policies/access';
 import { prisma } from '@/lib/db/prisma';
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
     const access = await getChapterAccess(user.email);
     const attempt = await startQuizAttempt(user.id, selection, access.full ? 'ALL' : [...access.chapterIds]);
 
-    return NextResponse.json({ success: true, data: attempt }, { status: 201 });
+    return NextResponse.json({ success: true, data: toInProgressAttempt(attempt) }, { status: 201 });
   } catch (error) {
     if (error instanceof AuthError) {
       return NextResponse.json({ success: false, error: { message: error.message } }, { status: error.statusCode });

@@ -295,6 +295,29 @@ export async function startQuizAttempt(userId: string, selection: QuizSelectionI
   return attempt;
 }
 
+// Explanations name the correct answer, so they must not reach the browser
+// while an attempt is in progress. The full snapshot (with explanation) stays
+// in the database for the results screen.
+type WithSnapshot = { questionSnapshotJson: unknown };
+function withoutExplanation<T extends WithSnapshot>(item: T): T {
+  const snap = item.questionSnapshotJson;
+  if (!snap || typeof snap !== 'object') return item;
+  const { explanationJson: _hidden, ...rest } = snap as Record<string, unknown>;
+  return { ...item, questionSnapshotJson: rest };
+}
+
+export function toInProgressAttempt<A extends { items: WithSnapshot[] }>(attempt: A): A {
+  return { ...attempt, items: attempt.items.map(withoutExplanation) };
+}
+
+// Same rule for the question-selection preview.
+export function withoutQuestionExplanations<Q extends { explanationJson?: unknown }>(questions: Q[]) {
+  return questions.map(({ explanationJson: _hidden, ...rest }) => rest);
+}
+
+// Raised when an action doesn't fit the attempt's state (e.g. answering after submit).
+export class QuizStateError extends Error {}
+
 export async function recordQuizAnswer(userId: string, input: QuizAnswerInput) {
   // Fetch only the option correctness — no need to load all question data
   const [attemptItem, selectedOption] = await Promise.all([
@@ -304,7 +327,7 @@ export async function recordQuizAnswer(userId: string, input: QuizAnswerInput) {
         questionId: input.questionId,
         attempt: { userId },
       },
-      select: { id: true },
+      select: { id: true, attempt: { select: { status: true } } },
     }),
     prisma.questionOption.findFirst({
       where: {
@@ -319,10 +342,18 @@ export async function recordQuizAnswer(userId: string, input: QuizAnswerInput) {
     throw new Error('Quiz attempt item not found');
   }
 
+  // A submitted attempt is final: answers can't be changed once the results
+  // (and the correct answers) have been shown.
+  if (attemptItem.attempt.status !== 'IN_PROGRESS') {
+    throw new QuizStateError('This quiz has already been submitted');
+  }
+
   if (!selectedOption) {
     throw new Error('Selected option does not belong to the question');
   }
 
+  // Correctness is stored but not returned: the client only learns it from the
+  // results of the completed attempt.
   const updatedItem = await prisma.quizAttemptItem.update({
     where: {
       attemptId_questionId: {
@@ -336,9 +367,19 @@ export async function recordQuizAnswer(userId: string, input: QuizAnswerInput) {
       isCorrect: selectedOption.isCorrect,
       timeSpentSeconds: input.timeSpentSeconds,
     },
+    select: { id: true, questionId: true, selectedOptionId: true, timeSpentSeconds: true },
   });
 
   return updatedItem;
+}
+
+async function withCorrectOptionIds<I extends { questionId: string }>(items: I[]) {
+  const correctOptions = await prisma.questionOption.findMany({
+    where: { questionId: { in: items.map(i => i.questionId) }, isCorrect: true, isDeleted: false },
+    select: { id: true, questionId: true },
+  });
+  const correctByQuestion = new Map(correctOptions.map(o => [o.questionId, o.id]));
+  return items.map(item => ({ ...item, correctOptionId: correctByQuestion.get(item.questionId) ?? null }));
 }
 
 export async function completeQuizAttempt(userId: string, attemptId: string) {
@@ -346,7 +387,7 @@ export async function completeQuizAttempt(userId: string, attemptId: string) {
   const [attemptForUser, aggregates] = await Promise.all([
     prisma.quizAttempt.findFirst({
       where: { id: attemptId, userId },
-      select: { id: true, totalQuestions: true },
+      select: { id: true, totalQuestions: true, status: true },
     }),
     prisma.quizAttemptItem.aggregate({
       where: { attemptId, isCorrect: true },
@@ -356,6 +397,16 @@ export async function completeQuizAttempt(userId: string, attemptId: string) {
 
   if (!attemptForUser) {
     throw new Error('Quiz attempt not found for user');
+  }
+
+  // Already submitted (e.g. a retried request): return the stored result
+  // without re-scoring or counting the activity twice.
+  if (attemptForUser.status === 'COMPLETED') {
+    const done = await prisma.quizAttempt.findFirstOrThrow({
+      where: { id: attemptId, userId },
+      include: { items: { orderBy: { questionOrder: 'asc' } } },
+    });
+    return { ...done, items: await withCorrectOptionIds(done.items) };
   }
 
   const correctCount = aggregates._count.id;
@@ -375,18 +426,8 @@ export async function completeQuizAttempt(userId: string, attemptId: string) {
     },
   });
 
-  // Fetch correct option IDs so the review screen can highlight the right answer.
-  const questionIds = attempt.items.map(i => i.questionId);
-  const correctOptions = await prisma.questionOption.findMany({
-    where: { questionId: { in: questionIds }, isCorrect: true, isDeleted: false },
-    select: { id: true, questionId: true },
-  });
-  const correctByQuestion = new Map(correctOptions.map(o => [o.questionId, o.id]));
-
-  const enrichedItems = attempt.items.map(item => ({
-    ...item,
-    correctOptionId: correctByQuestion.get(item.questionId) ?? null,
-  }));
+  // Correct option IDs so the review screen can highlight the right answer.
+  const enrichedItems = await withCorrectOptionIds(attempt.items);
 
   // Engagement counters for the onboarding checklist / trial-drip emails.
   // Fire-and-forget, fail-soft — must never block the quiz result.
@@ -411,9 +452,11 @@ export async function completeQuizAttempt(userId: string, attemptId: string) {
   return { ...attempt, items: enrichedItems };
 }
 
+// Review data includes explanations and answer correctness, so it is only
+// available once the attempt has been submitted.
 export async function getQuizAttemptReview(userId: string, attemptId: string) {
   return prisma.quizAttempt.findFirst({
-    where: { id: attemptId, userId },
+    where: { id: attemptId, userId, status: 'COMPLETED' },
     include: {
       items: {
         orderBy: { questionOrder: 'asc' },

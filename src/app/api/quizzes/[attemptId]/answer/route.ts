@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { AuthError, requireAuthenticatedUser } from '@/server/policies/auth';
 import { validateCsrfOrigin } from '@/server/policies/csrf';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
-import { recordQuizAnswer } from '@/server/services/quiz.service';
+import { QuizStateError, recordQuizAnswer } from '@/server/services/quiz.service';
 import { quizAnswerSchema } from '@/server/validators/quiz';
 
 export async function POST(request: Request, context: { params: Promise<{ attemptId: string }> }) {
@@ -44,6 +44,9 @@ export async function POST(request: Request, context: { params: Promise<{ attemp
   } catch (error) {
     if (error instanceof AuthError) {
       return NextResponse.json({ success: false, error: { message: error.message } }, { status: error.statusCode });
+    }
+    if (error instanceof QuizStateError) {
+      return NextResponse.json({ success: false, error: { message: error.message } }, { status: 409 });
     }
 
     return NextResponse.json({ success: false, error: { message: 'Unable to record answer' } }, { status: 500 });
