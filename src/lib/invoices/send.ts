@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db/prisma';
 import { generateInvoicePdf } from './generate';
 import { resend, FROM_EMAIL, BCC_EMAIL } from '@/lib/email/resend';
+import { emailLayout, eyebrow, heading, p, details, button, signature, esc, C } from '@/lib/email/layout';
 
 function pad(n: number) {
   return String(n).padStart(4, '0');
@@ -80,12 +81,25 @@ export async function issueInvoice(paymentId: string): Promise<void> {
         to: toEmail,
         bcc: [BCC_EMAIL],
         subject: `Your Chartix invoice ${invoiceNumber}`,
-        html: `<p>Hi ${payment.billingName ?? ''},</p>
-<p>Thank you for your purchase! Please find your invoice <strong>${invoiceNumber}</strong> attached.</p>
-<p>You now have <strong>6 months of full access</strong> to <strong>Chartix ${levelLabel}</strong> — all notes, quizzes, mock tests, and Chartix Scholar.</p>
-<p>Visit your dashboard: <a href="https://chartix.in/user">chartix.in/user</a></p>
-<p>For any queries, reply to this email or write to contact@chartix.in.</p>
-<p>Happy studying!<br/>Team Chartix</p>`,
+        html: emailLayout({
+          title: `Your Chartix invoice ${invoiceNumber}`,
+          preheader: `Payment received — your ${levelLabel} access is active for 6 months.`,
+          body: [
+            eyebrow(`${levelLabel} · Payment received`),
+            heading('Thank you for<br>your purchase.'),
+            p(`Hi ${esc((payment.billingName ?? '').trim().split(/\s+/)[0] || 'there')},`),
+            p(`Your payment is confirmed. You now have <strong>six months of full access</strong> to <strong>Chartix ${levelLabel}</strong> — every note, practice question, mock exam and Chartix Scholar.`),
+            details([
+              ['Invoice', invoiceNumber],
+              ['Plan', esc(description)],
+              ['Amount paid', `&#8377;${(payment.amount / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
+            ]),
+            p('Your invoice is attached to this email as a PDF.', { size: 14, color: C.muted }),
+            button('https://chartix.in/user', 'Go to my dashboard &rarr;'),
+            signature('Happy studying,'),
+          ].join('\n'),
+          footer: 'Questions about your invoice? Reply to this email or write to <a href="mailto:contact@chartix.in" style="color:#8a938f;">contact@chartix.in</a>.',
+        }),
         attachments: [
           {
             filename: `${invoiceNumber}.pdf`,

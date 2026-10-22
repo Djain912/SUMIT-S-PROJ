@@ -1,4 +1,5 @@
 import { resend, FROM_EMAIL, BCC_EMAIL } from './resend';
+import { emailLayout, eyebrow, heading, subheading, p, list, button, signature, note, esc, C } from './layout';
 
 // The Resend SDK returns { error } instead of throwing, so a rejected send
 // would otherwise pass silently. Throw so callers can log / retry.
@@ -7,127 +8,50 @@ async function sendOrThrow(params: Parameters<typeof resend.emails.send>[0]) {
   if (error) throw new Error(`Resend error (${error.name}): ${error.message}`);
 }
 
-const GREEN = '#0f5c35';
-const GRAY = '#6b7280';
-const DARK = '#111827';
-const BODY = '#374151';
-const BORDER = '#e5e7eb';
-const BG_LIGHT = '#f0faf4';
-
-function featureCard(icon: string, title: string, desc: string) {
-  return `
-  <tr><td style="padding:0 0 10px">
-    <table style="border-collapse:collapse;width:100%;border:0.5px solid ${BORDER};border-radius:8px">
-      <tr>
-        <td style="padding:14px 12px;width:44px;vertical-align:top">
-          <div style="width:32px;height:32px;background:${BG_LIGHT};border-radius:6px;text-align:center;line-height:32px;font-size:16px">${icon}</div>
-        </td>
-        <td style="padding:14px 12px 14px 0;vertical-align:top">
-          <p style="margin:0;font-size:13px;font-weight:600;color:${DARK}">${title}</p>
-          <p style="margin:3px 0 0;font-size:12px;color:${GRAY}">${desc}</p>
-        </td>
-      </tr>
-    </table>
-  </td></tr>`;
-}
-
 function buildHtml({
   firstName,
   headline,
   subline,
   introLine,
+  eyebrowText,
+  cta = { href: 'https://chartix.in/user/notes', label: 'Start with Chapter 1 &rarr;' },
 }: {
   firstName: string;
   headline: string;
   subline: string;
   introLine: string;
+  eyebrowText: string;
+  cta?: { href: string; label: string };
 }) {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${headline}</title></head>
-<body style="margin:0;padding:0;background:#f4f4f5;font-family:Arial,sans-serif">
-<table style="border-collapse:collapse;width:100%;background:#f4f4f5" cellpadding="0" cellspacing="0">
-<tr><td style="padding:32px 16px">
-<table style="border-collapse:collapse;max-width:560px;margin:0 auto;background:#fff;border-radius:10px;overflow:hidden">
+  const body = [
+    eyebrow(eyebrowText),
+    heading(headline),
+    p(subline, { color: C.muted, size: 14 }),
+    p(`Hi ${esc(firstName)},`),
+    p(introLine),
+    subheading('Where to begin'),
+    list([
+      '<strong>Study notes</strong> — structured, exam-focused notes for every topic.',
+      '<strong>Practice questions</strong> — topic-wise, with full explanations. Aim for twenty a day.',
+      '<strong>Mock exams</strong> — full-length and timed, in the real exam format.',
+      '<strong>Readiness analytics</strong> — see exactly where you are strong, and where to improve.',
+      '<strong>Chartix Scholar</strong> — an AI tutor for any concept, any time.',
+    ]),
+    button(cta.href, cta.label),
+    signature('Wishing you focused, confident preparation.'),
+    note('<strong style="color:#14251f;">P.S.</strong> We would love to hear how your preparation goes — share your thoughts at <a href="https://chartix.in/feedback" style="color:#0b3b2e;">chartix.in/feedback</a>.'),
+    `<table width="100%" cellpadding="0" cellspacing="0" style="margin:26px 0 0;"><tr><td style="text-align:center;">
+      <img src="https://chartix.in/cmt-prep-provider-badge.png" width="48" height="48" alt="CMT Association Participating Prep Provider" style="display:block;margin:0 auto 8px;border:0;">
+      <p style="margin:0;font-size:11.5px;line-height:1.5;color:#8a938f;">Chartix is a Participating Prep Provider of the CMT Association</p>
+    </td></tr></table>`,
+  ].join('\n');
 
-  <!-- Header -->
-  <tr><td style="background:${GREEN};padding:28px 32px;text-align:center">
-    <img src="https://chartix.in/chartix-wordmark.png" alt="Chartix" height="28" style="display:inline-block;filter:brightness(0) invert(1)" />
-  </td></tr>
-
-  <!-- Body -->
-  <tr><td style="padding:32px 32px 24px">
-    <table style="border-collapse:collapse;width:100%">
-
-      <!-- Headline -->
-      <tr><td style="padding:0 0 6px">
-        <p style="margin:0;font-size:22px;font-weight:700;color:${DARK};letter-spacing:-0.3px">${headline}</p>
-      </td></tr>
-      <tr><td style="padding:0 0 24px">
-        <p style="margin:0;font-size:13.5px;color:${BODY};line-height:1.6">${subline}</p>
-      </td></tr>
-
-      <!-- Greeting -->
-      <tr><td style="padding:0 0 20px">
-        <p style="margin:0;font-size:14px;color:${BODY};line-height:1.7">Hi ${firstName},<br><br>${introLine}</p>
-      </td></tr>
-
-      <!-- Start here label -->
-      <tr><td style="padding:0 0 10px">
-        <p style="margin:0;font-size:12px;font-weight:700;color:${DARK};text-transform:uppercase;letter-spacing:0.6px">Start here</p>
-      </td></tr>
-
-      <!-- Feature cards -->
-      ${featureCard('📝', 'Study Notes', 'Structured, exam-focused notes for every CMT topic — written to the point.')}
-      ${featureCard('❓', 'Practice Questions', 'Topic-wise Q&amp;A built around the CMT curriculum. Do at least 20 daily.')}
-      ${featureCard('🤖', 'Chartix Scholar', 'AI chatbot trained on technical analysis &amp; CMT material. Ask it anything.')}
-      ${featureCard('📋', 'Mock Tests', 'Full-length timed tests that simulate real exam conditions.')}
-      ${featureCard('📊', 'Smart Analytics', 'AI-powered performance tracking — see exactly where you\'re strong and where to improve.')}
-
-      <!-- CTA -->
-      <tr><td style="padding:24px 0;text-align:center">
-        <a href="https://chartix.in/user/notes" style="display:inline-block;background:${GREEN};color:#fff;text-decoration:none;font-size:14px;font-weight:600;padding:13px 32px;border-radius:8px">Start with Chapter 1 →</a>
-      </td></tr>
-
-      <!-- Feedback -->
-      <tr><td style="padding:0 0 24px">
-        <p style="margin:0 0 4px;font-size:14px;color:${BODY}">We'd love to hear how your experience goes:</p>
-        <a href="https://chartix.in/feedback" style="font-size:13px;color:${GREEN};font-weight:600;text-decoration:none">chartix.in/feedback →</a>
-      </td></tr>
-
-      <!-- Signature -->
-      <tr><td style="border-top:0.5px solid ${BORDER};padding-top:20px">
-        <p style="margin:0;font-size:13px;font-weight:600;color:${DARK}">Sumit Jain, CMT<sup>®</sup></p>
-        <p style="margin:3px 0;font-size:12px;color:${GREEN}">Founder, Chartix.in</p>
-        <p style="margin:3px 0 0;font-size:11.5px;color:#9ca3af">CMT Charterholder · Equity Research Analyst</p>
-      </td></tr>
-
-    </table>
-  </td></tr>
-
-  <!-- CMT Participating Prep Provider -->
-  <tr><td style="padding:0 32px 20px;text-align:center">
-    <img src="https://chartix.in/cmt-prep-provider-badge.png" width="52" height="52" alt="CMT Association Participating Prep Provider" style="display:block;margin:0 auto 8px">
-    <p style="margin:0;font-size:11.5px;color:#9ca3af;line-height:1.5">
-      Chartix is a <b style="color:#6b7280">Participating Prep Provider</b> of the CMT Association
-    </p>
-  </td></tr>
-
-  <!-- Footer -->
-  <tr><td style="background:#f9fafb;border-top:0.5px solid ${BORDER};padding:16px 32px;text-align:center">
-    <p style="margin:0;font-size:11px;color:#9ca3af">
-      © 2026 Chartix.in &nbsp;·&nbsp;
-      <a href="https://www.instagram.com/chartix.in" style="color:#9ca3af;text-decoration:none">Instagram</a> &nbsp;·&nbsp;
-      <a href="https://chartix.in/blog" style="color:#9ca3af;text-decoration:none">Blog</a>
-    </p>
-    <p style="margin:6px 0 0;font-size:11px;color:#d1d5db">You received this because you signed up on chartix.in</p>
-  </td></tr>
-
-</table>
-</td></tr>
-</table>
-</body>
-</html>`;
+  return emailLayout({
+    title: headline.replace(/<br>/g, ' '),
+    preheader: subline,
+    body,
+    footer: 'You received this because you signed up at <a href="https://chartix.in" style="color:#8a938f;">chartix.in</a><br><a href="https://chartix.in/blog" style="color:#8a938f;">Blog</a> &nbsp;·&nbsp; <a href="https://www.instagram.com/chartix.in" style="color:#8a938f;">Instagram</a> &nbsp;·&nbsp; <a href="mailto:contact@chartix.in" style="color:#8a938f;">contact@chartix.in</a>',
+  });
 }
 
 function extractFirstName(fullName: string | null | undefined): string {
@@ -152,10 +76,11 @@ export async function sendTrialWelcomeEmail(
     from: FROM_EMAIL,
     to: email,
     bcc: [BCC_EMAIL],
-    subject: levelName ? `Your Chartix ${levelName} free trial is live 🎉` : 'Your Chartix free trial is live 🎉',
+    subject: levelName ? `Your Chartix ${levelName} free trial is live` : 'Your Chartix free trial is live',
     html: buildHtml({
       firstName,
-      headline: levelName ? `Your ${levelName} trial is live. 🎉` : 'Your free trial is live. 🎉',
+      eyebrowText: levelName ? `${levelName} · Free trial` : 'Free trial',
+      headline: levelName ? `Your ${levelName} trial<br>is now live.` : 'Your free trial<br>is now live.',
       subline: levelName
         ? `Your 7-day ${levelName} trial starts now — notes, quizzes, mock tests and the AI tutor are ready to support your CMT preparation.`
         : 'Your 7-day access starts now — notes, quizzes, mock tests and the AI tutor are ready to support your CMT preparation.',
@@ -175,7 +100,8 @@ export async function sendTrialNudgeEmail(email: string, fullName: string | null
     subject: `You haven't started yet — ${daysRemaining} days left on your trial`,
     html: buildHtml({
       firstName,
-      headline: 'Your trial is running. Have you started?',
+      eyebrowText: `Free trial · ${daysRemaining} days left`,
+      headline: 'Your trial is running.<br>Have you started?',
       subline: `You still have ${daysRemaining} days left — enough time to get a real feel for CMT preparation.`,
       introLine: `You signed up a couple of days ago but haven't opened any notes yet. No pressure — but your trial clock is running, and we don't want you to miss out.<br><br>Here's the quickest way to get started: open the first chapter, read for 10 minutes, then try a few practice questions. That's it.`,
     }),
@@ -191,7 +117,9 @@ export async function sendTrialUrgencyEmail(email: string, fullName: string | nu
     subject: '1 day left on your Chartix trial',
     html: buildHtml({
       firstName,
-      headline: '1 day left on your trial.',
+      eyebrowText: 'Free trial · Final day',
+      headline: 'One day left<br>on your trial.',
+      cta: { href: 'https://chartix.in/pricing', label: 'Continue my preparation &rarr;' },
       subline: 'Your 7-day free trial ends tomorrow. Here\'s how to make the most of it — or upgrade to keep going.',
       introLine: `Your free trial expires in about 24 hours. If you haven't had a chance to explore yet, today is the day.<br><br>If you've been using Chartix and want to continue, upgrading takes 2 minutes and keeps all your progress intact.`,
     }),
@@ -204,10 +132,11 @@ export async function sendPremiumWelcomeEmail(email: string, fullName: string | 
     from: FROM_EMAIL,
     to: email,
     bcc: [BCC_EMAIL],
-    subject: 'Welcome to Chartix Premium 🎉',
+    subject: 'Welcome to Chartix Premium',
     html: buildHtml({
       firstName,
-      headline: 'Welcome to Chartix Premium. 🎉',
+      eyebrowText: 'Chartix Premium',
+      headline: 'Welcome to<br>Chartix Premium.',
       subline: 'Your full access is now unlocked — notes, quizzes, mock tests and the AI tutor are ready to support your CMT preparation.',
       introLine: 'Thank you for choosing us to be part of your CMT journey. We\'re excited to have you on board and look forward to helping you prepare with confidence.',
     }),

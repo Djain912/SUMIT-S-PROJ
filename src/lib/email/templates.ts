@@ -1,5 +1,7 @@
 // ── Email HTML templates ──────────────────────────────────────────────────────
 
+import { emailLayout, eyebrow, heading, p, button, panel, details, teamSignature, esc, C } from './layout';
+
 const QUERY_TYPE_LABELS: Record<string, string> = {
   GENERAL: 'General Enquiry',
   COURSE_INFO: 'Course Information',
@@ -28,156 +30,60 @@ export function adminNotificationEmail(data: ContactEmailData): string {
     timeStyle: 'short',
   });
 
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>New Contact Form Submission</title>
-<style>
-  body { margin: 0; padding: 0; background: #f4f4f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-  .wrapper { max-width: 560px; margin: 32px auto; background: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e4e4e7; }
-  .header { background: #09090b; padding: 24px 32px; }
-  .header h1 { margin: 0; color: #ffffff; font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
-  .header p { margin: 4px 0 0; color: #a1a1aa; font-size: 13px; }
-  .body { padding: 28px 32px; }
-  .badge { display: inline-block; background: #fef9c3; color: #854d0e; border-radius: 6px; padding: 3px 10px; font-size: 12px; font-weight: 600; margin-bottom: 20px; }
-  .field { margin-bottom: 16px; }
-  .field label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #71717a; margin-bottom: 4px; }
-  .field p { margin: 0; font-size: 14px; color: #18181b; }
-  .message-box { background: #f4f4f5; border-radius: 8px; padding: 14px 16px; margin-top: 4px; }
-  .message-box p { margin: 0; font-size: 14px; color: #18181b; line-height: 1.6; white-space: pre-wrap; }
-  .divider { height: 1px; background: #e4e4e7; margin: 20px 0; }
-  .footer { padding: 16px 32px; background: #f4f4f5; }
-  .footer p { margin: 0; font-size: 12px; color: #a1a1aa; }
-</style>
-</head>
-<body>
-  <div class="wrapper">
-    <div class="header">
-      <h1>Chartix — New Contact Submission</h1>
-      <p>Someone filled out the contact form on chartix.in</p>
-    </div>
-    <div class="body">
-      <div class="badge">${queryLabel}</div>
+  const rows: [string, string][] = [
+    ['Name', esc(data.fullName)],
+    ['Email', `<a href="mailto:${esc(data.email)}" style="color:${C.green};">${esc(data.email)}</a>`],
+  ];
+  if (data.mobile) rows.push(['Mobile', esc(data.mobile)]);
+  rows.push(['Type', esc(queryLabel)], ['Subject', esc(data.subject)]);
 
-      <div class="field">
-        <label>Full Name</label>
-        <p>${escapeHtml(data.fullName)}</p>
-      </div>
-      <div class="field">
-        <label>Email</label>
-        <p><a href="mailto:${escapeHtml(data.email)}" style="color:#2563eb;">${escapeHtml(data.email)}</a></p>
-      </div>
-      ${data.mobile ? `
-      <div class="field">
-        <label>Mobile</label>
-        <p>${escapeHtml(data.mobile)}</p>
-      </div>` : ''}
-      <div class="field">
-        <label>Subject</label>
-        <p>${escapeHtml(data.subject)}</p>
-      </div>
-      <div class="divider"></div>
-      <div class="field">
-        <label>Message</label>
-        <div class="message-box"><p>${escapeHtml(data.message)}</p></div>
-      </div>
-    </div>
-    <div class="footer">
-      <p>Submitted on ${dateStr} IST &nbsp;·&nbsp; Chartix Contact Form</p>
-    </div>
-  </div>
-</body>
-</html>`;
+  return emailLayout({
+    title: 'New contact form submission',
+    preheader: `${data.fullName}: ${data.subject}`,
+    body: [
+      eyebrow('Contact form · New submission'),
+      heading(esc(data.subject), 24),
+      details(rows),
+      panel(`<p style="margin:0;font-size:14px;line-height:1.7;color:${C.ink};white-space:pre-wrap;">${esc(data.message)}</p>`),
+    ].join('\n'),
+    footer: `Submitted ${dateStr} IST · Chartix contact form`,
+  });
 }
 
 /** Auto-reply email sent to the person who submitted the form */
 export function userAutoReplyEmail(data: Pick<ContactEmailData, 'fullName' | 'subject'>): string {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>We received your message</title>
-<style>
-  body { margin: 0; padding: 0; background: #f4f4f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-  .wrapper { max-width: 560px; margin: 32px auto; background: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e4e4e7; }
-  .header { background: #09090b; padding: 24px 32px; }
-  .header h1 { margin: 0; color: #ffffff; font-size: 18px; font-weight: 700; }
-  .body { padding: 28px 32px; }
-  .body p { margin: 0 0 14px; font-size: 14px; color: #3f3f46; line-height: 1.7; }
-  .subject-box { background: #f4f4f5; border-left: 3px solid #09090b; border-radius: 4px; padding: 10px 14px; margin: 16px 0; font-size: 14px; color: #18181b; }
-  .footer { padding: 16px 32px; background: #f4f4f5; border-top: 1px solid #e4e4e7; }
-  .footer p { margin: 0; font-size: 12px; color: #a1a1aa; }
-</style>
-</head>
-<body>
-  <div class="wrapper">
-    <div class="header">
-      <h1>Thanks for reaching out, ${escapeHtml(data.fullName.split(' ')[0])}!</h1>
-    </div>
-    <div class="body">
-      <p>We've received your message and will get back to you within <strong>1–2 business days</strong>.</p>
-      <p>Your enquiry was about:</p>
-      <div class="subject-box">${escapeHtml(data.subject)}</div>
-      <p>In the meantime, feel free to explore the study notes, quizzes, and analytics on <a href="https://chartix.in" style="color:#2563eb;">chartix.in</a>.</p>
-      <p style="margin-bottom:0;">— The Chartix Team</p>
-    </div>
-    <div class="footer">
-      <p>This is an automated message. Please do not reply to this email — contact us at <a href="mailto:contact@chartix.in" style="color:#2563eb;">contact@chartix.in</a>.</p>
-    </div>
-  </div>
-</body>
-</html>`;
+  const firstName = data.fullName.trim().split(/\s+/)[0] || 'there';
+  return emailLayout({
+    title: 'We received your message',
+    preheader: 'Thank you for writing to Chartix — we will reply within 1–2 business days.',
+    body: [
+      eyebrow('Message received'),
+      heading(`Thank you for<br>reaching out, ${esc(firstName)}.`),
+      p('We have received your message and will reply within <strong>1–2 business days</strong>.'),
+      p('Your enquiry was about:', { mb: 10 }),
+      panel(`<p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:16px;line-height:1.5;color:${C.ink};">${esc(data.subject)}</p>`),
+      p(`In the meantime, your notes, practice questions and analytics are always available on <a href="https://chartix.in" style="color:${C.green};">chartix.in</a>.`),
+      teamSignature(),
+    ].join('\n'),
+    footer: 'This is an automated confirmation. For anything else, write to <a href="mailto:contact@chartix.in" style="color:#8a938f;">contact@chartix.in</a>.',
+  });
 }
 
 /** Email with a one-time password-reset link. */
 export function passwordResetEmail(data: { resetUrl: string; firstName?: string | null }): string {
-  const hi = data.firstName ? `, ${escapeHtml(data.firstName)}` : '';
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Reset your Chartix password</title>
-<style>
-  body { margin: 0; padding: 0; background: #f4f4f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-  .wrapper { max-width: 560px; margin: 32px auto; background: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e4e4e7; }
-  .header { background: #09090b; padding: 24px 32px; }
-  .header h1 { margin: 0; color: #ffffff; font-size: 18px; font-weight: 700; }
-  .body { padding: 28px 32px; }
-  .body p { margin: 0 0 14px; font-size: 14px; color: #3f3f46; line-height: 1.7; }
-  .btn { display: inline-block; background: #09090b; color: #ffffff !important; text-decoration: none; padding: 12px 22px; border-radius: 8px; font-size: 14px; font-weight: 600; margin: 8px 0 18px; }
-  .muted { font-size: 12px; color: #a1a1aa; word-break: break-all; }
-  .footer { padding: 16px 32px; background: #f4f4f5; border-top: 1px solid #e4e4e7; }
-  .footer p { margin: 0; font-size: 12px; color: #a1a1aa; }
-</style>
-</head>
-<body>
-  <div class="wrapper">
-    <div class="header"><h1>Reset your password</h1></div>
-    <div class="body">
-      <p>Hi${hi},</p>
-      <p>We received a request to reset the password for your Chartix account. Click the button below to choose a new password. This link expires in <strong>1 hour</strong> and can be used once.</p>
-      <p><a class="btn" href="${escapeHtml(data.resetUrl)}">Reset password</a></p>
-      <p class="muted">Or paste this link into your browser:<br/>${escapeHtml(data.resetUrl)}</p>
-      <p>If you didn't request this, you can safely ignore this email — your password won't change.</p>
-      <p style="margin-bottom:0;">— The Chartix Team</p>
-    </div>
-    <div class="footer">
-      <p>Sent by Chartix · <a href="mailto:contact@chartix.in" style="color:#71717a;">contact@chartix.in</a></p>
-    </div>
-  </div>
-</body>
-</html>`;
-}
-
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+  const hi = data.firstName ? `Hi ${esc(data.firstName)},` : 'Hello,';
+  return emailLayout({
+    title: 'Reset your Chartix password',
+    preheader: 'Use this link within one hour to choose a new password.',
+    body: [
+      eyebrow('Account security'),
+      heading('Reset your password'),
+      p(hi),
+      p('We received a request to reset the password for your Chartix account. Use the button below to choose a new one. The link expires in <strong>one hour</strong> and can be used once.'),
+      button(data.resetUrl, 'Reset password'),
+      p(`Or paste this link into your browser:<br><span style="word-break:break-all;">${esc(data.resetUrl)}</span>`, { size: 12, color: C.muted }),
+      p('If you did not request this, you can safely ignore this email — your password will not change.'),
+      teamSignature(),
+    ].join('\n'),
+  });
 }
