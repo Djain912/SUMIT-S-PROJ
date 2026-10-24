@@ -4,6 +4,7 @@ import { validateCsrfOrigin } from '@/server/policies/csrf';
 import { enforceRateLimit } from '@/server/policies/rate-limit';
 import { getChapterAccess } from '@/server/policies/access';
 import { prisma } from '@/lib/db/prisma';
+import { isExpiredOfferCode } from '@/lib/offers';
 import {
   getRazorpay, razorpayConfigured, applyDiscount, getPriceUnits,
   type SupportedCurrency, type PurchaseLevel,
@@ -86,7 +87,7 @@ export async function POST(request: Request) {
 
     if (couponCode) {
       const coupon = await prisma.coupon.findUnique({ where: { code: couponCode } });
-      if (!coupon || !coupon.isActive || !coupon.discountType || coupon.discountValue == null) {
+      if (!coupon || !coupon.isActive || !coupon.discountType || coupon.discountValue == null || isExpiredOfferCode(couponCode)) {
         return NextResponse.json({ success: false, error: { message: 'Coupon is no longer valid.' } }, { status: 400 });
       }
       if (coupon.maxRedemptions !== null && coupon.redeemedCount >= coupon.maxRedemptions) {

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { AuthError, requireAuthenticatedUser } from '@/server/policies/auth';
 import { prisma } from '@/lib/db/prisma';
+import { isExpiredOfferCode } from '@/lib/offers';
 import { getPriceUnits, applyDiscount, type SupportedCurrency } from '@/lib/payments/razorpay';
 
 export const dynamic = 'force-dynamic';
@@ -21,7 +22,7 @@ export async function POST(request: Request) {
 
     const coupon = await prisma.coupon.findUnique({ where: { code } });
 
-    if (!coupon || !coupon.isActive) {
+    if (!coupon || !coupon.isActive || isExpiredOfferCode(code)) {
       return NextResponse.json({ success: false, error: { message: 'Invalid or expired coupon code.' } }, { status: 400 });
     }
     if (!coupon.discountType || coupon.discountValue == null) {

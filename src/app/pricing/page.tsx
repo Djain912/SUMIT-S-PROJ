@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, CheckCircle, Clock, AlertCircle, Lock, Shield, X } from 'lucide-react';
+import { ArrowRight, CheckCircle, Clock, AlertCircle, Lock, Shield, Sparkles, X } from 'lucide-react';
 import { getVisitorCurrency } from '@/lib/geo/country';
+import { applyDiscount, getPriceUnits } from '@/lib/payments/razorpay';
+import { DIWALI_OFFER, isOfferLive } from '@/lib/offers';
 
 const plansData = [
   {
@@ -114,6 +116,14 @@ export default async function PricingPage() {
   const currency = await getVisitorCurrency();
   const isUSD = currency === 'USD';
 
+  // Same math as checkout, so the advertised price matches what Razorpay charges.
+  const offerLive = isOfferLive();
+  const { finalPaise: offerUnits } = applyDiscount(getPriceUnits(currency), 'PERCENT', DIWALI_OFFER.percent);
+  const offerPrice = isUSD
+    ? `$${(offerUnits / 100).toFixed(2).replace(/\.00$/, '')}`
+    : `₹${Math.floor(offerUnits / 100).toLocaleString('en-IN')}`;
+  const listPrice = isUSD ? '$99' : '₹6,999';
+
   return (
     <div className="min-h-screen bg-[#f0f7f4]">
 
@@ -140,6 +150,34 @@ export default async function PricingPage() {
         <p className="mt-4 mx-auto max-w-xl text-base leading-7 text-zinc-500">
           No bundles, no confusion. Try free first — then choose the CMT level you&apos;re preparing for.
         </p>
+
+        {/* Diwali offer */}
+        {offerLive && (
+          <div className="relative mx-auto mt-8 max-w-2xl overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-950 via-emerald-900 to-emerald-800 px-6 py-7 text-left shadow-xl ring-1 ring-amber-300/30 sm:px-9">
+            <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-amber-400/20 blur-3xl" />
+            <div aria-hidden className="pointer-events-none absolute -bottom-20 -left-10 h-40 w-40 rounded-full bg-amber-300/10 blur-3xl" />
+            <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.25em] text-amber-300">
+                  <Sparkles className="h-3.5 w-3.5" /> Deepavali Offer
+                </p>
+                <p className="mt-2 font-serif text-3xl font-semibold leading-tight text-white sm:text-4xl">
+                  {DIWALI_OFFER.percent}% off <span className="text-amber-200">every level</span>
+                </p>
+                <p className="mt-2 text-sm text-emerald-200/90">
+                  <span className="text-emerald-300/70 line-through">{listPrice}</span>{' '}
+                  <span className="font-semibold text-white">{offerPrice}</span> per level · until {DIWALI_OFFER.endsLabel}
+                </p>
+              </div>
+              <div className="shrink-0 text-center">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-300/80">Use code at checkout</p>
+                <p className="mt-1.5 rounded-xl border border-dashed border-amber-300/70 bg-amber-300/10 px-5 py-2.5 font-mono text-xl font-bold tracking-[0.3em] text-amber-200">
+                  {DIWALI_OFFER.code}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link
@@ -213,12 +251,24 @@ export default async function PricingPage() {
               <p className={`text-xs font-semibold uppercase tracking-widest mb-1 ${plan.comingSoon ? 'text-zinc-400' : 'text-emerald-600'}`}>
                 {plan.level}
               </p>
-              <div className="flex items-end gap-1.5 mb-2">
-                <span className={`text-4xl font-extrabold ${plan.comingSoon ? 'text-zinc-400' : 'text-emerald-900'}`}>
-                  {isUSD ? plan.priceUSD : plan.priceINR}
-                </span>
-                <span className="mb-1 text-sm text-zinc-400">{plan.period}</span>
-              </div>
+              {offerLive && !plan.comingSoon ? (
+                <div className="mb-2">
+                  <div className="flex items-end gap-2">
+                    <span className="text-4xl font-extrabold text-emerald-900">{offerPrice}</span>
+                    <span className="mb-1 text-base font-semibold text-zinc-400 line-through">{listPrice}</span>
+                  </div>
+                  <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-200">
+                    <Sparkles className="h-3 w-3" /> Deepavali · {DIWALI_OFFER.percent}% off with {DIWALI_OFFER.code}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-end gap-1.5 mb-2">
+                  <span className={`text-4xl font-extrabold ${plan.comingSoon ? 'text-zinc-400' : 'text-emerald-900'}`}>
+                    {isUSD ? plan.priceUSD : plan.priceINR}
+                  </span>
+                  <span className="mb-1 text-sm text-zinc-400">{plan.period}</span>
+                </div>
+              )}
               <p className="text-sm leading-6 text-zinc-500 mb-2">{plan.description}</p>
 
               <div className="flex items-center gap-1.5 mb-6">
@@ -251,7 +301,9 @@ export default async function PricingPage() {
                     href="/get-access"
                     className="block w-full text-center text-xs text-zinc-400 hover:text-zinc-600 transition py-1"
                   >
-                    or Purchase Full Access — {isUSD ? '$99' : '₹6,999'}
+                    {offerLive
+                      ? `or Purchase Full Access — ${offerPrice} with ${DIWALI_OFFER.code}`
+                      : `or Purchase Full Access — ${listPrice}`}
                   </Link>
                   {/* No-refund notice */}
                   <div className="flex items-center justify-center gap-1.5 rounded-xl border border-zinc-100 bg-zinc-50 px-3 py-2 mt-1">
