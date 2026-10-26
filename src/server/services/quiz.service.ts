@@ -36,13 +36,42 @@ export const FULL_TEST_CONFIG: Record<string, FullTestConfig> = {
   },
 };
 
-// Target difficulty mix WITHIN each domain's allocation (exam-realistic).
+// Target difficulty mix for every quiz and mock. Skewed hard on purpose: trial
+// users who saw mostly easy questions judged the product as too easy.
 type Difficulty = 'EASY' | 'MEDIUM' | 'HARD';
 const DIFFICULTY_WEIGHTS: Record<Difficulty, number> = {
-  EASY: 0.25,
-  MEDIUM: 0.50,
-  HARD: 0.25,
+  EASY: 0.20,
+  MEDIUM: 0.40,
+  HARD: 0.40,
 };
+
+function difficultyOf(q: { difficulty: string | null }): Difficulty {
+  return q.difficulty === 'EASY' || q.difficulty === 'HARD' ? q.difficulty : 'MEDIUM';
+}
+
+// Picks `count` items in the target difficulty mix; a short bucket is topped
+// up from the remaining pool so the quiz length never drops.
+function pickByDifficulty<T extends { id: string; difficulty: string | null }>(items: T[], count: number): T[] {
+  if (items.length <= count) return items;
+  const buckets: Record<Difficulty, T[]> = { EASY: [], MEDIUM: [], HARD: [] };
+  for (const item of shuffle(items)) buckets[difficultyOf(item)].push(item);
+
+  const easyT = Math.round(DIFFICULTY_WEIGHTS.EASY * count);
+  const hardT = Math.round(DIFFICULTY_WEIGHTS.HARD * count);
+  const medT = count - easyT - hardT;
+  const picked = [
+    ...buckets.EASY.slice(0, easyT),
+    ...buckets.MEDIUM.slice(0, medT),
+    ...buckets.HARD.slice(0, hardT),
+  ];
+  if (picked.length < count) {
+    const used = new Set(picked.map(p => p.id));
+    // Prefer harder leftovers when backfilling.
+    const leftovers = [...buckets.HARD, ...buckets.MEDIUM, ...buckets.EASY].filter(i => !used.has(i.id));
+    picked.push(...leftovers.slice(0, count - picked.length));
+  }
+  return picked;
+}
 
 // Maps each unit (chapter.orderIndex) to its CMT knowledge domain per level.
 export const DOMAIN_BY_UNIT_L1: Record<number, CmtDomain> = {
@@ -105,8 +134,7 @@ async function pickFullTestQuestionIds(scope: ChapterScope, level: string): Prom
     const chapterId = q.chapterId ?? q.subtopic?.chapterId ?? null;
     const domain = chapterId ? domainByChapter.get(chapterId) : undefined;
     if (!domain) continue;
-    const diff: Difficulty = q.difficulty === 'EASY' || q.difficulty === 'HARD' ? q.difficulty : 'MEDIUM';
-    byDomain[domain][diff].push(q.id);
+    byDomain[domain][difficultyOf(q)].push(q.id);
   }
   for (const d of Object.keys(byDomain) as CmtDomain[]) {
     for (const diff of Object.keys(DIFFICULTY_WEIGHTS) as Difficulty[]) {
@@ -154,7 +182,7 @@ async function pickFullTestQuestionIds(scope: ChapterScope, level: string): Prom
     short += pull(byDomain[d].EASY, easyT);
     short += pull(byDomain[d].MEDIUM, medT);
     short += pull(byDomain[d].HARD, hardT);
-    if (short > 0) pull(shuffle([...byDomain[d].EASY, ...byDomain[d].MEDIUM, ...byDomain[d].HARD]), short);
+    if (short > 0) pull([...byDomain[d].HARD, ...byDomain[d].MEDIUM, ...byDomain[d].EASY], short);
   }
 
   if (selected.size < cfg.total) {
@@ -250,9 +278,9 @@ export async function resolveQuizQuestions(selection: QuizSelectionInput, scope:
     },
   });
 
-  // DB unique index on id guarantees no duplication — no in-memory dedup needed
-  const orderedQuestions = selection.randomizeOrder ? shuffle(questions) : questions;
-  return orderedQuestions.slice(0, selection.questionCount);
+  const picked = new Set(pickByDifficulty(questions, selection.questionCount).map(q => q.id));
+  const kept = questions.filter(q => picked.has(q.id));
+  return selection.randomizeOrder ? shuffle(kept) : kept;
 }
 
 export async function startQuizAttempt(userId: string, selection: QuizSelectionInput, scope: ChapterScope = 'ALL') {
