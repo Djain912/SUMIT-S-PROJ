@@ -6,7 +6,7 @@ import { Label, Panel } from './parts';
 import { ShareButton } from './share';
 
 type LiveRow = {
-  date: string;       // NSE format "27-Oct-2026"
+  date: string;
   fii_buy: number;
   fii_sell: number;
   fii_net: number;
@@ -45,35 +45,29 @@ export function LiveOverlay({ dbLatestDate }: { dbLatestDate: string }) {
   if (!live) return null;
 
   const dateLabel = fmtDate(live.date, 'long');
+  const combined = live.fiiNet + live.diiNet;
   const todayMsg = [
     `FII / DII data — ${dateLabel}`,
     `FII: ${cr(live.fiiNet, { compact: false })} (net ${live.fiiNet < 0 ? 'sold' : 'bought'})`,
     `DII: ${cr(live.diiNet, { compact: false })} (net ${live.diiNet < 0 ? 'sold' : 'bought'})`,
-    `Net: ${cr(live.fiiNet + live.diiNet, { compact: false })}`,
+    `Net: ${cr(combined, { compact: false })}`,
   ].join('\n');
 
-  const combined = live.fiiNet + live.diiNet;
-
   return (
-    <Panel className="mb-6 border-emerald-200 bg-emerald-50/40" mark id="share-live">
-      <div className="px-6 pt-5 pb-2">
-        <p className="text-[12px] font-medium uppercase tracking-[0.08em] text-emerald-800">
-          Live · {dateLabel}
-        </p>
-      </div>
+    <Panel className="mb-16" mark id="share-live">
       <div className="grid divide-y divide-stone-200 md:grid-cols-3 md:divide-x md:divide-y-0">
         {([
           ['FII / FPI net', live.fiiNet, COLORS.fii, live.fiiBuy, live.fiiSell],
           ['DII net', live.diiNet, COLORS.dii, live.diiBuy, live.diiSell],
           ['Combined', combined, null, null, null],
         ] as const).map(([label, v, color, buy, sell]) => (
-          <div key={label} className="px-6 py-5">
+          <div key={label} className="px-6 py-7">
             <div className="flex items-center gap-2">
               {color && <span className="h-2.5 w-2.5 rounded-[3px]" style={{ backgroundColor: color }} />}
               <Label>{label}</Label>
             </div>
-            <p className="mt-2 font-serif text-[36px] leading-none tracking-[-0.01em] text-stone-900">{cr(v, { compact: false })}</p>
-            <p className="mt-2 text-[13px] text-stone-500">
+            <p className="mt-3 font-serif text-[40px] leading-none tracking-[-0.01em] text-stone-900">{cr(v, { compact: false })}</p>
+            <p className="mt-3 text-[13px] text-stone-500">
               {buy != null && sell != null
                 ? <>Bought {cr(buy, { sign: false, compact: false })} · Sold {cr(sell, { sign: false, compact: false })}</>
                 : v >= 0 ? 'Net money into equities' : 'Net money out of equities'}
@@ -81,10 +75,20 @@ export function LiveOverlay({ dbLatestDate }: { dbLatestDate: string }) {
           </div>
         ))}
       </div>
-      <div className="border-t border-emerald-200 px-6 py-4 flex items-center justify-between gap-3">
-        <p className="text-[13px] text-stone-500">Data from NSE — may update until final figures are published</p>
-        <ShareButton variant="primary" label="Share" message={todayMsg} targetId="share-live"
-          imageTitle="Institutional money flows" imageSubtitle={dateLabel} fileName={`chartix-fii-dii-${live.date}`} />
+      <div className="border-t border-stone-200 px-6 py-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Label>What happened</Label>
+          <ShareButton variant="primary" label="Share today's data" message={todayMsg} targetId="share-live"
+            imageTitle="Institutional money flows" imageSubtitle={dateLabel} fileName={`chartix-fii-dii-${live.date}`} />
+        </div>
+        <p className="mt-3 max-w-3xl font-serif text-[19px] leading-[1.55] text-stone-800">
+          {live.fiiNet >= 0
+            ? `Foreign investors (FIIs) bought a net ${cr(live.fiiNet, { compact: false })}`
+            : `Foreign investors (FIIs) sold a net ${cr(live.fiiNet, { compact: false })}`}
+          {live.diiNet >= 0
+            ? ` and domestic institutions (DIIs) bought a net ${cr(live.diiNet, { compact: false })}.`
+            : ` and domestic institutions (DIIs) sold a net ${cr(live.diiNet, { compact: false })}.`}
+        </p>
       </div>
     </Panel>
   );
