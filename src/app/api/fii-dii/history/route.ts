@@ -14,7 +14,7 @@ export async function GET(request: Request) {
 
   try {
     const rows = await prisma.fiiDiiLog.findMany({
-      orderBy: { date: 'asc' },
+      orderBy: { date: 'desc' },
       take: days,
       select: {
         date: true,
@@ -22,6 +22,7 @@ export async function GET(request: Request) {
         diiBuy: true, diiSell: true, diiNet: true,
       },
     });
+    rows.reverse();
     return NextResponse.json(rows);
   } catch (e) {
     return NextResponse.json(
