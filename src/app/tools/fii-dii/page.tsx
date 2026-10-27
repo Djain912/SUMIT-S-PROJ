@@ -9,8 +9,6 @@ import { Block, Label, PageIntro, Panel } from '@/components/fii-dii/parts';
 import { CumulativeChart, DailyFlowChart } from '@/components/fii-dii/charts';
 import { SignedBar } from '@/components/fii-dii/visuals';
 import { ShareButton } from '@/components/fii-dii/share';
-import { LiveOverlay } from '@/components/fii-dii/live-overlay';
-
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
@@ -113,8 +111,6 @@ export default async function FiiDiiOverview() {
         meta={latest ? <>Latest session: <span className="text-stone-600">{fmtDate(latest.date, 'long')}</span>{updated.cash && <> · <span className="text-stone-600">Last updated {fmtStamp(updated.cash)}</span></>} · Refreshed after every market close</> : null}>
         How foreign (FII/FPI) and domestic (DII) institutions are buying and selling Indian equities — free, no login.
       </PageIntro>
-
-      <LiveOverlay dbLatestDate={latest?.date ?? ''} />
 
       {latest && (
         <Panel className="mb-16" mark id="share-today">

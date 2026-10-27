@@ -8,11 +8,10 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-// Vercel calls this several times each evening and once next morning (see
-// vercel.json). NSE's cash API only ever returns the latest session and often
-// publishes after 7 PM IST, so a single early run lost that day for good; the
-// repeated runs (and the 8 AM catch-up, before the next session replaces it)
-// make sure every session is captured. Upserts make repeat runs harmless.
+// Vercel calls this every 30 min from 6:30 to 11 PM IST on weekdays, plus an 8 AM
+// catch-up (see vercel.json). NSE's cash API only returns the latest session and
+// publishes anywhere from ~6 to 9 PM, so evening runs keep polling until today's
+// cash + F&O are stored, then return early without touching NSE.
 // Protected by CRON_SECRET — Vercel sends it as Authorization: Bearer <secret>.
 
 const UA =
@@ -186,6 +185,26 @@ export async function GET(request: Request) {
   }
 
   const results: Record<string, unknown> = {};
+  const run = new URL(request.url).searchParams.get('run');
+
+  // Evening runs repeat every 30 min; once today's cash and F&O are both stored, stop hitting NSE.
+  if (run !== 'morning') {
+    const nowIst = new Date(Date.now() + 5.5 * 3600_000);
+    const iso = nowIst.toISOString().slice(0, 10);
+    const label = `${String(nowIst.getUTCDate()).padStart(2, '0')}-${MONTHS[nowIst.getUTCMonth()]}-${nowIst.getUTCFullYear()}`;
+    const [cashToday, fnoToday] = await Promise.all([
+      prisma.fiiDiiLog.findFirst({ where: { date: iso, fiiBuy: { gt: 0 } }, select: { date: true } }),
+      prisma.fnoLog.findFirst({ where: { date: label }, select: { date: true } }),
+    ]);
+    if (cashToday && fnoToday) {
+      try {
+        results.telegram = await runTelegramNotify({ morning: false });
+      } catch (e) {
+        results.telegram = { error: (e as Error).message };
+      }
+      return NextResponse.json({ ok: true, skipped: `Already have ${iso}`, ...results });
+    }
+  }
 
   // 1. Cash segment
   try {
@@ -224,7 +243,6 @@ export async function GET(request: Request) {
 
   // 3. Refresh the public pages, then deliver Telegram posts / alerts
   revalidateTag(FII_DII_CACHE_TAG);
-  const run = new URL(request.url).searchParams.get('run');
   try {
     results.telegram = await runTelegramNotify({ morning: run === 'morning' });
   } catch (e) {
