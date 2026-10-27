@@ -21,15 +21,15 @@
     },
     {
       "path": "/api/cron/fii-dii-log",
+      "schedule": "30 13 * * *"
+    },
+    {
+      "path": "/api/cron/fii-dii-log",
+      "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/fii-dii-log",
       "schedule": "30 14 * * *"
-    },
-    {
-      "path": "/api/cron/fii-dii-log",
-      "schedule": "0 16 * * *"
-    },
-    {
-      "path": "/api/cron/fii-dii-log",
-      "schedule": "30 17 * * *"
     },
     {
       "path": "/api/cron/fii-dii-log?run=morning",
