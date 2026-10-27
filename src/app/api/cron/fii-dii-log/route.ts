@@ -8,7 +8,8 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-// Vercel calls this every 30 min from 6:30 to 11 PM IST on weekdays, plus an 8 AM
+// Vercel calls this hourly from 6:30 to 10:30 PM IST (Hobby plan: daily entries, fired
+// anywhere within the hour), plus an 8 AM
 // catch-up (see vercel.json). NSE's cash API only returns the latest session and
 // publishes anywhere from ~6 to 9 PM, so evening runs keep polling until today's
 // cash + F&O are stored, then return early without touching NSE.
