@@ -1,0 +1,7 @@
+{
+  "note": "People who asked to stop receiving Chartix emails. Every scripts/send-*.mjs bulk email skips these addresses. Add new requests here (lowercase), with the date.",
+  "unsubscribed": [
+    { "email": "ankitgill145@gmail.com", "date": "2026-10-23", "reason": "asked to unsubscribe" },
+    { "email": "rahool2795@gmail.com", "date": "2026-10-28", "reason": "asked to unsubscribe" }
+  ]
+}
