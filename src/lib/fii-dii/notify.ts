@@ -1,7 +1,7 @@
 import { Redis } from '@upstash/redis';
 import { sendTelegramMessage, sendTelegramPhotos, telegramConfigured } from '@/lib/telegram';
 import { getCashDays, getFnoDays, getSectors } from './data';
-import { renderDailyCard, renderFnoCard, renderFnoTrendsCard, renderSectorCard } from './cards';
+import { renderDailyCard, renderFnoCard, renderFnoTrendsCard, renderSectorCard, renderWeeklyCard, weekStart } from './cards';
 import { cr, fmtDate, longShare, stance } from './format';
 
 // End-of-day Telegram delivery for the FII/DII tracker, called by the logger cron.
@@ -9,6 +9,8 @@ import { cr, fmtDate, longShare, stance } from './format';
 //    separate messages (each with its own caption), once per session each, as
 //    soon as both cash and F&O are stored. The 8 AM run posts whatever exists
 //    if the evening never completed.
+//  • Posts a weekly wrap once the week's last session is in (Friday evening,
+//    or the next morning run if Friday was a holiday).
 //  • Posts the sector card once per new NSDL report.
 //  • On the 8 AM run, alerts if the last trading day is still missing data.
 
@@ -90,6 +92,24 @@ function trendsCaption(days: Awaited<ReturnType<typeof getFnoDays>>) {
   ].join('\n');
 }
 
+function weeklyCaption(cash: Awaited<ReturnType<typeof getCashDays>>) {
+  const end = cash[cash.length - 1].date;
+  const week = cash.filter((r) => r.date >= weekStart(end));
+  const fii = week.reduce((a, r) => a + r.fiiNet, 0);
+  const dii = week.reduce((a, r) => a + r.diiNet, 0);
+  return [
+    `FII / DII weekly wrap · ${fmtDate(week[0].date, 'day')} – ${shortDate(end)}`,
+    '',
+    `FII: ${flow(fii)}`,
+    `DII: ${flow(dii)}`,
+    `Net (FII + DII): ${cr(fii + dii, { compact: false })}`,
+    '',
+    `Full data: ${link()}`,
+  ].join('\n');
+}
+
+const todayIst = () => new Date(Date.now() + 5.5 * 3600_000).toISOString().slice(0, 10);
+
 export async function runTelegramNotify({ morning }: { morning: boolean }) {
   if (!telegramConfigured()) return { skipped: 'Telegram not configured' };
   const store = kv();
@@ -122,6 +142,24 @@ export async function runTelegramNotify({ morning }: { morning: boolean }) {
       }
     }
     out.daily = { latest: latest?.date, fnoReady, posted };
+
+    // Weekly wrap — after the daily posts, once per week
+    if (latest) {
+      const isFriday = new Date(`${latest.date}T00:00:00Z`).getUTCDay() === 5;
+      const weekOver = weekStart(todayIst()) > weekStart(latest.date);
+      if ((isFriday && fnoReady) || (morning && weekOver)) {
+        const key = `fii-dii:tg:weekly:${weekStart(latest.date)}`;
+        if (!store || (await store.set(key, '1', { nx: true, ex: 60 * 60 * 24 * 30 })) === 'OK') {
+          try {
+            await sendTelegramPhotos([{ png: await renderWeeklyCard(cash, fno), name: `weekly-${latest.date}` }], weeklyCaption(cash));
+            out.weekly = { posted: latest.date };
+          } catch (e) {
+            await store?.del(key);
+            out.weekly = { error: (e as Error).message };
+          }
+        }
+      }
+    }
   } catch (e) {
     out.daily = { error: (e as Error).message };
   }

@@ -28,3 +28,8 @@ graphify-out
 # Daily insight scan — generated output + local state, not source
 scripts/social/output/
 scripts/social/state/
+
+# Customer email lists from bulk sends (personal data; repo is public)
+scripts/.*-sent.json
+# Hard-coded recipient/exclude lists used by scripts (kept local)
+scripts/private-email-lists.json

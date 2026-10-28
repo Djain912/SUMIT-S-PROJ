@@ -279,3 +279,76 @@ export async function renderFnoTrendsCard(days: FnoDay[]): Promise<ArrayBuffer> 
     </Frame>,
   );
 }
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+/** Monday (YYYY-MM-DD) of the week containing `iso`. */
+export function weekStart(iso: string): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+  return d.toISOString().slice(0, 10);
+}
+
+function FnoWeekRow({ title, from, to }: { title: string; from?: LongShort; to: LongShort }) {
+  const net = to.long - to.short;
+  const chg = from ? net - (from.long - from.short) : 0;
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '14px 0', borderBottom: `1px solid ${LINE}` }}>
+      <div style={{ display: 'flex', fontSize: 23, fontWeight: 700 }}>{title}</div>
+      <div style={{ display: 'flex', fontSize: 21, color: BODY }}>
+        {`${longShare(to).toFixed(0)}% long · net ${num(net, true)}`}
+        {from && <div style={{ display: 'flex', marginLeft: 14, fontWeight: 700, color: INK }}>{`(${num(chg, true)} this week)`}</div>}
+      </div>
+    </div>
+  );
+}
+
+/** Week-close summary: each session's flows, week totals and how FII F&O positions moved. */
+export async function renderWeeklyCard(cash: CashDay[], fno: FnoDay[]): Promise<ArrayBuffer> {
+  const end = cash[cash.length - 1].date;
+  const mon = weekStart(end);
+  const week = cash.filter((r) => r.date >= mon);
+  const fii = sum(week, 'fiiNet');
+  const dii = sum(week, 'diiNet');
+  const fnoWeek = fno.filter((d) => d.date >= mon);
+  const fnoTo = fnoWeek[fnoWeek.length - 1];
+  const fnoFrom = [...fno].reverse().find((d) => d.date < mon); // previous week's close
+  const month = cash.filter((r) => r.date.slice(0, 7) === end.slice(0, 7));
+  const src = await logo();
+  const cell = (v: string, bold = false) => <div style={{ display: 'flex', flex: 1, justifyContent: 'flex-end', fontWeight: bold ? 800 : 400 }}>{v}</div>;
+  return render(
+    <Frame logoSrc={src} eyebrow="FII & DII DATA · WEEKLY WRAP" title="Week in review"
+      subtitle={`${fmtDate(week[0].date, 'day')} – ${fmtDate(end)} · ${week.length} session${week.length === 1 ? '' : 's'}`}>
+      <div style={{ display: 'flex', gap: 16 }}>
+        <Stat label="FII / FPI NET" color={COLORS.fii} value={cr(fii, { compact: false })} note={fii < 0 ? 'Net sellers this week' : 'Net buyers this week'} />
+        <Stat label="DII NET" color={COLORS.dii} value={cr(dii, { compact: false })} note={dii < 0 ? 'Net sellers this week' : 'Net buyers this week'} />
+        <Stat label="COMBINED" value={cr(fii + dii, { compact: false })} note={fii + dii >= 0 ? 'Net money in' : 'Net money out'} />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', marginTop: 28, background: '#FFFFFF', border: `1px solid ${LINE}`, borderRadius: 24, padding: '18px 28px', fontSize: 22 }}>
+        <div style={{ display: 'flex', fontSize: 16, fontWeight: 700, letterSpacing: 2, color: MUTED, paddingBottom: 10, borderBottom: `1px solid ${LINE}` }}>
+          <div style={{ display: 'flex', width: 190 }}>SESSION</div>{cell('FII')}{cell('DII')}{cell('COMBINED')}
+        </div>
+        {week.map((r) => (
+          <div key={r.date} style={{ display: 'flex', padding: '11px 0', borderBottom: `1px solid ${LINE}` }}>
+            <div style={{ display: 'flex', width: 190, color: BODY }}>{`${WEEKDAYS[new Date(`${r.date}T00:00:00Z`).getUTCDay()]} ${fmtDate(r.date, 'day')}`}</div>
+            {cell(cr(r.fiiNet))}{cell(cr(r.diiNet))}{cell(cr(r.fiiNet + r.diiNet), true)}
+          </div>
+        ))}
+        <div style={{ display: 'flex', paddingTop: 11, fontWeight: 800 }}>
+          <div style={{ display: 'flex', width: 190 }}>Week</div>{cell(cr(fii), true)}{cell(cr(dii), true)}{cell(cr(fii + dii), true)}
+        </div>
+      </div>
+      {fnoTo && (
+        <div style={{ display: 'flex', flexDirection: 'column', marginTop: 26 }}>
+          <div style={{ display: 'flex', fontSize: 18, fontWeight: 700, letterSpacing: 2, color: MUTED }}>{`FII F&O AT WEEK CLOSE · ${fmtDate(fnoTo.date, 'day').toUpperCase()} · CONTRACTS`}</div>
+          <FnoWeekRow title="Index futures" from={fnoFrom?.fii.idxFut} to={fnoTo.fii.idxFut} />
+          <FnoWeekRow title="Index calls" from={fnoFrom?.fii.idxCall} to={fnoTo.fii.idxCall} />
+          <FnoWeekRow title="Index puts" from={fnoFrom?.fii.idxPut} to={fnoTo.fii.idxPut} />
+        </div>
+      )}
+      <div style={{ display: 'flex', marginTop: 'auto', marginBottom: 28, fontSize: 20, color: BODY }}>
+        {`Month to date (${month.length} sessions): FII ${cr(sum(month, 'fiiNet'))} · DII ${cr(sum(month, 'diiNet'))}`}
+      </div>
+    </Frame>,
+  );
+}

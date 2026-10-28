@@ -25,6 +25,9 @@ const EXCLUDE = new Set([
   'traderbtc569@gmail.com',
 ]);
 
+// Anyone who asked to unsubscribe (scripts/email-unsubscribed.json) is never emailed.
+for (const u of JSON.parse(readFileSync('scripts/email-unsubscribed.json', 'utf-8')).unsubscribed) EXCLUDE.add(u.email.toLowerCase());
+
 const LEVEL = {
   LEVEL_1: { label: 'Level I', questions: '3,400+ Level I' },
   LEVEL_2: { label: 'Level II', questions: '1,000+ Level II' },
@@ -50,7 +53,7 @@ async function recipients() {
     },
   });
   return users
-    .filter((u) => u.role !== 'ADMIN' && !EXCLUDE.has(u.email))
+    .filter((u) => u.role !== 'ADMIN' && !EXCLUDE.has(u.email.toLowerCase()))
     .filter((u) => u.levelTrials.length > 0)
     .filter((u) => u.payments.length === 0 && !(u.premiumUntil && u.premiumUntil > now) && u.entitlements.length === 0)
     .map((u) => ({
