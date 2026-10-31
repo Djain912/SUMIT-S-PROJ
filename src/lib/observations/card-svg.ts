@@ -72,6 +72,11 @@ function esc(s: string | number) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+// Instrument Serif has no ₹ glyph, and resvg then sets the WHOLE line in Manrope
+// (even with the ₹ in its own tspan). Lines with ₹ are therefore set in the sans
+// font on purpose and measured with sans widths, so they can't run into the key stat.
+const needsSans = (s: string) => s.includes('₹');
+
 // Rough advance widths (em) — good enough to wrap without a layout engine.
 const SERIF_EM = 0.32; // Instrument Serif is narrow
 const SANS_EM = 0.5;
@@ -199,11 +204,12 @@ function lineChart(c: LineChart, box: Box): string {
     parts.push(`<rect x="${(a - 4).toFixed(1)}" y="${y0}" width="${Math.max(8, b - a + 8).toFixed(1)}" height="${h}" fill="${ACCENT}" fill-opacity="0.07"/>`);
   }
 
-  // reference lines
+  // reference lines (labels are drawn after the price line so it can't cover them)
+  const refLabels: string[] = [];
   for (const r of c.refLines ?? []) {
     const yy = Y(r.value);
     parts.push(`<line x1="${x0}" y1="${yy.toFixed(1)}" x2="${x0 + plotW}" y2="${yy.toFixed(1)}" stroke="${MUTED}" stroke-width="1.5" stroke-dasharray="7 7"/>`);
-    parts.push(`<text x="${x0 + 6}" y="${(yy - 10).toFixed(1)}" font-family="${SANS}" font-size="17" font-weight="600" fill="${MUTED}">${esc(r.label)}</text>`);
+    refLabels.push(`<text x="${x0 + 6}" y="${(yy - 10).toFixed(1)}" font-family="${SANS}" font-size="17" font-weight="600" fill="${MUTED}" stroke="${BG}" stroke-width="6" stroke-linejoin="round" paint-order="stroke">${esc(r.label)}</text>`);
   }
 
   // overlay (e.g. moving average)
@@ -225,6 +231,7 @@ function lineChart(c: LineChart, box: Box): string {
   const linePts = values.map((v, i) => `${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
   parts.push(`<polygon points="${X(0).toFixed(1)},${y0 + h} ${linePts} ${X(n - 1).toFixed(1)},${y0 + h}" fill="url(#area)"/>`);
   parts.push(`<polyline points="${linePts}" fill="none" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>`);
+  parts.push(...refLabels);
 
   // markers
   for (const mk of c.markers ?? []) {
@@ -269,7 +276,9 @@ function barChart(c: BarChart, box: Box): string {
   const minV = Math.min(0, ...vals);
   const span = maxV - minV || 1;
   const Y = (v: number) => top + ((maxV - v) / span) * h;
-  const slot = box.w / n;
+  // The average label sits in a right-hand gutter so it never lands on the last bar's value.
+  const gutter = c.avg ? textWidth(c.avg.label, 17, 0.56) + 20 : 0;
+  const slot = (box.w - gutter) / n;
   const bw = Math.min(64, slot * 0.62);
   const zeroY = Y(0);
 
@@ -296,7 +305,7 @@ function barChart(c: BarChart, box: Box): string {
   if (c.avg) {
     const ay = Y(c.avg.value);
     parts.push(`<line x1="${box.x}" y1="${ay.toFixed(1)}" x2="${box.x + box.w}" y2="${ay.toFixed(1)}" stroke="${INK}" stroke-width="1.5" stroke-dasharray="7 7"/>`);
-    parts.push(`<text x="${box.x + box.w}" y="${(ay - 10).toFixed(1)}" text-anchor="end" font-family="${SANS}" font-size="17" font-weight="700" fill="${INK}">${esc(c.avg.label)}</text>`);
+    parts.push(`<text x="${box.x + box.w}" y="${(ay + 6).toFixed(1)}" text-anchor="end" font-family="${SANS}" font-size="17" font-weight="700" fill="${INK}" stroke="${BG}" stroke-width="6" stroke-linejoin="round" paint-order="stroke">${esc(c.avg.label)}</text>`);
   }
   return parts.join('\n');
 }
@@ -305,15 +314,18 @@ function hbarChart(c: HBarChart, box: Box): string {
   const items = c.items;
   const n = items.length;
   const parts: string[] = [];
-  const labelW = 230;
   const valueW = 110;
   const rowH = Math.min(46, box.h / n);
   const barH = Math.min(26, rowH * 0.6);
   const maxAbs = Math.max(...items.map((i) => Math.abs(i.value)), 0.0001);
   const hasNeg = items.some((i) => i.value < 0);
   const hasPos = items.some((i) => i.value > 0);
-  const plotX = box.x + labelW;
-  const plotW = box.w - labelW - valueW;
+  // Label column fits the longest name; negative values print left of their bars,
+  // so reserve that width too or they run into the names.
+  const labelW = Math.min(380, Math.max(230, ...items.map((i) => textWidth(i.label, 20, 0.54) + 28)));
+  const negW = hasNeg ? Math.max(...items.filter((i) => i.value < 0).map((i) => textWidth(fmtBarValue(i.value, c.format), 19, 0.58))) + 24 : 0;
+  const plotX = box.x + labelW + negW;
+  const plotW = box.w - labelW - negW - valueW;
   const zeroX = hasNeg && hasPos ? plotX + plotW * (Math.max(...items.map((i) => -i.value), 0) / (Math.max(...items.map((i) => -i.value), 0) + Math.max(...items.map((i) => i.value), 0))) : hasNeg ? plotX + plotW : plotX;
   const scale = hasNeg && hasPos ? plotW / (Math.max(...items.map((i) => -i.value), 0) + Math.max(...items.map((i) => i.value), 0)) : plotW / maxAbs;
 
@@ -346,17 +358,20 @@ export function renderCard(spec: CardSpec): string {
   parts.push(`<text x="${M + 40}" y="82" font-family="${SANS}" font-size="19" font-weight="700" letter-spacing="2.6" fill="${ACCENT}">${esc(spec.kicker.toUpperCase())}</text>`);
 
   // headline — shrink until it fits in two lines
-  let size = 60;
-  let lines = balancedWrap(spec.headline, textW, size, SERIF_EM);
-  while (lines.length > 2 && size > 44) {
+  const headSans = needsSans(spec.headline);
+  const headFont = headSans ? SANS : SERIF;
+  const headEm = headSans ? SANS_EM : SERIF_EM;
+  let size = headSans ? 50 : 60;
+  let lines = balancedWrap(spec.headline, textW, size, headEm);
+  while (lines.length > 2 && size > (headSans ? 38 : 44)) {
     size -= 4;
-    lines = balancedWrap(spec.headline, textW, size, SERIF_EM);
+    lines = balancedWrap(spec.headline, textW, size, headEm);
   }
   lines = lines.slice(0, 3);
   const lh = Math.round(size * 1.1);
   let y = 112 + size * 0.82;
   for (const l of lines) {
-    parts.push(`<text x="${M}" y="${y.toFixed(0)}" font-family="${SERIF}" font-size="${size}" fill="${INK}" letter-spacing="-0.5">${esc(l)}</text>`);
+    parts.push(`<text x="${M}" y="${y.toFixed(0)}" font-family="${headFont}" font-size="${size}" fill="${INK}" letter-spacing="-0.5">${esc(l)}</text>`);
     y += lh;
   }
 
@@ -373,9 +388,10 @@ export function renderCard(spec: CardSpec): string {
     const kx = W - M - 330;
     parts.push(`<rect x="${kx}" y="108" width="3" height="160" fill="${ACCENT}"/>`);
     let vs = 92;
+    const statSans = needsSans(spec.keyStat.value);
     // Generous width estimate: ₹, %, K and digits run wider than average text.
-    while (textWidth(spec.keyStat.value, vs, 0.5) > 290 && vs > 48) vs -= 6;
-    parts.push(`<text x="${kx + 28}" y="${108 + vs * 0.86}" font-family="${SERIF}" font-size="${vs}" fill="${ACCENT}" style="font-variant-numeric:tabular-nums">${esc(spec.keyStat.value)}</text>`);
+    while (textWidth(spec.keyStat.value, vs, statSans ? 0.62 : 0.5) > 290 && vs > 40) vs -= 6;
+    parts.push(`<text x="${kx + 28}" y="${108 + vs * 0.86}" font-family="${statSans ? SANS : SERIF}" font-size="${vs}" fill="${ACCENT}" style="font-variant-numeric:tabular-nums">${esc(spec.keyStat.value)}</text>`);
     const kl = wrap(spec.keyStat.label, 300, 19, SANS_EM).slice(0, 3);
     let ky = 108 + vs * 0.86 + 38;
     for (const l of kl) {

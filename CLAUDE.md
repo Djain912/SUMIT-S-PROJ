@@ -7,7 +7,7 @@ NOT the news bot: that is `/Users/sumitjain/Downloads/stock_intelligence_system`
 
 ## Hard rules
 - **The GitHub repo is PUBLIC.** Never commit customer emails/PII (`scripts/.*-sent.json` stay local), `.env`, paid course content (L3 notes/cases/MCQs, question batches, `prisma/backups`) or business analytics.
-- Customer emails are sent only from `contact@chartix.in` (never a personal Gmail). Founder address is `sumit@chartix.in`.
+- Customer emails go through Resend from a `@chartix.in` address only (never a personal Gmail): `contact@chartix.in` for invoices and automatic emails; `sumit@chartix.in` is allowed for founder-style emails and campaigns Sumit chooses (no extra Resend setup needed: the whole domain is verified).
 - Every bulk send script must skip `scripts/email-unsubscribed.json`. Trial-drip cron does NOT check it yet (known gap).
 - Chartix is global: L3 cases/MCQs use US$ and international names, not ₹/NSE.
 - Vercel Hobby allows only once-per-day cron expressions. `*/30` or any sub-daily expression FAILS the whole deploy. Use separate hourly entries instead. After pushing, check the Vercel status on the commit before telling the user it is live.
